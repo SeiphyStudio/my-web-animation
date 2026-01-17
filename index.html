@@ -3,610 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>高中物理：駐波形成與反射模擬</title>
+    <title>高中物理波動模擬實驗室</title>
     <style>
-        :root {
-            --bg-color: #1a1a1a;
-            --panel-color: #2d2d2d;
-            --text-color: #e0e0e0;
-            --accent-color: #4caf50;
-            --secondary-color: #2196f3;
-            --danger-color: #f44336;
-        }
-
         body {
-            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
+            background-color: #f0f2f5;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            padding: 50px 20px;
         }
-
-        header {
-            margin-top: 20px;
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
             text-align: center;
         }
-
-        h1 {
-            margin: 0;
-            font-weight: 300;
-            letter-spacing: 2px;
-        }
-
-        .subtitle {
-            font-size: 0.9em;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        .main-container {
+        .menu-container {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            width: 95%;
-            max-width: 1000px;
-            margin-top: 20px;
             gap: 20px;
-        }
-
-        canvas {
-            background-color: #000;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             width: 100%;
-            height: auto;
-            cursor: crosshair;
+            max-width: 400px;
         }
-
-        .controls {
-            background-color: var(--panel-color);
+        .btn {
+            background-color: #fff;
+            color: #007bff;
             padding: 20px;
+            text-decoration: none;
             border-radius: 12px;
-            width: 100%;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            box-sizing: border-box;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            padding: 10px;
-            border: 1px solid #444;
-            border-radius: 8px;
-        }
-
-        .control-group h3 {
-            margin: 0 0 5px 0;
-            font-size: 1rem;
-            color: var(--accent-color);
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-        }
-
-        label {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            font-size: 0.95rem;
-        }
-
-        input[type="radio"], input[type="checkbox"] {
-            margin-right: 10px;
-            accent-color: var(--accent-color);
-            width: 18px;
-            height: 18px;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            accent-color: var(--accent-color);
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
+            text-align: center;
+            font-size: 1.2em;
             font-weight: bold;
-            transition: transform 0.1s, opacity 0.2s;
-            flex: 1;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 2px solid #007bff;
         }
-
-        button:active {
-            transform: scale(0.98);
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            background-color: #007bff;
+            color: #fff;
         }
-
-        #btn-start {
-            background-color: var(--accent-color);
-            color: white;
-        }
-
-        #btn-reset {
-            background-color: var(--danger-color);
-            color: white;
-        }
-
-        .legend {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 5px;
+        .footer {
+            margin-top: 50px;
+            color: #888;
             font-size: 0.9em;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .line-sample {
-            width: 30px;
-            height: 3px;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>物理模擬：駐波的形成</h1>
-        <div class="subtitle">高中物理選修 - 波動力學</div>
-    </header>
+    <h1>🌊 高中物理波動模擬實驗室</h1>
 
-    <div class="main-container">
-        <canvas id="waveCanvas" width="1000" height="400"></canvas>
-        
-        <div class="legend">
-            <div class="legend-item"><div class="line-sample" style="background: lime; border-top: 2px dashed lime;"></div> 右行波 (入射)</div>
-            <div class="legend-item"><div class="line-sample" style="background: orange; border-top: 2px dashed orange;"></div> 左行波 (反射/對向)</div>
-            <div class="legend-item"><div class="line-sample" style="background: white; height: 4px;"></div> 合成波 (駐波)</div>
-        </div>
-
-        <div class="controls">
-            <!-- 模式選擇 -->
-            <div class="control-group">
-                <h3>模擬情境模式</h3>
-                <label>
-                    <input type="radio" name="mode" value="two-waves" checked onchange="updateMode()">
-                    兩波反向傳遞 (無限長)
-                </label>
-                <div id="phase-control" style="margin-left: 28px; margin-bottom: 5px; font-size: 0.9em; color: #ccc;">
-                    <label>
-                        <input type="radio" name="phase" value="in-phase" checked>
-                        同相波源 (波腹在中央)
-                    </label>
-                    <label>
-                        <input type="radio" name="phase" value="out-phase">
-                        反相波源 (波節在中央)
-                    </label>
-                </div>
-                <label>
-                    <input type="radio" name="mode" value="fixed-end" onchange="updateMode()">
-                    單波傳向固定端 (反射)
-                </label>
-                <label>
-                    <input type="radio" name="mode" value="free-end" onchange="updateMode()">
-                    單波傳向自由端 (反射)
-                </label>
-            </div>
-
-            <!-- 顯示設定 -->
-            <div class="control-group">
-                <h3>顯示設定</h3>
-                <label>
-                    <input type="checkbox" id="show-antinodes">
-                    顯示腹點 (振幅最大/紅色)
-                </label>
-                <label>
-                    <input type="checkbox" id="show-nodes">
-                    顯示節點 (不振動/藍色)
-                </label>
-                <label>
-                    <input type="checkbox" id="show-components" checked>
-                    顯示分量波 (虛線)
-                </label>
-                <label>
-                    <input type="checkbox" id="show-composite" checked>
-                    顯示合成波 (白色實線)
-                </label>
-                <label>
-                    <input type="checkbox" id="slow-motion">
-                    慢動作演示
-                </label>
-            </div>
-
-            <!-- 參數調整 -->
-            <div class="control-group">
-                <h3>參數控制</h3>
-                <label>
-                    振幅 (Amplitude)
-                </label>
-                <input type="range" id="amp-slider" min="10" max="80" value="40">
-                
-                <div class="button-group">
-                    <button id="btn-start" onclick="toggleAnimation()">暫停</button>
-                    <button id="btn-reset" onclick="resetAnimation()">重置動畫</button>
-                </div>
-            </div>
-        </div>
+    <div class="menu-container">
+        <a href="駐波形成.html" class="btn">1. 駐波形成模擬</a>
+        <a href="水波干涉.html" class="btn">2. 水波干涉模擬</a>
+        <a href="波的干涉.html" class="btn">3. 波的干涉模擬</a>
+        <a href="雙狹縫干涉.html" class="btn">4. 雙狹縫干涉模擬</a>
     </div>
 
-    <script>
-        // 初始化 Canvas
-        const canvas = document.getElementById('waveCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // 物理參數
-        let time = 0;
-        let isRunning = true;
-        let waveSpeed = 4; // 像素/幀
-        const wavelength = 200; // 波長 (像素)
-        const k = (2 * Math.PI) / wavelength; // 角波數
-        const omega = k * waveSpeed; // 角頻率
-        
-        // 狀態變數
-        let amplitude = 40;
-        let currentMode = 'two-waves'; // 'two-waves', 'fixed-end', 'free-end'
-        
-        // 邊界與原點
-        const width = canvas.width;
-        const height = canvas.height;
-        const centerY = height / 2;
-        
-        // 動畫循環控制
-        let animationId;
+    <div class="footer">
+        Design for Physics Class
+    </div>
 
-        // 監聽器 setup
-        document.getElementById('amp-slider').addEventListener('input', (e) => {
-            amplitude = parseInt(e.target.value);
-        });
-
-        document.querySelectorAll('input[name="phase"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                resetAnimation();
-            });
-        });
-
-        function updateMode() {
-            const modes = document.getElementsByName('mode');
-            for(let m of modes) {
-                if(m.checked) currentMode = m.value;
-            }
-            
-            // 顯示/隱藏相位控制 (只有雙波模式需要)
-            const phaseCtrl = document.getElementById('phase-control');
-            if (currentMode === 'two-waves') {
-                phaseCtrl.style.opacity = '1';
-                phaseCtrl.style.pointerEvents = 'auto';
-            } else {
-                phaseCtrl.style.opacity = '0.3';
-                phaseCtrl.style.pointerEvents = 'none';
-            }
-            
-            resetAnimation();
-        }
-
-        function toggleAnimation() {
-            isRunning = !isRunning;
-            document.getElementById('btn-start').innerText = isRunning ? "暫停" : "繼續";
-        }
-
-        function resetAnimation() {
-            time = 0;
-            if (!isRunning) toggleAnimation();
-        }
-
-        // 核心繪圖函數
-        function draw() {
-            // 清除畫布
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, width, height);
-            
-            // 繪製平衡位置軸
-            ctx.beginPath();
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.moveTo(0, centerY);
-            ctx.lineTo(width, centerY);
-            ctx.stroke();
-
-            // 繪製邊界 (如果是反射模式)
-            if (currentMode !== 'two-waves') {
-                ctx.lineWidth = 5;
-                ctx.strokeStyle = '#888';
-                ctx.beginPath();
-                ctx.moveTo(width - 2, 0);
-                ctx.lineTo(width - 2, height);
-                ctx.stroke();
-
-                // 繪製固定端的鎖點或自由端的環
-                ctx.fillStyle = '#aaa';
-                if (currentMode === 'fixed-end') {
-                    ctx.fillRect(width - 10, centerY - 10, 10, 20); // 夾具
-                } else {
-                    ctx.beginPath();
-                    ctx.arc(width - 2, centerY, 8, 0, Math.PI * 2); // 滑環
-                    ctx.stroke();
-                }
-            }
-
-            // 取得設定值
-            const showComponents = document.getElementById('show-components').checked;
-            const showComposite = document.getElementById('show-composite').checked;
-            const showAntinodes = document.getElementById('show-antinodes').checked;
-            const showNodes = document.getElementById('show-nodes').checked;
-            const isSlow = document.getElementById('slow-motion').checked;
-            
-            // 速度控制
-            const speedMultiplier = isSlow ? 0.2 : 1.0;
-            if (isRunning) {
-                time += speedMultiplier;
-            }
-
-            // 計算有效距離 (前導波)
-            // 當時間 t 增加，波傳遞距離 d = waveSpeed * t
-            let distTraveled = waveSpeed * time;
-
-            // 判斷雙波模式下的相位差
-            let phaseOffset = 0; 
-            if (currentMode === 'two-waves') {
-                const phaseChoice = document.querySelector('input[name="phase"]:checked').value;
-                // 修正：同相波源在中央應形成腹點。因波函數方向定義問題，需加 PI 修正
-                if (phaseChoice === 'in-phase') phaseOffset = Math.PI;
-                else phaseOffset = 0;
-            }
-
-            // --- 計算波函數 ---
-            // Y1: 向右傳遞的波 (Green)
-            // Y2: 向左傳遞的波 (Orange)
-            
-            ctx.beginPath();
-            
-            // 為了畫圖效能，我們遍歷 x 點
-            const points = [];
-            
-            for (let x = 0; x <= width; x += 2) {
-                let y1 = 0;
-                let y2 = 0;
-                
-                // --- 波 1 (向右) ---
-                // 條件：x 必須小於波傳遞到的距離
-                if (x < distTraveled) {
-                    y1 = amplitude * Math.sin(k * x - omega * time);
-                }
-
-                // --- 波 2 (向左) ---
-                if (currentMode === 'two-waves') {
-                    // 雙源：第二個波源在右側 (x=width)，向左發射
-                    // 它的傳遞距離也是 distTraveled
-                    // 條件：(width - x) < distTraveled => x > width - distTraveled
-                    if (width - x < distTraveled) {
-                        // 如果是反相，這裡加 PI
-                        y2 = amplitude * Math.sin(k * (x - width) + omega * time + phaseOffset); 
-                        // 注意公式：sin(kx + wt) 是向左波
-                        // 這裡用 (x-width) 是為了讓相位在右牆對齊
-                    }
-                } else if (currentMode === 'fixed-end') {
-                    // 固定端反射
-                    // 虛擬波從右側進入，這是入射波的鏡像
-                    // 當入射波到達牆壁 (distTraveled > width) 後，反射波開始出現
-                    // 反射波行進距離 = distTraveled - width
-                    // 條件：反射波從右向左走，位置在 width - (distTraveled - width) = 2*width - distTraveled
-                    // 簡化邏輯：反射波是 y1 的鏡像，但在 x=width 處需反相 (固定端 y=0)
-                    
-                    // 數學模型：y2(x, t) 是向左傳遞的波
-                    // 在 x=width 處，y1 + y2 = 0 => y2 = -y1
-                    // y1(w, t) = A sin(kw - wt)
-                    // y2(w, t) = -A sin(kw - wt) = A sin(kw - wt + PI)
-                    // 所以 y2 = A sin(k(2w - x) - wt + PI) ??? 
-                    // 更簡單的想法：反射波就是入射波跑到牆後面的部分，被"折"回來並變號
-                    
-                    let distReflected = distTraveled - width;
-                    if (distReflected > 0) {
-                        // 只有當波撞到牆後才有反射波
-                        // 反射波存在區域： x > width - distReflected
-                        if (x > width - distReflected) {
-                            // 固定端：反相 (加 PI 或 乘 -1)
-                            // 這裡模擬虛擬波源在 2*width 處發射
-                            y2 = -1 * amplitude * Math.sin(k * (2 * width - x) - omega * time);
-                        }
-                    }
-
-                } else if (currentMode === 'free-end') {
-                    // 自由端反射
-                    // 同固定端，但不變號
-                    let distReflected = distTraveled - width;
-                    if (distReflected > 0) {
-                        if (x > width - distReflected) {
-                            y2 = amplitude * Math.sin(k * (2 * width - x) - omega * time);
-                        }
-                    }
-                }
-
-                points.push({x, y1, y2, sum: y1 + y2});
-            }
-
-            // --- 繪製分量波 ---
-            if (showComponents) {
-                // 畫 y1 (右行 - 綠色)
-                ctx.beginPath();
-                ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-                ctx.lineWidth = 2;
-                ctx.setLineDash([5, 5]);
-                for (let i = 0; i < points.length; i++) {
-                    // 只畫存在的波
-                    if (points[i].x < distTraveled)
-                        ctx.lineTo(points[i].x, centerY - points[i].y1);
-                    else 
-                        ctx.moveTo(points[i].x, centerY);
-                }
-                ctx.stroke();
-
-                // 畫 y2 (左行 - 橘色)
-                ctx.beginPath();
-                ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)';
-                for (let i = 0; i < points.length; i++) {
-                    let p = points[i];
-                    let shouldDraw = false;
-                    
-                    // 判斷 y2 是否已存在
-                    if (currentMode === 'two-waves') {
-                        if (width - p.x < distTraveled) shouldDraw = true;
-                    } else {
-                        if (distTraveled > width && p.x > width - (distTraveled - width)) shouldDraw = true;
-                    }
-
-                    if (shouldDraw && Math.abs(p.y2) > 0.01) { 
-                         // Check magnitude to avoid drawing lines connecting to 0 abruptly at wavefront
-                         ctx.lineTo(p.x, centerY - p.y2);
-                    } else {
-                         ctx.moveTo(p.x, centerY - p.y2);
-                    }
-                }
-                ctx.stroke();
-                ctx.setLineDash([]); // Reset dash
-            }
-
-            // --- 繪製合成波 (實線) ---
-            if (showComposite) {
-                ctx.beginPath();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 4;
-                ctx.shadowBlur = 5;
-                ctx.shadowColor = '#fff';
-                
-                // 繪製路徑
-                for (let i = 0; i < points.length; i++) {
-                    ctx.lineTo(points[i].x, centerY - points[i].sum);
-                }
-                ctx.stroke();
-                ctx.shadowBlur = 0; // Reset shadow
-            }
-
-            // --- 繪製波腹與波節 (點) ---
-            if (showNodes || showAntinodes) {
-                // 理論上的節點/腹點位置計算
-                // 駐波條件：y_sum = 2A sin(kx + phi) cos(wt + ...)
-                // 位置只跟 x 有關。
-                
-                // 為了簡化並適應所有模式的動態，我們直接掃描合成振幅
-                // 但因為波是動態生成的，我們可以用數學預測位置
-                
-                // 計算駐波的參考起點
-                // 固定端(Mode 2)：牆壁 x=width 必定是節點
-                // 自由端(Mode 3)：牆壁 x=width 必定是腹點
-                // 雙波(Mode 1)：
-                //    同相：中央 (width/2) 是腹點 (如果 width 是波長整數倍...) 
-                //    更通用：找出一個已知點。
-                
-                // 這裡使用更直觀的方法：畫出理論位置，但只在該處波已經形成時才顯示
-                
-                let startX = 0;
-                let conditionMet = false;
-
-                // 節點間距 = lambda / 2 = 100px
-                const nodeInterval = wavelength / 2;
-                
-                // 定義參考點(Anchor)
-                let anchorX = 0;
-                let isAnchorNode = false; // 參考點是節點嗎？
-
-                if (currentMode === 'fixed-end') {
-                    anchorX = width; 
-                    isAnchorNode = true;
-                } else if (currentMode === 'free-end') {
-                    anchorX = width;
-                    isAnchorNode = false; // 是腹點
-                } else {
-                    // 雙源
-                    const phaseChoice = document.querySelector('input[name="phase"]:checked').value;
-                    anchorX = width / 2;
-                    // 如果同相，中央是腹點；如果反相，中央是節點
-                    isAnchorNode = (phaseChoice === 'out-phase');
-                }
-
-                // 往左往右推算所有點
-                // 我們遍歷整個畫布尋找符合點
-                for (let x = 0; x <= width; x++) {
-                    let distToAnchor = Math.abs(x - anchorX);
-                    // 判斷這個位置是否是節點或腹點
-                    // 距離是 lambda/4 的倍數
-                    // 節點到節點 lambda/2, 節點到腹點 lambda/4
-                    
-                    let isNodeLoc = false;
-                    let isAntiLoc = false;
-                    
-                    // 用餘數判斷
-                    // 容許誤差 1px
-                    let remainder = distToAnchor % (wavelength / 2);
-                    let closeToMultiple = (remainder < 1.5 || remainder > (wavelength/2 - 1.5));
-                    let closeToHalf = (Math.abs(remainder - wavelength/4) < 1.5);
-
-                    if (isAnchorNode) {
-                        if (closeToMultiple) isNodeLoc = true;
-                        if (closeToHalf) isAntiLoc = true;
-                    } else { // Anchor is Antinode
-                        if (closeToMultiple) isAntiLoc = true;
-                        if (closeToHalf) isNodeLoc = true;
-                    }
-
-                    // 檢查波是否已經傳到這裡 (駐波已形成)
-                    // 簡單判斷：兩波都必須覆蓋此點
-                    let wave1Covered = (x < distTraveled);
-                    let wave2Covered = false;
-                    
-                    if (currentMode === 'two-waves') wave2Covered = (width - x < distTraveled);
-                    else wave2Covered = (distTraveled > width && x > width - (distTraveled - width));
-
-                    if (wave1Covered && wave2Covered) {
-                        if (showNodes && isNodeLoc) {
-                            ctx.fillStyle = '#2196f3'; // Blue
-                            ctx.beginPath();
-                            ctx.arc(x, centerY, 5, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
-                        if (showAntinodes && isAntiLoc) {
-                            ctx.fillStyle = '#f44336'; // Red
-                            // 腹點跟隨波的y值移動，還是停在平衡位置？
-                            // 題目通常指"標示出這些點的位置"，通常畫在平衡位置或隨波峰移動
-                            // 為了清楚，畫在隨波移動的位置最帥，但畫在平衡軸上最標準
-                            // 這裡我們畫在合成波的當前 y 位置上
-                            
-                            // 找出對應的 points index
-                            let pIdx = Math.floor(x/2); 
-                            if(pIdx < points.length) {
-                                let py = points[pIdx].sum;
-                                ctx.beginPath();
-                                ctx.arc(x, centerY - py, 6, 0, Math.PI * 2);
-                                ctx.fill();
-                                ctx.strokeStyle = '#f44336';
-                                ctx.stroke();
-                            }
-                        }
-                    }
-                }
-            }
-            
-            animationId = requestAnimationFrame(draw);
-        }
-
-        // 啟動
-        draw();
-
-    </script>
 </body>
 </html>
