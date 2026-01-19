@@ -5,9 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高中物理模擬實驗室</title>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
-        h1 { color: #333; margin-bottom: 40px; text-align: center; font-size: 2em; }
-        .menu-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; width: 100%; max-width: 800px; }
+        body { 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            background-color: #f0f2f5; 
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 這是新的：大佈局容器 (左右排版) */
+        .main-layout {
+            display: flex;
+            flex-direction: row; /* 設定為橫向排列 */
+            align-items: center; /* 垂直置中 */
+            justify-content: center;
+            gap: 50px; /* 左邊文字和右邊圖片的間距 */
+            max-width: 1200px;
+            width: 100%;
+            flex-wrap: wrap; /* 手機版寬度不夠時自動換行變垂直 */
+        }
+
+        /* 左邊內容區塊 */
+        .content-area {
+            flex: 1; /* 佔據剩餘空間 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 300px; /* 防止縮太小 */
+        }
+
+        /* 右邊人物圖片 */
+        .teacher-img {
+            max-width: 350px; /* 圖片最大寬度，可依需求調整 */
+            width: 100%;
+            height: auto;
+            /* 幫人物加一點陰影讓它更立體 */
+            filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.2));
+            animation: float 3s ease-in-out infinite; /* 加一點漂浮動畫 */
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        h1 { color: #333; margin-bottom: 40px; text-align: center; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
+        
+        .menu-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; width: 100%; }
+        
         .category-card {
             background-color: #fff;
             width: 250px;
@@ -27,7 +76,6 @@
         .title { color: #333; font-size: 1.4em; font-weight: bold; margin-bottom: 10px; }
         .desc { color: #666; font-size: 0.9em; line-height: 1.5; }
         
-        /* 替不同的卡片加上不同顏色 */
         .card-motion { border-top-color: #ff6b6b; }
         .card-waves { border-top-color: #4ecdc4; }
         .card-optics { border-top-color: #ffe66d; }
@@ -35,30 +83,35 @@
 </head>
 <body>
 
-    <h1>🚀 高中物理模擬實驗室</h1>
-
-    <div class="menu-container">
+    <div class="main-layout">
         
-        <a href="motion.html" class="category-card card-motion">
-            <div class="icon">🏎️</div>
-            <div class="title">運動與力</div>
-            <div class="desc">包含牛頓定律、拋體運動等經典力學模擬。</div>
-        </a>
+        <div class="content-area">
+            <h1>🚀 高中物理模擬實驗室</h1>
 
-        <a href="waves.html" class="category-card card-waves">
-            <div class="icon">🌊</div>
-            <div class="title">波動</div>
-            <div class="desc">包含水波、駐波、干涉與繞射等波動現象。</div>
-        </a>
+            <div class="menu-container">
+                <a href="motion.html" class="category-card card-motion">
+                    <div class="icon">🏎️</div>
+                    <div class="title">運動與力</div>
+                    <div class="desc">包含牛頓定律、拋體運動等經典力學模擬。</div>
+                </a>
 
-        <a href="optics.html" class="category-card card-optics">
-            <div class="icon">🔦</div>
-            <div class="title">光學</div>
-            <div class="desc">包含面鏡成像、透鏡折射與光學干涉、繞射模擬。</div>
-        </a>
+                <a href="waves.html" class="category-card card-waves">
+                    <div class="icon">🌊</div>
+                    <div class="title">波動</div>
+                    <div class="desc">包含水波、駐波、干涉與繞射等波動現象。</div>
+                </a>
+
+                <a href="optics.html" class="category-card card-optics">
+                    <div class="icon">🔦</div>
+                    <div class="title">光學</div>
+                    <div class="desc">包含面鏡成像、透鏡折射與光學儀器模擬。</div>
+                </a>
+            </div>
+        </div>
+
+        <img src="teacher.png" alt="物理老師" class="teacher-img">
 
     </div>
 
 </body>
 </html>
-
