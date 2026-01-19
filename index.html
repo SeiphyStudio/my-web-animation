@@ -5,67 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>高中物理模擬實驗室</title>
     <style>
-        body {
-            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif;
-            background-color: #f0f2f5;
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
+        h1 { color: #333; margin-bottom: 40px; text-align: center; font-size: 2em; }
+        .menu-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; width: 100%; max-width: 800px; }
+        .category-card {
+            background-color: #fff;
+            width: 250px;
+            padding: 30px 20px;
+            text-decoration: none;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-top: 5px solid #007bff;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 50px 20px;
         }
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .menu-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            width: 100%;
-            max-width: 400px;
-        }
-        .btn {
-            background-color: #fff;
-            color: #007bff;
-            padding: 20px;
-            text-decoration: none;
-            border-radius: 12px;
-            text-align: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 2px solid #007bff;
-        }
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-            background-color: #007bff;
-            color: #fff;
-        }
-        .footer {
-            margin-top: 50px;
-            color: #888;
-            font-size: 0.9em;
-        }
+        .category-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+        .icon { font-size: 3em; margin-bottom: 15px; }
+        .title { color: #333; font-size: 1.4em; font-weight: bold; margin-bottom: 10px; }
+        .desc { color: #666; font-size: 0.9em; line-height: 1.5; }
+        
+        /* 替不同的卡片加上不同顏色 */
+        .card-motion { border-top-color: #ff6b6b; }
+        .card-waves { border-top-color: #4ecdc4; }
+        .card-optics { border-top-color: #ffe66d; }
     </style>
 </head>
 <body>
 
-    <h1>🌊 高中物理模擬實驗室</h1>
+    <h1>🚀 高中物理模擬實驗室</h1>
 
     <div class="menu-container">
-        <a href="駐波形成.html" class="btn">1. 駐波形成模擬</a>
-        <a href="水波干涉.html" class="btn">2. 水波干涉模擬</a>
-        <a href="波的干涉.html" class="btn">3. 波的干涉模擬</a>
-        <a href="雙狹縫干涉.html" class="btn">4. 雙狹縫干涉模擬</a>
-    </div>
+        
+        <a href="motion.html" class="category-card card-motion">
+            <div class="icon">🏎️</div>
+            <div class="title">運動與力</div>
+            <div class="desc">包含牛頓定律、拋體運動等經典力學模擬。</div>
+        </a>
 
-    <div class="footer">
-        Design for Physics Class
+        <a href="waves.html" class="category-card card-waves">
+            <div class="icon">🌊</div>
+            <div class="title">波動</div>
+            <div class="desc">包含水波、駐波、干涉與繞射等波動現象。</div>
+        </a>
+
+        <a href="optics.html" class="category-card card-optics">
+            <div class="icon">🔦</div>
+            <div class="title">光學</div>
+            <div class="desc">包含面鏡成像、透鏡折射與光學儀器模擬。</div>
+        </a>
+
     </div>
 
 </body>
 </html>
-
