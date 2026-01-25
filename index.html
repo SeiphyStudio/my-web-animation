@@ -16,35 +16,31 @@
             align-items: center;
         }
 
-        /* 這是新的：大佈局容器 (左右排版) */
         .main-layout {
             display: flex;
-            flex-direction: row; /* 設定為橫向排列 */
-            align-items: center; /* 垂直置中 */
+            flex-direction: row;
+            align-items: center;
             justify-content: center;
-            gap: 50px; /* 左邊文字和右邊圖片的間距 */
+            gap: 50px;
             max-width: 1200px;
             width: 100%;
-            flex-wrap: wrap; /* 手機版寬度不夠時自動換行變垂直 */
+            flex-wrap: wrap;
         }
 
-        /* 左邊內容區塊 */
         .content-area {
-            flex: 1; /* 佔據剩餘空間 */
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 300px; /* 防止縮太小 */
+            min-width: 300px;
         }
 
-        /* 右邊人物圖片 */
         .teacher-img {
-            max-width: 350px; /* 圖片最大寬度，可依需求調整 */
+            max-width: 350px;
             width: 100%;
             height: auto;
-            /* 幫人物加一點陰影讓它更立體 */
             filter: drop-shadow(10px 10px 20px rgba(0,0,0,0.2));
-            animation: float 3s ease-in-out infinite; /* 加一點漂浮動畫 */
+            animation: float 3s ease-in-out infinite;
         }
 
         @keyframes float {
@@ -55,25 +51,12 @@
 
         h1 { color: #333; margin-bottom: 40px; text-align: center; font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.1); }
         
-        /* 修改：改為 Grid 網格佈局，實現 2x2 排列 */
-        .menu-container { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); /* 強制兩欄 */
-            gap: 30px; 
-            width: fit-content; 
-        }
-
-        /* 手機版 RWD：變為單欄 */
-        @media (max-width: 768px) {
-            .menu-container {
-                grid-template-columns: 1fr;
-            }
-        }
+        .menu-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; width: 100%; }
         
         .category-card {
             background-color: #fff;
-            width: 250px;
-            padding: 30px 20px;
+            width: 200px; /* 稍微把卡片改窄一點，這樣放四張比較剛好 */
+            padding: 25px 15px;
             text-decoration: none;
             border-radius: 15px;
             text-align: center;
@@ -83,19 +66,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 100%; /* 讓卡片高度一致 */
-            box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
         }
         .category-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
         .icon { font-size: 3em; margin-bottom: 15px; }
-        .title { color: #333; font-size: 1.4em; font-weight: bold; margin-bottom: 10px; }
+        .title { color: #333; font-size: 1.3em; font-weight: bold; margin-bottom: 10px; }
         .desc { color: #666; font-size: 0.9em; line-height: 1.5; }
         
-        /* 各個卡片的顏色 */
-        .card-motion { border-top-color: #ff6b6b; }
-        .card-waves { border-top-color: #4ecdc4; }
-        .card-optics { border-top-color: #ffe66d; }
-        .card-tools { border-top-color: #2ecc71; } /* 新增：小工具的綠色 */
+        /* 各分類顏色設定 */
+        .card-motion { border-top-color: #ff6b6b; } /* 紅色 */
+        .card-waves { border-top-color: #4ecdc4; }  /* 藍綠色 */
+        .card-optics { border-top-color: #ffe66d; } /* 黃色 */
+        .card-tools { border-top-color: #a55eea; }  /* 紫色 (新加入) */
     </style>
 </head>
 <body>
@@ -106,41 +87,35 @@
             <h1>🚀 高中物理模擬實驗室</h1>
 
             <div class="menu-container">
-                <!-- 1. 運動與力 -->
-                <a href="#motion" class="category-card card-motion">
+                <a href="motion.html" class="category-card card-motion">
                     <div class="icon">🏎️</div>
                     <div class="title">運動與力</div>
-                    <div class="desc">包含牛頓定律、拋體運動等經典力學模擬。</div>
+                    <div class="desc">牛頓定律、拋體運動等經典力學。</div>
                 </a>
 
-                <!-- 2. 波動 -->
-                <a href="#waves" class="category-card card-waves">
+                <a href="waves.html" class="category-card card-waves">
                     <div class="icon">🌊</div>
                     <div class="title">波動</div>
-                    <div class="desc">包含水波、駐波、干涉與繞射等波動現象。</div>
+                    <div class="desc">水波、駐波、干涉與繞射現象。</div>
                 </a>
 
-                <!-- 3. 光學 -->
-                <a href="#optics" class="category-card card-optics">
+                <a href="optics.html" class="category-card card-optics">
                     <div class="icon">🔦</div>
                     <div class="title">光學</div>
-                    <div class="desc">包含面鏡成像、透鏡折射與光學干涉、繞射模擬。</div>
+                    <div class="desc">面鏡成像、透鏡折射與光學儀器。</div>
                 </a>
 
-                <!-- 4. 小工具 (新增) -->
-                <a href="#tools" class="category-card card-tools">
-                    <div class="icon">🛠️</div>
+                <a href="tools.html" class="category-card card-tools">
+                    <div class="icon">🧰</div>
                     <div class="title">小工具</div>
-                    <div class="desc">包含實驗計時器、單位換算、科學計算機等實用輔助。</div>
+                    <div class="desc">包含計時器、計算機等教學輔助工具。</div>
                 </a>
             </div>
         </div>
 
-        <!-- 這裡修正為您原本上傳的檔名 image_a68ca0.png -->
-        <img src="image_a68ca0.png" alt="物理老師" class="teacher-img">
+        <img src="teacher.png" alt="物理老師" class="teacher-img">
 
     </div>
 
 </body>
 </html>
-
