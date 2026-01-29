@@ -8,11 +8,34 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f3e5f5; display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
         h1 { color: #8e44ad; margin-bottom: 30px; text-align: center; }
         .menu-container { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; }
-        .btn { background-color: #fff; color: #8e44ad; padding: 20px; text-decoration: none; border-radius: 12px; text-align: center; font-size: 1.2em; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #8e44ad; transition: transform 0.2s; }
+        
+        /* 一般按鈕樣式 */
+        .btn { background-color: #fff; color: #8e44ad; padding: 20px; text-decoration: none; border-radius: 12px; text-align: center; font-size: 1.2em; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #8e44ad; transition: transform 0.2s; cursor: pointer; }
         .btn:hover { transform: translateY(-3px); background-color: #8e44ad; color: #fff; }
+        
+        /* 加鎖按鈕的特殊樣式 (深紫色) */
+        .btn-lock { border-color: #5e2a75; color: #5e2a75; background-color: #fce4ec; }
+        .btn-lock:hover { background-color: #5e2a75; color: #fff; }
+
         .back-btn { margin-top: 30px; color: #666; text-decoration: none; font-weight: bold; }
         .back-btn:hover { color: #8e44ad; }
     </style>
+
+    <script>
+        function checkPassword() {
+            // 1. 彈出視窗詢問密碼
+            var password = prompt("請輸入老師專用密碼：");
+
+            // 2. 檢查密碼 (這裡預設是 1234，你可以自己改成別的)
+            if (password === "1021") {
+                // 密碼正確 -> 跳轉到目標檔案
+                window.location.href = "上課觀測記錄.html"; 
+            } else if (password != null) {
+                // 密碼錯誤 -> 顯示警告 (排除按取消的情況)
+                alert("密碼錯誤，存取被拒絕 🚫");
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -20,14 +43,9 @@
 
     <div class="menu-container">
         <a href="座位抽籤.html" class="btn">1. 座位抽籤系統</a>
-
-        <a href="輪盤座位抽籤.html" class="btn">2. 輪盤座位抽籤</a>
-
-        <a href="上課觀測記錄.html" class="btn">3. 上課觀測記錄</a>
-
-        <a href="縮短網址.html" class="btn">4. 縮短網址</a>
         
-        </div>
+        <a href="#" onclick="checkPassword()" class="btn btn-lock">🔒 2. 上課觀測記錄 (老師專用)</a>
+    </div>
 
     <a href="index.html" class="back-btn">⬅ 回到主選單</a>
 
