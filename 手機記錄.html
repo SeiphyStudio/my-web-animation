@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- 這行就是允許手機縮放的魔法咒語！ user-scalable=yes 允許縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <title>上課行為記錄</title>
+    <style>
+        /* 基礎版面設定 */
+        body {
+            font-family: "微軟正黑體", sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* 限制最大寬度，讓它在電腦上看也像手機 */
+            background-color: white;
+            border: 2px solid #003366;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        /* --- 座位區設計 (使用 Grid 網格系統) --- */
+        .seating-area {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr); /* 切成 6 個直行 */
+            gap: 5px; /* 座位之間的間距 */
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* 座位按鈕 */
+        .seat {
+            aspect-ratio: 1 / 1; /* 讓座位變成正方形 */
+            border: 2px solid #005b9f;
+            background-color: white;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 4px; /* 微微的圓角比較好看 */
+            transition: 0.2s; /* 變色時的動畫時間 */
+            padding: 0;
+        }
+
+        /* 被選中的座位狀態 */
+        .seat.selected {
+            background-color: #ffe066; /* 變成亮黃色 */
+            border-color: #d4a000;
+            font-weight: bold;
+        }
+
+        /* --- 行為區設計 --- */
+        .behavior-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 切成 2 個直行 */
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* 行為按鈕 */
+        .behavior-btn {
+            padding: 15px 5px;
+            font-size: 1.2rem;
+            border: 2px solid black;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 4px;
+            opacity: 0.6; /* 預設半透明，表示還沒被選到 */
+        }
+
+        /* 綠色行為 (正向) */
+        .behavior-good { background-color: #a8d59d; }
+        /* 橘色行為 (負向) */
+        .behavior-bad { background-color: #f4c0a1; }
+
+        /* 被選中的行為狀態 */
+        .behavior-btn.active {
+            opacity: 1; /* 變成不透明，且邊框加粗 */
+            border-width: 3px;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+
+        /* --- 傳送按鈕設計 --- */
+        .submit-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.5rem;
+            background: linear-gradient(to bottom, #a0d8ef, #ccefff);
+            border: 2px solid black;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        /* 訊息提示區 */
+        #status-message {
+            margin-top: 10px;
+            color: #d93025;
+            font-weight: bold;
+            text-align: center;
+            height: 20px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="status-message">請先選擇下方的「行為」喔！</div>
+
+    <!-- 座位區：老師幫你生出 36 個座位 (6x6) -->
+    <div class="seating-area" id="seats-container">
+        <!-- 這裡的按鈕會由下方的 JavaScript 自動產生，省去手打 36 次的麻煩 -->
+    </div>
+
+    <!-- 行為區 -->
+    <div class="behavior-area">
+        <div class="behavior-btn behavior-good" onclick="selectBehavior(this, '認真聽課')">認真聽課</div>
+        <div class="behavior-btn behavior-good" onclick="selectBehavior(this, '積極搶答')">積極搶答</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '睡覺')">睡覺</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '遲到')">遲到</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '吵鬧')">吵鬧</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '滑手機')">滑手機</div>
+    </div>
+
+    <!-- 傳送按鈕 -->
+    <button class="submit-btn" onclick="submitData()">傳送</button>
+</div>
+
+<script>
+    // 這裡就是程式大腦（邏輯區）
+    
+    // 變數（標籤盒子）：用來記住現在選了什麼行為
+    let currentBehavior = ""; 
+    
+    // 陣列（購物車）：用來裝被選中的學生座號
+    let selectedSeatsArray = []; 
+
+    // --- 1. 自動產生座位表的功能 ---
+    function generateSeats() {
+        const container = document.getElementById('seats-container');
+        for (let i = 1; i <= 36; i++) {
+            // 把數字變成兩位數，例如 1 變成 "01"
+            let seatNumber = i < 10 ? '0' + i : i.toString(); 
+            
+            // 創造一個按鈕元素
+            let btn = document.createElement('button');
+            btn.className = 'seat';
+            btn.innerText = seatNumber;
+            
+            // 設定點擊座位時會發生的事情
+            btn.onclick = function() {
+                toggleSeat(btn, seatNumber);
+            };
+            container.appendChild(btn);
+        }
+    }
+
+    // --- 2. 選擇行為的功能 ---
+    function selectBehavior(element, behaviorName) {
+        // 先把所有行為按鈕的 active (被選中狀態) 拔掉
+        let allBtns = document.querySelectorAll('.behavior-btn');
+        allBtns.forEach(btn => btn.classList.remove('active'));
+
+        // 給目前點擊的這個按鈕加上 active 狀態
+        element.classList.add('active');
+        
+        // 把行為名稱裝進變數盒子裡
+        currentBehavior = behaviorName;
+        
+        // 更新上方提示文字
+        document.getElementById('status-message').innerText = `目前選擇行為：【${currentBehavior}】，請點選學生座位。`;
+        document.getElementById('status-message').style.color = "#188038"; // 變成綠色字
+    }
+
+    // --- 3. 點選座位的功能 ---
+    function toggleSeat(seatElement, seatNumber) {
+        // 防呆機制：如果老師還沒選行為，就不給點座位
+        if (currentBehavior === "") {
+            alert("老師，請先選擇下方的『行為』，才能選學生喔！");
+            return;
+        }
+
+        // 檢查這個座號是不是已經在購物車（陣列）裡了
+        let index = selectedSeatsArray.indexOf(seatNumber);
+
+        if (index === -1) {
+            // 如果不在裡面，就把它放進去 (push)，並改變按鈕顏色
+            selectedSeatsArray.push(seatNumber);
+            seatElement.classList.add('selected');
+        } else {
+            // 如果已經在裡面，代表老師想取消，就把它拿出來 (splice)，並恢復顏色
+            selectedSeatsArray.splice(index, 1);
+            seatElement.classList.remove('selected');
+        }
+    }
+
+    // --- 4. 傳送資料的功能 ---
+    function submitData() {
+        // 防呆機制：檢查資料齊不齊全
+        if (currentBehavior === "") {
+            alert("請先選擇行為！");
+            return;
+        }
+        if (selectedSeatsArray.length === 0) {
+            alert("請至少選擇一位學生！");
+            return;
+        }
+
+        // 整理要送出的文字（模擬打包包裹）
+        let message = "📦 準備送出到試算表...\n\n";
+        message += "行為項目：" + currentBehavior + "\n";
+        message += "學生座號：" + selectedSeatsArray.sort().join(", "); // .join 可以把陣列變成一段文字
+        
+        // 彈出視窗讓你看結果 (未來這裡會換成連線到 Google Sheet 的程式碼)
+        alert(message);
+
+        // 送出後，清空所有狀態，準備記錄下一筆
+        resetForm();
+    }
+
+    // --- 5. 送出後清空畫面的功能 ---
+    function resetForm() {
+        currentBehavior = "";
+        selectedSeatsArray = [];
+        
+        // 清除行為按鈕的選擇狀態
+        document.querySelectorAll('.behavior-btn').forEach(btn => btn.classList.remove('active'));
+        
+        // 清除座位按鈕的選擇狀態
+        document.querySelectorAll('.seat').forEach(btn => btn.classList.remove('selected'));
+        
+        // 恢復提示文字
+        document.getElementById('status-message').innerText = "請先選擇下方的「行為」喔！";
+        document.getElementById('status-message').style.color = "#d93025";
+    }
+
+    // 網頁載入完成後，執行產生座位的函數
+    window.onload = generateSeats;
+
+</script>
+</body>
+</html>
