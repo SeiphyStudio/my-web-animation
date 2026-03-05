@@ -2,56 +2,229 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教學小工具</title>
+    <!-- 這行就是允許手機縮放的魔法咒語！ user-scalable=yes 允許縮放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <title>上課行為記錄</title>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f3e5f5; display: flex; flex-direction: column; align-items: center; padding: 50px 20px; }
-        h1 { color: #8e44ad; margin-bottom: 30px; text-align: center; }
-        .menu-container { display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 400px; }
-        
-        /* 一般按鈕樣式 */
-        .btn { background-color: #fff; color: #8e44ad; padding: 20px; text-decoration: none; border-radius: 12px; text-align: center; font-size: 1.2em; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 2px solid #8e44ad; transition: transform 0.2s; cursor: pointer; }
-        .btn:hover { transform: translateY(-3px); background-color: #8e44ad; color: #fff; }
-        
-        /* 加鎖按鈕的特殊樣式 (深紫色) */
-        .btn-lock { border-color: #5e2a75; color: #5e2a75; background-color: #fce4ec; }
-        .btn-lock:hover { background-color: #5e2a75; color: #fff; }
-
-        .back-btn { margin-top: 30px; color: #666; text-decoration: none; font-weight: bold; }
-        .back-btn:hover { color: #8e44ad; }
-    </style>
-
-    <script>
-        function checkPassword() {
-            // 1. 彈出視窗詢問密碼
-            var password = prompt("請輸入老師專用密碼：");
-
-            // 2. 檢查密碼 (這裡預設是 1234，你可以自己改成別的)
-            if (password === "1021") {
-                // 密碼正確 -> 跳轉到目標檔案
-                window.location.href = "上課觀測記錄.html"; 
-            } else if (password != null) {
-                // 密碼錯誤 -> 顯示警告 (排除按取消的情況)
-                alert("密碼錯誤，存取被拒絕 🚫");
-            }
+        /* 基礎版面設定 */
+        body {
+            font-family: "微軟正黑體", sans-serif;
+            margin: 0;
+            padding: 10px;
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-    </script>
+
+        .container {
+            width: 100%;
+            max-width: 500px; /* 限制最大寬度，讓它在電腦上看也像手機 */
+            background-color: white;
+            border: 2px solid #003366;
+            padding: 15px;
+            box-sizing: border-box;
+        }
+
+        /* --- 座位區設計 (使用 Grid 網格系統) --- */
+        .seating-area {
+            display: grid;
+            /* 【修改點 1】從 repeat(6, 1fr) 改成 repeat(7, 1fr)，切成 7 個直行 */
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 4px; /* 座位之間的間距稍微縮小一點，讓畫面不會太緊繃 */
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        /* 座位按鈕 */
+        .seat {
+            aspect-ratio: 1 / 1; /* 讓座位變成正方形 */
+            border: 2px solid #005b9f;
+            background-color: white;
+            font-size: 1.05rem; /* 字體稍微縮小一點以適應更多的格子 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 4px; 
+            transition: 0.2s; 
+            padding: 0;
+        }
+
+        /* 被選中的座位狀態 */
+        .seat.selected {
+            background-color: #ffe066; /* 變成亮黃色 */
+            border-color: #d4a000;
+            font-weight: bold;
+        }
+
+        /* --- 行為區設計 --- */
+        .behavior-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 保持 2 個直行 */
+            gap: 8px; /* 【修改點 2】間距稍微縮小 */
+            margin-bottom: 20px;
+        }
+
+        /* 行為按鈕 */
+        .behavior-btn {
+            /* 【修改點 3】把原本的 padding: 15px 5px 改小，讓按鈕變扁一點，節省垂直空間 */
+            padding: 10px 5px; 
+            font-size: 1.1rem;
+            border: 2px solid black;
+            cursor: pointer;
+            text-align: center;
+            border-radius: 4px;
+            opacity: 0.6; 
+        }
+
+        /* 綠色行為 (正向) */
+        .behavior-good { background-color: #a8d59d; }
+        /* 橘色行為 (負向) */
+        .behavior-bad { background-color: #f4c0a1; }
+
+        /* 被選中的行為狀態 */
+        .behavior-btn.active {
+            opacity: 1; 
+            border-width: 3px;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(0,0,0,0.3);
+        }
+
+        /* --- 傳送按鈕設計 --- */
+        .submit-btn {
+            width: 100%;
+            padding: 15px; /* 傳送按鈕也稍微調扁一點點 */
+            font-size: 1.5rem;
+            background: linear-gradient(to bottom, #a0d8ef, #ccefff);
+            border: 2px solid black;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        /* 訊息提示區 */
+        #status-message {
+            margin-top: 10px;
+            color: #d93025;
+            font-weight: bold;
+            text-align: center;
+            height: 20px;
+            font-size: 0.95rem; /* 字體稍微調小以防文字折行 */
+        }
+
+    </style>
 </head>
 <body>
 
-    <h1>🧰 教學小工具</h1>
+<div class="container">
+    <div id="status-message">請先選擇下方的「行為」喔！</div>
 
-    <div class="menu-container">
-        <a href="座位抽籤.html" class="btn">1. 座位抽籤系統</a>
-        <a href="輪盤座位抽籤.html" class="btn">2. 輪盤座位抽籤</a>
-        <a href="縮短網址.html" class="btn">3. 縮短網址</a>
-        <a href="手機記錄.html" class="btn">4. 手機記錄</a>
-        <a href="小精靈(手機板).html" class="btn">5. 小精靈(手機板)</a>
-        <a href="心率測量.html" class="btn">6. 心率測量</a>
-        <a href="#" onclick="checkPassword()" class="btn btn-lock">🔒 7. 上課觀測記錄 (老師專用)</a>
+    <!-- 座位區：自動產生 49 個座位 (7x7) -->
+    <div class="seating-area" id="seats-container">
+        <!-- 這裡的按鈕會由下方的 JavaScript 自動產生 -->
     </div>
 
-    <a href="index.html" class="back-btn">⬅ 回到主選單</a>
+    <!-- 行為區：新增了兩個按鈕，總共 8 個 -->
+    <div class="behavior-area">
+        <div class="behavior-btn behavior-good" onclick="selectBehavior(this, '認真聽課')">認真聽課</div>
+        <div class="behavior-btn behavior-good" onclick="selectBehavior(this, '積極搶答')">積極搶答</div>
+        <div class="behavior-btn behavior-good" onclick="selectBehavior(this, '樂於助人')">樂於助人</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '未帶物品')">未帶物品</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '睡覺')">睡覺</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '遲到')">遲到</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '吵鬧')">吵鬧</div>
+        <div class="behavior-btn behavior-bad" onclick="selectBehavior(this, '滑手機')">滑手機</div>
+    </div>
 
+    <!-- 傳送按鈕 -->
+    <button class="submit-btn" onclick="submitData()">傳送</button>
+</div>
+
+<script>
+    let currentBehavior = ""; 
+    let selectedSeatsArray = []; 
+
+    // --- 1. 自動產生座位表的功能 ---
+    function generateSeats() {
+        const container = document.getElementById('seats-container');
+        // 【修改點 4】迴圈條件從 36 改成 49 (7列 x 7行)
+        for (let i = 1; i <= 49; i++) {
+            let seatNumber = i < 10 ? '0' + i : i.toString(); 
+            
+            let btn = document.createElement('button');
+            btn.className = 'seat';
+            btn.innerText = seatNumber;
+            
+            btn.onclick = function() {
+                toggleSeat(btn, seatNumber);
+            };
+            container.appendChild(btn);
+        }
+    }
+
+    // --- 2. 選擇行為的功能 ---
+    function selectBehavior(element, behaviorName) {
+        let allBtns = document.querySelectorAll('.behavior-btn');
+        allBtns.forEach(btn => btn.classList.remove('active'));
+
+        element.classList.add('active');
+        currentBehavior = behaviorName;
+        
+        document.getElementById('status-message').innerText = `目前選擇：【${currentBehavior}】，請點選座位。`;
+        document.getElementById('status-message').style.color = "#188038"; 
+    }
+
+    // --- 3. 點選座位的功能 ---
+    function toggleSeat(seatElement, seatNumber) {
+        if (currentBehavior === "") {
+            alert("老師，請先選擇下方的『行為』，才能選學生喔！");
+            return;
+        }
+
+        let index = selectedSeatsArray.indexOf(seatNumber);
+
+        if (index === -1) {
+            selectedSeatsArray.push(seatNumber);
+            seatElement.classList.add('selected');
+        } else {
+            selectedSeatsArray.splice(index, 1);
+            seatElement.classList.remove('selected');
+        }
+    }
+
+    // --- 4. 傳送資料的功能 ---
+    function submitData() {
+        if (currentBehavior === "") {
+            alert("請先選擇行為！");
+            return;
+        }
+        if (selectedSeatsArray.length === 0) {
+            alert("請至少選擇一位學生！");
+            return;
+        }
+
+        let message = "📦 準備送出到試算表...\n\n";
+        message += "行為項目：" + currentBehavior + "\n";
+        message += "學生座號：" + selectedSeatsArray.sort().join(", "); 
+        
+        alert(message);
+        resetForm();
+    }
+
+    // --- 5. 送出後清空畫面的功能 ---
+    function resetForm() {
+        currentBehavior = "";
+        selectedSeatsArray = [];
+        
+        document.querySelectorAll('.behavior-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.seat').forEach(btn => btn.classList.remove('selected'));
+        
+        document.getElementById('status-message').innerText = "請先選擇下方的「行為」喔！";
+        document.getElementById('status-message').style.color = "#d93025";
+    }
+
+    window.onload = generateSeats;
+
+</script>
 </body>
 </html>
