@@ -4,99 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>課堂共同評分系統</title>
-    <!-- 引入 Tailwind CSS 來快速打造美觀的介面 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 FontAwesome 圖示庫 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* 一些簡單的自訂動畫過渡效果 */
         .fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* 隱藏捲軸但保留滾動功能，讓畫面更乾淨 */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        /* Modal background */
+        .modal-bg { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
 
-    <!-- 頂部導覽列：用來切換測試角色 -->
+    <!-- 頂部導覽列 -->
     <nav class="bg-blue-600 text-white shadow-md p-4 sticky top-0 z-50">
         <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-2xl font-bold"><i class="fa-solid fa-star-half-stroke mr-2"></i>課堂共同評分系統</h1>
-            <div class="flex gap-2 bg-blue-700 p-1 rounded-lg">
-                <button onclick="switchRole('login')" class="px-4 py-2 rounded transition-colors text-sm font-medium hover:bg-blue-500" id="btn-login">登入畫面</button>
-                <button onclick="switchRole('student')" class="px-4 py-2 rounded transition-colors text-sm font-medium hover:bg-blue-500" id="btn-student">學生視角</button>
-                <button onclick="switchRole('teacher')" class="px-4 py-2 rounded transition-colors text-sm font-medium hover:bg-blue-500" id="btn-teacher">老師後台</button>
-                <button onclick="switchRole('screen')" class="px-4 py-2 rounded transition-colors text-sm font-medium hover:bg-blue-500" id="btn-screen">大螢幕展示</button>
+            <h1 class="text-2xl font-bold flex items-center gap-3">
+                <i class="fa-solid fa-star-half-stroke"></i>課堂共同評分系統
+                <span id="global-connection-status" class="bg-red-500/20 text-red-100 text-xs font-bold px-3 py-1 rounded-full border border-red-200/30">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 未登入雲端
+                </span>
+            </h1>
+            <!-- 測試用快速切換按鈕 (正式上線可隱藏) -->
+            <div class="flex gap-2 bg-blue-700 p-1 rounded-lg opacity-50 hover:opacity-100 transition-opacity" title="開發者快速導覽">
+                <button onclick="switchRole('login')" class="px-2 py-1 rounded text-xs font-medium hover:bg-blue-500" id="btn-login">登入</button>
+                <button onclick="switchRole('role-select')" class="px-2 py-1 rounded text-xs font-medium hover:bg-blue-500" id="btn-role-select">身分</button>
+                <button onclick="switchRole('student')" class="px-2 py-1 rounded text-xs font-medium hover:bg-blue-500" id="btn-student">學生</button>
+                <button onclick="switchRole('teacher')" class="px-2 py-1 rounded text-xs font-medium hover:bg-blue-500" id="btn-teacher">老師</button>
+                <button onclick="switchRole('screen')" class="px-2 py-1 rounded text-xs font-medium hover:bg-blue-500" id="btn-screen">大螢幕</button>
             </div>
         </div>
     </nav>
 
     <!-- 主要內容區塊 -->
-    <main class="flex-grow p-4 md:p-8 max-w-6xl mx-auto w-full">
+    <main class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
         
-        <!-- 視圖 1：登入選擇畫面 -->
+        <!-- 視圖 1：統一登入畫面 -->
         <div id="view-login" class="view-section hidden fade-in max-w-md mx-auto mt-10">
-            <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 text-center">
-                <div class="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600 text-3xl">
-                    <i class="fa-brands fa-google"></i>
+            <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 text-center">
+                <div class="bg-blue-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600 text-4xl shadow-inner">
+                    <i class="fa-solid fa-graduation-cap"></i>
                 </div>
-                <h2 class="text-2xl font-bold mb-2">學生登入</h2>
-                <p class="text-gray-500 mb-8 text-sm">請使用學校 Google 帳號登入系統</p>
+                <h2 class="text-3xl font-extrabold mb-3 text-gray-800">系統登入</h2>
+                <p class="text-gray-500 mb-8 text-sm">請使用您的 Google 帳號進行身分驗證</p>
                 
-                <div class="mb-6 text-left">
-                    <label class="block text-gray-700 font-medium mb-2">請選擇您所屬的組別：</label>
-                    <select id="login-group-select" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500">
-                        <option value="1">第 1 組</option>
-                        <option value="2">第 2 組</option>
-                        <option value="3">第 3 組</option>
-                        <option value="4">第 4 組</option>
-                        <option value="5">第 5 組</option>
-                        <option value="6">第 6 組</option>
-                    </select>
-                </div>
-                
-                <!-- 修改為真實 Google 登入功能 -->
-                <button onclick="realGoogleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-lg">
-                    <i class="fa-brands fa-google"></i> 使用 Google 帳號登入並開始
+                <button onclick="realGoogleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition-all flex justify-center items-center gap-3 shadow-lg hover:shadow-blue-500/30 transform hover:-translate-y-1 text-lg">
+                    <i class="fa-brands fa-google text-xl"></i> Google 帳號登入
                 </button>
             </div>
         </div>
 
-        <!-- 視圖 2：學生評分介面 -->
+        <!-- 視圖 2：身分選擇畫面 (登入後) -->
+        <div id="view-role-select" class="view-section hidden fade-in max-w-2xl mx-auto mt-10">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">請選擇您的身分</h2>
+                <p class="text-gray-500 mt-2" id="welcome-user-name">歡迎！</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 學生入口 -->
+                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 text-center hover:border-blue-300 transition-colors">
+                    <div class="text-5xl mb-4 text-blue-500"><i class="fa-solid fa-users"></i></div>
+                    <h3 class="text-2xl font-bold mb-4">學生進入</h3>
+                    <div class="text-left mb-6">
+                        <label class="block text-gray-700 font-medium mb-2 text-sm">請選擇您的姓名：</label>
+                        <select id="student-name-select" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 bg-gray-50">
+                            <!-- JS 動態生成 -->
+                        </select>
+                        <p class="text-xs text-gray-400 mt-2">* 若找不到名字，請聯繫老師</p>
+                    </div>
+                    <button onclick="enterAsStudent()" class="w-full bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                        進入評分系統
+                    </button>
+                </div>
+
+                <!-- 老師入口 -->
+                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 text-center hover:border-purple-300 transition-colors">
+                    <div class="text-5xl mb-4 text-purple-500"><i class="fa-solid fa-chalkboard-user"></i></div>
+                    <h3 class="text-2xl font-bold mb-4">老師進入 (管理後台)</h3>
+                    <div class="text-left mb-6">
+                        <label class="block text-gray-700 font-medium mb-2 text-sm">請輸入後台密碼：</label>
+                        <input type="password" id="teacher-password-input" placeholder="預設密碼 1234" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 bg-gray-50">
+                    </div>
+                    <button onclick="enterAsTeacher()" class="w-full bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white font-bold py-3 px-4 rounded-xl transition-colors">
+                        登入後台
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 視圖 3：學生評分介面 -->
         <div id="view-student" class="view-section hidden fade-in max-w-2xl mx-auto">
-            <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
-                <div class="flex justify-between items-center mb-6 border-b pb-4">
-                    <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>進行評分</h2>
-                    <span id="student-info" class="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">我是第 X 組</span>
+            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 relative">
+                <!-- 登出按鈕 -->
+                <button onclick="studentLogout()" class="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors" title="登出離開">
+                    <i class="fa-solid fa-right-from-bracket text-xl"></i>
+                </button>
+
+                <div class="mb-6 border-b pb-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-3"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>進行評分</h2>
+                    <div class="flex flex-wrap gap-2">
+                        <span id="student-identity-badge" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm">座號 姓名</span>
+                        <span id="student-group-badge" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold text-sm">第 X 組</span>
+                    </div>
                 </div>
 
                 <div class="mb-6">
                     <label class="block text-gray-700 font-medium mb-2">請選擇您現在要評分的對象：</label>
-                    <select id="target-group-select" onchange="checkIfVoted()" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 text-lg">
+                    <select id="target-group-select" onchange="checkIfVoted()" class="w-full border-gray-300 rounded-xl shadow-sm p-4 border focus:ring-blue-500 focus:border-blue-500 text-lg bg-gray-50 font-bold">
                         <!-- 選項由 JS 動態生成 -->
                     </select>
                 </div>
 
                 <!-- 已經評分過的提示訊息 -->
-                <div id="already-voted-msg" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-8 rounded-xl text-center mb-6">
-                    <i class="fa-solid fa-circle-check text-4xl mb-3"></i>
-                    <p class="text-lg font-bold">您已經完成對此組的評分！</p>
-                    <p class="text-sm mt-1">感謝您的回饋，請切換至其他組別繼續評分。</p>
+                <div id="already-voted-msg" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-8 rounded-2xl text-center mb-6">
+                    <i class="fa-solid fa-circle-check text-5xl mb-4 text-green-500"></i>
+                    <p class="text-xl font-bold">您已經完成對此組的評分！</p>
+                    <p class="text-sm mt-2 opacity-80">感謝您的回饋，請切換至其他組別繼續評分。</p>
                 </div>
 
                 <!-- 評分表單 -->
                 <div id="rating-form-container">
-                    <form id="rating-form" onsubmit="submitVote(event)" class="space-y-6">
+                    <form id="rating-form" onsubmit="submitVote(event)" class="space-y-5">
                         <div id="criteria-inputs" class="space-y-4">
                             <!-- 評分項目由 JS 動態生成 -->
                         </div>
                         
-                        <div class="pt-4 border-t">
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:-translate-y-1 text-lg">
-                                送出評分
+                        <div class="pt-6 mt-4">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg transform transition hover:-translate-y-1 text-xl tracking-wider">
+                                <i class="fa-solid fa-paper-plane mr-2"></i> 送出評分
                             </button>
                         </div>
                     </form>
@@ -104,13 +143,32 @@
             </div>
         </div>
 
-        <!-- 視圖 3：老師後台管理 -->
+        <!-- 視圖 4：老師後台管理 -->
         <div id="view-teacher" class="view-section hidden fade-in">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- 左側：設定區 -->
-                <div class="md:col-span-1 space-y-6">
-                    <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
-                        <h2 class="text-xl font-bold mb-4 border-b pb-2"><i class="fa-solid fa-gear text-gray-500 mr-2"></i>系統設定</h2>
+            <div class="flex justify-between items-end mb-6">
+                <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-chalkboard-user text-purple-600 mr-2"></i>教師管理後台</h2>
+                <button onclick="teacherLogout()" class="text-gray-500 hover:text-red-500 font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i>登出後台</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 中左區塊：大螢幕控制 & 設定 -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- 大螢幕控制 -->
+                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100 text-center">
+                        <h3 class="text-lg font-bold mb-4 text-left border-b pb-2"><i class="fa-solid fa-tv text-blue-500 mr-2"></i>大螢幕控制</h3>
+                        <div class="flex flex-col gap-3">
+                            <button onclick="togglePublish(false)" id="btn-hide-results" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl transition-colors">
+                                <i class="fa-solid fa-eye-slash mr-2"></i>隱藏成績 (收集中)
+                            </button>
+                            <button onclick="togglePublish(true)" id="btn-show-results" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-xl shadow transition-colors">
+                                <i class="fa-solid fa-trophy mr-2"></i>公布排行榜！
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 系統設定 -->
+                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+                        <h3 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-gear text-gray-500 mr-2"></i>系統參數設定</h3>
                         
                         <div class="flex items-center justify-between mb-4">
                             <span class="text-gray-700 font-medium">允許同組互評</span>
@@ -119,84 +177,127 @@
                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 font-medium mb-1 text-sm">修改後台登入密碼</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="setting-password" class="w-full border-gray-300 rounded p-2 text-sm border focus:ring-blue-500">
+                                <button onclick="updateTeacherPassword()" class="bg-purple-100 text-purple-700 px-3 rounded text-sm hover:bg-purple-200 font-bold">儲存</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
-                        <h2 class="text-xl font-bold mb-4 border-b pb-2"><i class="fa-solid fa-list-check text-gray-500 mr-2"></i>評分項目設定</h2>
-                        <div id="teacher-criteria-list" class="space-y-3 mb-4">
+                    <!-- 評分項目設定 -->
+                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+                        <h3 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-list-check text-gray-500 mr-2"></i>評分項目與權重</h3>
+                        <div id="teacher-criteria-list" class="space-y-2 mb-2">
                             <!-- JS 動態生成 -->
                         </div>
-                        <p class="text-xs text-gray-500 mb-4">* 此處可設定各單元的配分權重 (最高分數)</p>
+                        <p class="text-xs text-gray-400 mt-2">* 修改滿分後系統將自動儲存</p>
                     </div>
                 </div>
 
-                <!-- 右側：控制台與即時數據 -->
-                <div class="md:col-span-2 space-y-6">
-                    <div class="bg-white p-6 rounded-2xl shadow border border-gray-100 text-center">
-                        <h2 class="text-xl font-bold mb-6 text-left"><i class="fa-solid fa-tv text-gray-500 mr-2"></i>大螢幕控制</h2>
-                        
-                        <div class="flex justify-center gap-4">
-                            <button onclick="togglePublish(false)" id="btn-hide-results" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg transition-colors w-1/2">
-                                <i class="fa-solid fa-eye-slash mr-2"></i>隱藏成績 (收集中)
-                            </button>
-                            <button onclick="togglePublish(true)" id="btn-show-results" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-colors w-1/2">
-                                <i class="fa-solid fa-trophy mr-2"></i>公布排行榜！
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-6 rounded-2xl shadow border border-gray-100">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold"><i class="fa-solid fa-database text-gray-500 mr-2"></i>即時收集狀況 (僅老師可見)</h2>
-                            <!-- 新增：匯出成績的按鈕 -->
+                <!-- 右側區塊：學生名單與即時狀態 -->
+                <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- 學生名單與即時評分追蹤 -->
+                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                            <h3 class="text-xl font-bold"><i class="fa-solid fa-users-viewfinder text-indigo-500 mr-2"></i>學生名單與即時狀態</h3>
                             <button onclick="exportToCSV()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center">
-                                <i class="fa-solid fa-file-csv mr-2"></i>匯出 CSV
+                                <i class="fa-solid fa-file-csv mr-2"></i>匯出成績 CSV
                             </button>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
+
+                        <!-- 新增學生表單 -->
+                        <div class="bg-indigo-50 p-4 rounded-xl mb-6 border border-indigo-100">
+                            <h4 class="text-sm font-bold text-indigo-800 mb-2">快速新增學生</h4>
+                            <div class="flex flex-wrap gap-2 items-end">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">座號</label>
+                                    <input type="number" id="add-student-seat" class="w-20 p-2 border rounded text-sm" placeholder="如: 1">
+                                </div>
+                                <div class="flex-grow">
+                                    <label class="block text-xs text-gray-600 mb-1">姓名</label>
+                                    <input type="text" id="add-student-name" class="w-full p-2 border rounded text-sm" placeholder="輸入姓名">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">所屬組別</label>
+                                    <input type="number" id="add-student-group" class="w-24 p-2 border rounded text-sm" placeholder="如: 1">
+                                </div>
+                                <button onclick="addStudent()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded shadow">
+                                    <i class="fa-solid fa-plus mr-1"></i> 新增
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 學生狀態表格 -->
+                        <div class="overflow-x-auto rounded-xl border border-gray-200">
+                            <table class="w-full text-left border-collapse text-sm">
                                 <thead>
-                                    <tr class="bg-gray-100">
-                                        <th class="p-3 rounded-tl-lg">報告組別</th>
-                                        <th class="p-3">已收到評分份數</th>
-                                        <th class="p-3 rounded-tr-lg">目前平均總分</th>
+                                    <tr class="bg-gray-100 text-gray-700">
+                                        <th class="p-3 w-16 text-center">狀態</th>
+                                        <th class="p-3">座號 姓名</th>
+                                        <th class="p-3 text-center">組別</th>
+                                        <th class="p-3 text-center">已評組數</th>
+                                        <th class="p-3 text-center">操作</th>
                                     </tr>
                                 </thead>
-                                <tbody id="teacher-stats-table">
+                                <tbody id="teacher-students-table" class="divide-y divide-gray-200">
                                     <!-- JS 動態生成 -->
                                 </tbody>
                             </table>
                         </div>
                     </div>
+
+                    <!-- 各組成績總覽 -->
+                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
+                        <h3 class="text-xl font-bold mb-4"><i class="fa-solid fa-chart-column text-green-500 mr-2"></i>各組得票與成績總覽</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-50 border-b">
+                                        <th class="p-3">報告組別</th>
+                                        <th class="p-3 text-center">收到評分份數</th>
+                                        <th class="p-3 text-center">目前平均總分</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teacher-stats-table" class="divide-y divide-gray-100">
+                                    <!-- JS 動態生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- 視圖 4：大螢幕展示 (結果端) -->
-        <div id="view-screen" class="view-section hidden fade-in max-w-4xl mx-auto">
+        <!-- 視圖 5：大螢幕展示 (結果端) -->
+        <div id="view-screen" class="view-section hidden fade-in max-w-5xl mx-auto">
             <div class="bg-white p-8 md:p-12 rounded-3xl shadow-2xl border border-gray-100 text-center min-h-[60vh] flex flex-col justify-center">
                 
                 <!-- 尚未公布：顯示進度 -->
                 <div id="screen-progress" class="space-y-6">
-                    <div class="inline-block bg-blue-100 text-blue-600 p-4 rounded-full mb-4">
-                        <i class="fa-solid fa-spinner fa-spin text-5xl"></i>
+                    <div class="inline-block bg-blue-50 text-blue-600 p-6 rounded-full mb-4 shadow-inner">
+                        <i class="fa-solid fa-spinner fa-spin text-6xl"></i>
                     </div>
-                    <h2 class="text-4xl font-bold text-gray-800">同學報告中 / 評分收集中</h2>
-                    <p class="text-xl text-gray-500 mt-4">請台下同學開啟 Chromebook 進行評分</p>
+                    <h2 class="text-5xl font-extrabold text-gray-800">同學報告中</h2>
+                    <p class="text-2xl text-gray-500 mt-4">請台下同學開啟裝置進行評分</p>
                     
-                    <div class="mt-12">
-                        <p class="text-2xl font-bold text-blue-600 mb-2">目前系統已收到 <span id="total-votes-count" class="text-5xl mx-2 text-red-500">0</span> 份評分</p>
-                        <div class="w-full bg-gray-200 rounded-full h-4 mt-4 max-w-lg mx-auto overflow-hidden">
-                            <div id="progress-bar-fill" class="bg-blue-600 h-4 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    <div class="mt-16 bg-gray-50 py-8 rounded-3xl border border-gray-100">
+                        <p class="text-2xl font-bold text-gray-600 mb-4">目前系統已收到 <span id="total-votes-count" class="text-6xl mx-3 text-blue-600 font-black">0</span> 份評分</p>
+                        <div class="w-full bg-gray-200 rounded-full h-6 mt-6 max-w-2xl mx-auto overflow-hidden shadow-inner relative">
+                            <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full transition-all duration-1000" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- 已經公布：顯示排行榜 -->
                 <div id="screen-leaderboard" class="hidden w-full">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-8"><i class="fa-solid fa-crown text-yellow-500 mr-3"></i>各組評分排行榜</h2>
+                    <h2 class="text-5xl font-extrabold text-gray-800 mb-12"><i class="fa-solid fa-crown text-yellow-500 mr-4"></i>各組評分排行榜</h2>
                     
-                    <div id="leaderboard-bars" class="space-y-6 text-left">
+                    <div id="leaderboard-bars" class="space-y-8 text-left max-w-4xl mx-auto">
                         <!-- 排行榜長條圖由 JS 動態生成 -->
                     </div>
                 </div>
@@ -205,16 +306,33 @@
 
     </main>
 
+    <!-- Modal: 查看學生的評分明細 -->
+    <div id="vote-details-modal" class="fixed inset-0 modal-bg hidden z-50 flex items-center justify-center fade-in p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg" id="modal-student-name">學生評分紀錄</h3>
+                <button onclick="closeVoteModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-grow bg-gray-50" id="modal-votes-list">
+                <!-- 評分紀錄列表 -->
+            </div>
+            <div class="p-4 border-t text-center bg-white">
+                <button onclick="closeVoteModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-xl transition-colors">關閉</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         /**
          * 系統核心狀態
          */
         const state = {
-            currentStudentGroup: 1, 
+            currentStudent: null, // { id, seat, name, group }
             settings: {
                 allowSelfRating: false, 
                 totalGroups: 6,         
-                isPublished: false      
+                isPublished: false,
+                teacherPassword: '1234' 
             },
             criteria: [
                 { id: 'c1', name: '內容豐富度與深度', maxScore: 10 },
@@ -223,25 +341,23 @@
                 { id: 'c4', name: '時間掌控', maxScore: 5 },
                 { id: 'c5', name: '團隊合作與默契', maxScore: 5 }
             ],
-            votes: [] 
+            votes: [],
+            students: [] // 學生名單
         };
 
-        // 初始化：網頁載入時執行
+        // 初始化
         window.onload = () => {
             switchRole('login');
-            renderTeacherCriteria();
-            updateTeacherStats();
             initFirebase(); 
         };
 
-        // --- Firebase 雲端同步邏輯 ---
-        let db, auth, currentUser, votesRef, settingsRef, updateDocFn;
-        // 為了確保資料路徑不衝突，我們依然給予一個 appId 做區隔
-        const appId = "school-peer-eval-main";
+        // --- Firebase 雲端邏輯 ---
+        let db, auth, currentUser, votesRef, settingsRef, studentsRef, updateDocFn, deleteDocFn, docFn;
+        const appId = "school-peer-eval-pro"; // 更新 AppId 以免與舊資料衝突
 
         async function initFirebase() {
             try {
-                // 🏫 這裡已經換成了老師您的專屬資料庫鑰匙！
+                // 您的專屬資料庫鑰匙
                 const firebaseConfig = {
                   apiKey: "AIzaSyB4LN9SoxfsXDQrpAaJAK5OTYAtFeldx28",
                   authDomain: "school-peer-eval.firebaseapp.com",
@@ -253,16 +369,16 @@
                 };
 
                 const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
-                // 引入 Google 彈出視窗登入所需的套件
                 const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-                const { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
+                const { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
 
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
-                // 將工具掛載到 window，供外部 function 使用
                 updateDocFn = updateDoc;
+                deleteDocFn = deleteDoc;
+                docFn = doc;
                 window.addDocFn = addDoc; 
                 window.signInWithPopup = signInWithPopup;
                 window.GoogleAuthProvider = GoogleAuthProvider;
@@ -270,13 +386,30 @@
 
                 votesRef = collection(db, 'artifacts', appId, 'public', 'data', 'votes');
                 settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main');
+                studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
 
-                // 監聽登入狀態
                 onAuthStateChanged(auth, (user) => {
                     currentUser = user;
-                    // 若有登入（包含老師大螢幕端若也是用 Google 登入），就啟動資料監聽
+                    const globalStatus = document.getElementById('global-connection-status');
+                    
                     if (user) {
+                        if (globalStatus) {
+                            globalStatus.className = "bg-green-500/20 text-green-100 text-xs font-bold px-3 py-1 rounded-full border border-green-200/30";
+                            globalStatus.innerHTML = '<i class="fa-solid fa-cloud-check mr-1"></i> 雲端已連線';
+                        }
+                        document.getElementById('welcome-user-name').innerText = `歡迎！ ${user.displayName || user.email}`;
                         setupListeners({ onSnapshot, setDoc });
+                        
+                        // 若從登入畫面進來，自動跳轉身分選擇
+                        if(!document.getElementById('view-login').classList.contains('hidden')) {
+                            switchRole('role-select');
+                        }
+                    } else {
+                        if (globalStatus) {
+                            globalStatus.className = "bg-red-500/20 text-red-100 text-xs font-bold px-3 py-1 rounded-full border border-red-200/30";
+                            globalStatus.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> 未登入雲端';
+                        }
+                        switchRole('login');
                     }
                 });
 
@@ -286,63 +419,37 @@
             }
         }
 
-        /**
-         * 🏫 真實的 Google 帳號登入與網域防護邏輯
-         */
         async function realGoogleLogin() {
             if (!auth || !window.GoogleAuthProvider) {
-                alert("系統正在初始化連線中，請稍後幾秒再點擊！");
+                alert("系統正在初始化，請稍後幾秒再點擊！");
                 return;
             }
-            
             const provider = new window.GoogleAuthProvider();
-            // 強制提示選擇帳號，避免學生被自動登入上一個人的帳號
             provider.setCustomParameters({ prompt: 'select_account' }); 
 
             try {
                 const result = await window.signInWithPopup(auth, provider);
-                const user = result.user;
-
-                // ------------------------------------------------------------------
-                // ⚠️ 老師請注意：這裡可以設定貴校的專屬網域，防堵外人登入
-                // 測試期間，如果您是用自己的個人 Google 帳號測試，請先改為 "@gmail.com"
-                // 正式上線給學生用時，再改回 "@school.edu.tw" 或貴校真實的網域
-                // ------------------------------------------------------------------
+                // 網域防護 (請於正式上線時修改為學校網域)
                 const schoolDomain = "@gmail.com"; 
-                
-                if (!user.email.endsWith(schoolDomain)) {
-                    alert(`⚠️ 權限錯誤！\n請使用學校配發的 Google 帳號 (${schoolDomain}) 登入。\n您目前使用的帳號是：${user.email}`);
-                    await window.signOut(auth); // 立刻踢出該不合格的帳號
+                if (!result.user.email.endsWith(schoolDomain)) {
+                    alert(`⚠️ 權限錯誤！\n請使用學校配發的 Google 帳號 (${schoolDomain}) 登入。`);
+                    await window.signOut(auth); 
                     return;
                 }
-
-                alert(`✅ 登入成功！\n歡迎 ${user.displayName} 同學`);
-                
-                // 記錄學生選擇的組別，然後切換畫面
-                state.currentStudentGroup = parseInt(document.getElementById('login-group-select').value);
-                switchRole('student');
-
-                // 登入成功後，手動觸發資料監聽 (防呆)
-                setupListeners({ onSnapshot: (await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')).onSnapshot, 
-                                 setDoc: (await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')).setDoc });
-
             } catch (error) {
-                console.error("登入失敗:", error);
-                // 捕捉使用者取消視窗等錯誤
                 if(error.code !== 'auth/popup-closed-by-user') {
-                    alert("登入過程中發生錯誤，請重試！(" + error.message + ")");
+                    alert("登入過程中發生錯誤，請重試！");
                 }
             }
         }
 
         function setupListeners({ onSnapshot, setDoc }) {
-            // 監聽老師設定
+            // 監聽設定
             onSnapshot(settingsRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    state.settings = { ...state.settings, ...data };
-                    
+                    state.settings = { ...state.settings, ...docSnap.data() };
                     document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
+                    document.getElementById('setting-password').value = state.settings.teacherPassword;
                     
                     if(state.settings.isPublished) {
                         document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
@@ -353,63 +460,151 @@
                     }
                     if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
                 } else {
-                    setDoc(settingsRef, state.settings); 
+                    setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
                 }
-            }, (err) => console.error("設定監聽錯誤:", err));
+            }, (err) => console.error(err));
 
-            // 監聽學生評分
+            // 監聽學生名單
+            onSnapshot(studentsRef, (snapshot) => {
+                state.students = [];
+                snapshot.forEach(doc => {
+                    state.students.push({ id: doc.id, ...doc.data() });
+                });
+                // 座號排序
+                state.students.sort((a, b) => a.seat - b.seat);
+                
+                populateStudentDropdown();
+                if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
+            }, (err) => console.error(err));
+
+            // 監聽評分
             onSnapshot(votesRef, (snapshot) => {
                 state.votes = [];
                 snapshot.forEach(doc => {
                     state.votes.push({ id: doc.id, ...doc.data() });
                 });
                 
-                if(!document.getElementById('view-teacher').classList.contains('hidden')) updateTeacherStats();
+                if(!document.getElementById('view-teacher').classList.contains('hidden')) {
+                    updateTeacherStats();
+                    renderTeacherStudents(); // 重新渲染名單以更新「已評分數」
+                }
                 if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
-                
-                // 如果在學生畫面，也順便檢查是否被別人投票影響(雖然通常只管自己)
                 if(!document.getElementById('view-student').classList.contains('hidden')) checkIfVoted();
-                
-            }, (err) => console.error("評分監聽錯誤:", err));
+            }, (err) => console.error(err));
         }
 
-        /**
-         * 1. 介面切換邏輯
-         */
+        // ==========================================
+        // UI 切換與身分驗證邏輯
+        // ==========================================
         function switchRole(roleId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById(`view-${roleId}`).classList.remove('hidden');
             
-            const btns = ['login', 'student', 'teacher', 'screen'];
+            // 測試用導覽列樣式
+            const btns = ['login', 'role-select', 'student', 'teacher', 'screen'];
             btns.forEach(btn => {
                 const el = document.getElementById(`btn-${btn}`);
+                if(!el) return;
                 if (btn === roleId) {
-                    el.classList.add('bg-blue-900', 'ring-2', 'ring-white');
+                    el.classList.add('bg-blue-900', 'ring-1', 'ring-white');
                     el.classList.remove('hover:bg-blue-500');
                 } else {
-                    el.classList.remove('bg-blue-900', 'ring-2', 'ring-white');
+                    el.classList.remove('bg-blue-900', 'ring-1', 'ring-white');
                     el.classList.add('hover:bg-blue-500');
                 }
             });
 
-            if (roleId === 'student') initStudentView();
+            if (roleId === 'teacher') {
+                renderTeacherCriteria();
+                updateTeacherStats();
+                renderTeacherStudents();
+            }
             if (roleId === 'screen') renderScreenView();
-            if (roleId === 'teacher') updateTeacherStats();
+            if (roleId === 'role-select') populateStudentDropdown();
         }
 
-        /**
-         * 3. 學生評分介面邏輯
-         */
+        function populateStudentDropdown() {
+            const select = document.getElementById('student-name-select');
+            if(!select) return;
+            select.innerHTML = '<option value="" disabled selected>-- 點擊選擇姓名 --</option>';
+            if(state.students.length === 0) {
+                select.innerHTML += '<option value="" disabled>目前無名單，請老師至後台新增</option>';
+            } else {
+                state.students.forEach(s => {
+                    select.innerHTML += `<option value="${s.id}">座號 ${s.seat} - ${s.name}</option>`;
+                });
+            }
+        }
+
+        // 👨‍🏫 老師登入驗證
+        function enterAsTeacher() {
+            const inputPw = document.getElementById('teacher-password-input').value;
+            if (inputPw === state.settings.teacherPassword) {
+                document.getElementById('teacher-password-input').value = '';
+                switchRole('teacher');
+            } else {
+                alert("❌ 密碼錯誤！請重新輸入。");
+            }
+        }
+
+        function teacherLogout() {
+            switchRole('role-select');
+        }
+
+        // 👩‍🎓 學生選擇姓名並進入
+        function enterAsStudent() {
+            const select = document.getElementById('student-name-select');
+            if (!select.value) {
+                alert("請先選擇您的姓名！");
+                return;
+            }
+            
+            const studentId = select.value;
+            const student = state.students.find(s => s.id === studentId);
+            if(student) {
+                state.currentStudent = student;
+                // 更新雲端狀態為上線
+                if(updateDocFn && docFn) {
+                    updateDocFn(docFn(db, studentsRef.path, student.id), { isOnline: true }).catch(e=>console.error(e));
+                }
+                initStudentView();
+                switchRole('student');
+            }
+        }
+
+        function studentLogout() {
+            if(state.currentStudent && updateDocFn && docFn) {
+                // 更新雲端狀態為離線
+                updateDocFn(docFn(db, studentsRef.path, state.currentStudent.id), { isOnline: false }).catch(e=>console.error(e));
+            }
+            state.currentStudent = null;
+            switchRole('role-select');
+        }
+
+        // 當關閉網頁時嘗試標記離線 (Best effort)
+        window.addEventListener('beforeunload', () => {
+            if(state.currentStudent && updateDocFn && docFn) {
+                updateDocFn(docFn(db, studentsRef.path, state.currentStudent.id), { isOnline: false });
+            }
+        });
+
+
+        // ==========================================
+        // 學生評分介面邏輯
+        // ==========================================
         function initStudentView() {
-            document.getElementById('student-info').innerText = `我是 第 ${state.currentStudentGroup} 組 成員`;
+            if(!state.currentStudent) return;
+            
+            document.getElementById('student-identity-badge').innerText = `座號 ${state.currentStudent.seat} ${state.currentStudent.name}`;
+            document.getElementById('student-group-badge').innerText = `第 ${state.currentStudent.group} 組`;
             
             const targetSelect = document.getElementById('target-group-select');
             targetSelect.innerHTML = '<option value="" disabled selected>-- 請選擇報告組別 --</option>';
             
             for (let i = 1; i <= state.settings.totalGroups; i++) {
-                let disabledStr = (!state.settings.allowSelfRating && i === state.currentStudentGroup) ? 'disabled' : '';
+                let disabledStr = (!state.settings.allowSelfRating && i === parseInt(state.currentStudent.group)) ? 'disabled' : '';
                 let label = `第 ${i} 組`;
-                if (i === state.currentStudentGroup) label += ' (您的組別)';
+                if (i === parseInt(state.currentStudent.group)) label += ' (您的組別)';
                 
                 targetSelect.innerHTML += `<option value="${i}" ${disabledStr}>${label}</option>`;
             }
@@ -419,14 +614,14 @@
             
             state.criteria.forEach(c => {
                 criteriaContainer.innerHTML += `
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <div class="flex justify-between items-center mb-2">
-                            <label class="font-bold text-gray-700 text-lg">${c.name}</label>
-                            <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">最高 ${c.maxScore} 分</span>
+                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="font-bold text-gray-800 text-lg">${c.name}</label>
+                            <span class="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-medium">最高 ${c.maxScore} 分</span>
                         </div>
                         <input type="number" id="score_${c.id}" name="${c.id}" min="0" max="${c.maxScore}" required
-                               class="w-full border-gray-300 rounded shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500 text-lg text-center"
-                               placeholder="請輸入分數 (0~${c.maxScore})">
+                               class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 text-xl text-center font-bold text-blue-700"
+                               placeholder="輸入 0~${c.maxScore} 分">
                     </div>
                 `;
             });
@@ -437,17 +632,11 @@
 
         function checkIfVoted() {
             const targetSelect = document.getElementById('target-group-select');
-            if (!targetSelect.value) return;
+            if (!targetSelect.value || !state.currentStudent) return;
             const targetId = parseInt(targetSelect.value);
 
-            // 真正的防作弊：檢查雲端資料庫中，這位 user.uid 是否已經對目標組別投過票
-            let hasVoted = false;
-            if (currentUser) {
-                hasVoted = state.votes.some(v => v.userId === currentUser.uid && v.targetGroup === targetId);
-            } else {
-                // 退回單機判斷
-                hasVoted = state.votes.some(v => v.raterGroup === state.currentStudentGroup && v.targetGroup === targetId);
-            }
+            // 防作弊：檢查這個 studentId 是否投過這組
+            const hasVoted = state.votes.some(v => v.studentId === state.currentStudent.id && v.targetGroup === targetId);
 
             if (hasVoted) {
                 document.getElementById('rating-form-container').classList.add('hidden');
@@ -461,8 +650,9 @@
 
         function submitVote(e) {
             e.preventDefault(); 
-            const targetId = parseInt(document.getElementById('target-group-select').value);
+            if(!state.currentStudent) return;
             
+            const targetId = parseInt(document.getElementById('target-group-select').value);
             let total = 0;
             let scores = {};
             
@@ -473,7 +663,10 @@
             });
 
             const newVote = {
-                raterGroup: state.currentStudentGroup,
+                studentId: state.currentStudent.id,
+                raterSeat: state.currentStudent.seat,
+                raterName: state.currentStudent.name,
+                raterGroup: state.currentStudent.group,
                 targetGroup: targetId,
                 scores: scores,
                 total: total,
@@ -481,10 +674,7 @@
             };
 
             if (window.addDocFn && votesRef) {
-                // 將學生的 Google 唯一識別碼存入，防止同一帳號重複投票
                 newVote.userId = currentUser ? currentUser.uid : 'anonymous';
-                newVote.userEmail = currentUser ? currentUser.email : 'unknown';
-                
                 window.addDocFn(votesRef, newVote).then(() => {
                     alert(`🎉 成功送出評分！\n您給予第 ${targetId} 組總分：${total} 分`);
                     checkIfVoted();
@@ -494,55 +684,162 @@
                 });
             } else {
                 state.votes.push(newVote);
-                alert(`🎉 成功送出評分！(單機模式)\n您給予第 ${targetId} 組總分：${total} 分`);
+                alert(`🎉 成功送出評分！(單機模式)`);
                 checkIfVoted();
             }
         }
 
-        /**
-         * 4. 老師後台邏輯與匯出功能
-         */
+
+        // ==========================================
+        // 老師後台邏輯
+        // ==========================================
+        function updateTeacherPassword() {
+            const newPw = document.getElementById('setting-password').value;
+            if(!newPw) return;
+            if(updateDocFn && settingsRef) {
+                updateDocFn(settingsRef, { teacherPassword: newPw })
+                .then(()=> alert("密碼已更新！"))
+                .catch(e=>console.error(e));
+            }
+        }
+
+        // --- 學生名單管理 ---
+        function addStudent() {
+            const seat = parseInt(document.getElementById('add-student-seat').value);
+            const name = document.getElementById('add-student-name').value.trim();
+            const group = parseInt(document.getElementById('add-student-group').value);
+
+            if(!seat || !name || !group) {
+                alert("請填寫完整的座號、姓名與組別！");
+                return;
+            }
+
+            const newStudent = { seat, name, group, isOnline: false };
+            
+            if(window.addDocFn && studentsRef) {
+                window.addDocFn(studentsRef, newStudent).then(()=>{
+                    document.getElementById('add-student-seat').value = '';
+                    document.getElementById('add-student-name').value = '';
+                    document.getElementById('add-student-group').value = '';
+                }).catch(e=>console.error(e));
+            }
+        }
+
+        function deleteStudent(id, name) {
+            if(confirm(`確定要刪除學生「${name}」嗎？`)) {
+                if(deleteDocFn && docFn) {
+                    deleteDocFn(docFn(db, studentsRef.path, id)).catch(e=>console.error(e));
+                }
+            }
+        }
+
+        function renderTeacherStudents() {
+            const tbody = document.getElementById('teacher-students-table');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            if(state.students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">目前尚無名單，請在上方新增</td></tr>';
+                return;
+            }
+
+            state.students.forEach(s => {
+                // 狀態燈號
+                const statusDot = s.isOnline 
+                    ? `<div class="w-3 h-3 bg-green-500 rounded-full mx-auto animate-pulse" title="在線上"></div>`
+                    : `<div class="w-3 h-3 bg-gray-300 rounded-full mx-auto" title="離線"></div>`;
+                
+                // 計算此學生投了幾份票
+                const studentVotes = state.votes.filter(v => v.studentId === s.id);
+                const votesCount = studentVotes.length;
+                
+                let voteBtnHtml = '';
+                if(votesCount > 0) {
+                    voteBtnHtml = `<button onclick="showVoteDetails('${s.id}', '${s.name}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200">查看明細</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-3 border-b">${statusDot}</td>
+                        <td class="p-3 border-b font-medium text-gray-800">${s.seat}. ${s.name}</td>
+                        <td class="p-3 border-b text-center"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">第 ${s.group} 組</span></td>
+                        <td class="p-3 border-b text-center">
+                            <span class="${votesCount>0 ? 'text-green-600 font-bold' : 'text-gray-400'}">${votesCount} 份</span>
+                        </td>
+                        <td class="p-3 border-b text-center space-x-2">
+                            ${voteBtnHtml}
+                            <button onclick="deleteStudent('${s.id}', '${s.name}')" class="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 查看明細 Modal
+        function showVoteDetails(studentId, studentName) {
+            document.getElementById('modal-student-name').innerText = `【${studentName}】 的評分紀錄`;
+            const listContainer = document.getElementById('modal-votes-list');
+            listContainer.innerHTML = '';
+
+            const studentVotes = state.votes.filter(v => v.studentId === studentId);
+            
+            if(studentVotes.length === 0) {
+                listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">尚無評分紀錄</p>';
+            } else {
+                studentVotes.forEach(v => {
+                    let scoreDetails = '';
+                    state.criteria.forEach(c => {
+                        scoreDetails += `<span class="inline-block bg-white border border-gray-200 text-gray-600 text-xs px-2 py-1 rounded mr-1 mb-1">${c.name}: <span class="font-bold text-gray-800">${v.scores[c.id]}</span></span>`;
+                    });
+
+                    const timeStr = new Date(v.timestamp).toLocaleTimeString();
+                    
+                    listContainer.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 mb-3 shadow-sm">
+                            <div class="flex justify-between items-center mb-2 border-b pb-2">
+                                <span class="font-bold text-lg text-indigo-700">給 第 ${v.targetGroup} 組</span>
+                                <span class="text-2xl font-black text-blue-600">${v.total} <span class="text-sm font-normal text-gray-500">分</span></span>
+                            </div>
+                            <div class="mb-2">
+                                ${scoreDetails}
+                            </div>
+                            <div class="text-right text-xs text-gray-400">評分時間: ${timeStr}</div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('vote-details-modal').classList.remove('hidden');
+        }
+
+        function closeVoteModal() {
+            document.getElementById('vote-details-modal').classList.add('hidden');
+        }
+
+
+        // --- 原本的設定與總覽邏輯保留 ---
         function toggleAllowSelf() {
             state.settings.allowSelfRating = document.getElementById('setting-allow-self').checked;
-            
-            if (updateDocFn && settingsRef) {
-                updateDocFn(settingsRef, { allowSelfRating: state.settings.allowSelfRating })
-                    .catch(e => console.error("設定更新失敗", e));
-            }
-            alert(`已${state.settings.allowSelfRating ? '開啟' : '關閉'}同組互評功能`);
+            if (updateDocFn && settingsRef) updateDocFn(settingsRef, { allowSelfRating: state.settings.allowSelfRating });
         }
 
         function togglePublish(status) {
             state.settings.isPublished = status;
-            
-            if (updateDocFn && settingsRef) {
-                updateDocFn(settingsRef, { isPublished: status })
-                    .catch(e => console.error("狀態更新失敗", e));
-            }
-            
-            if(status) {
-                document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
-                document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
-            } else {
-                document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
-                document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
-            }
-            if(!document.getElementById('view-screen').classList.contains('hidden')){
-                 renderScreenView();
-            }
+            if (updateDocFn && settingsRef) updateDocFn(settingsRef, { isPublished: status });
+            if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
         }
 
         function renderTeacherCriteria() {
             const list = document.getElementById('teacher-criteria-list');
+            if(!list) return;
             list.innerHTML = '';
             state.criteria.forEach(c => {
                 list.innerHTML += `
-                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border">
-                        <span class="font-medium">${c.name}</span>
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
+                        <span class="font-medium text-gray-700">${c.name}</span>
                         <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-500">滿分</span>
-                            <input type="number" class="w-16 p-1 border rounded text-center" value="${c.maxScore}" 
-                                   onchange="updateCriteriaMax('${c.id}', this.value)" title="修改滿分">
+                            <span class="text-gray-500">滿分</span>
+                            <input type="number" class="w-16 p-1 border rounded text-center focus:ring-blue-500" value="${c.maxScore}" 
+                                   onchange="updateCriteriaMax('${c.id}', this.value)">
                         </div>
                     </div>
                 `;
@@ -559,16 +856,12 @@
             for(let i=1; i<=state.settings.totalGroups; i++) {
                 stats[i] = { count: 0, totalSum: 0, avg: 0 };
             }
-
             state.votes.forEach(v => {
                 stats[v.targetGroup].count += 1;
                 stats[v.targetGroup].totalSum += v.total;
             });
-
             for(let i=1; i<=state.settings.totalGroups; i++) {
-                if(stats[i].count > 0) {
-                    stats[i].avg = (stats[i].totalSum / stats[i].count).toFixed(1);
-                }
+                if(stats[i].count > 0) stats[i].avg = (stats[i].totalSum / stats[i].count).toFixed(1);
             }
             return stats;
         }
@@ -576,29 +869,25 @@
         function updateTeacherStats() {
             const stats = getGroupStats();
             const tbody = document.getElementById('teacher-stats-table');
+            if(!tbody) return;
             tbody.innerHTML = '';
-            
             for(let i=1; i<=state.settings.totalGroups; i++) {
                 tbody.innerHTML += `
-                    <tr class="border-b">
-                        <td class="p-3 font-bold text-gray-700">第 ${i} 組</td>
-                        <td class="p-3">
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-4 font-bold text-gray-700">第 ${i} 組</td>
+                        <td class="p-4 text-center">
                             <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm font-semibold">${stats[i].count} 份</span>
                         </td>
-                        <td class="p-3 text-lg font-bold">${stats[i].avg} 分</td>
+                        <td class="p-4 text-center text-xl font-bold text-indigo-600">${stats[i].avg} <span class="text-sm font-normal text-gray-500">分</span></td>
                     </tr>
                 `;
             }
         }
 
         function exportToCSV() {
-            if (state.votes.length === 0) {
-                alert('⚠️ 目前還沒有收到任何評分資料喔！');
-                return;
-            }
-
+            if (state.votes.length === 0) { alert('⚠️ 目前還沒有資料喔！'); return; }
             let csvContent = "\uFEFF";
-            let headers = ["評分時間", "學生Email", "評分者", "被評組別", "總分"];
+            let headers = ["評分時間", "評分者座號", "評分者姓名", "評分者組別", "被評組別", "總分"];
             state.criteria.forEach(c => headers.push(c.name));
             csvContent += headers.join(",") + "\n";
 
@@ -606,14 +895,13 @@
                 const timeStr = v.timestamp ? new Date(v.timestamp).toLocaleString() : new Date().toLocaleString();
                 let row = [
                     `"${timeStr}"`,
-                    `"${v.userEmail || 'unknown'}"`,
+                    v.raterSeat || "",
+                    `"${v.raterName || 'unknown'}"`,
                     `"第 ${v.raterGroup} 組"`,
                     `"第 ${v.targetGroup} 組"`,
                     v.total
                 ];
-                state.criteria.forEach(c => {
-                    row.push(v.scores[c.id] || 0);
-                });
+                state.criteria.forEach(c => row.push(v.scores[c.id] || 0));
                 csvContent += row.join(",") + "\n";
             });
 
@@ -621,19 +909,17 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.setAttribute("href", url);
-            link.setAttribute("download", `課堂評分成績_${new Date().toLocaleDateString().replace(/\//g, '')}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
+            link.setAttribute("download", `共同評分成績明細_${new Date().toLocaleDateString().replace(/\//g, '')}.csv`);
             link.click();
-            document.body.removeChild(link);
         }
 
-        /**
-         * 5. 大螢幕展示邏輯
-         */
+        // ==========================================
+        // 大螢幕展示邏輯
+        // ==========================================
         function renderScreenView() {
             const progressView = document.getElementById('screen-progress');
             const leaderboardView = document.getElementById('screen-leaderboard');
+            if(!progressView || !leaderboardView) return;
             
             if (!state.settings.isPublished) {
                 progressView.classList.remove('hidden');
@@ -641,7 +927,8 @@
                 
                 document.getElementById('total-votes-count').innerText = state.votes.length;
                 
-                const expectedVotes = state.settings.totalGroups * (state.settings.totalGroups - 1); 
+                // 動態進度條計算：假設期望票數為 (全班人數 - 一組人數) * 組數，這裡簡單抓個預估
+                const expectedVotes = state.settings.totalGroups * 5; // 簡易預估值
                 let percent = (state.votes.length / expectedVotes) * 100;
                 if(percent > 100) percent = 100;
                 document.getElementById('progress-bar-fill').style.width = `${percent}%`;
@@ -651,7 +938,6 @@
                 leaderboardView.classList.remove('hidden');
                 
                 const stats = getGroupStats();
-                
                 let rankArray = [];
                 for(let i=1; i<=state.settings.totalGroups; i++) {
                     rankArray.push({ group: i, avg: parseFloat(stats[i].avg) || 0 });
@@ -664,20 +950,20 @@
 
                 rankArray.forEach((item, index) => {
                     const isFirst = index === 0 && item.avg > 0;
-                    const barColor = isFirst ? 'bg-yellow-400' : 'bg-blue-500';
-                    const icon = isFirst ? '<i class="fa-solid fa-trophy text-yellow-500 mr-2"></i>' : `<span class="text-gray-400 mr-2 w-6 inline-block">${index+1}.</span>`;
+                    const barColor = isFirst ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' : 'bg-gradient-to-r from-blue-400 to-blue-600';
+                    const icon = isFirst ? '<i class="fa-solid fa-trophy text-yellow-500 mr-2 text-3xl"></i>' : `<span class="text-gray-400 mr-4 w-8 inline-block text-2xl">${index+1}.</span>`;
                     
                     const widthPercent = (item.avg / maxPossibleScore) * 100;
 
                     barsContainer.innerHTML += `
-                        <div class="flex items-center gap-4 fade-in" style="animation-delay: ${index * 0.1}s">
-                            <div class="w-24 text-right font-bold text-xl text-gray-700">
+                        <div class="flex items-center gap-6 fade-in" style="animation-delay: ${index * 0.1}s">
+                            <div class="w-32 text-right font-bold text-2xl text-gray-700 flex items-center justify-end">
                                 ${icon} 第 ${item.group} 組
                             </div>
-                            <div class="flex-grow bg-gray-100 rounded-full h-8 overflow-hidden relative shadow-inner">
-                                <div class="${barColor} h-full rounded-full transition-all duration-1000 ease-out" style="width: 0%" data-target-width="${widthPercent}%"></div>
+                            <div class="flex-grow bg-gray-100 rounded-full h-10 overflow-hidden relative shadow-inner border border-gray-200">
+                                <div class="${barColor} h-full rounded-full transition-all duration-1000 ease-out shadow-md" style="width: 0%" data-target-width="${widthPercent}%"></div>
                             </div>
-                            <div class="w-20 text-right font-bold text-2xl ${isFirst ? 'text-yellow-600' : 'text-blue-600'}">
+                            <div class="w-24 text-right font-black text-4xl ${isFirst ? 'text-yellow-600' : 'text-blue-600'} drop-shadow-sm">
                                 ${item.avg.toFixed(1)}
                             </div>
                         </div>
@@ -685,10 +971,8 @@
                 });
 
                 setTimeout(() => {
-                    const bars = barsContainer.querySelectorAll('.bg-blue-500, .bg-yellow-400');
-                    bars.forEach(bar => {
-                        bar.style.width = bar.getAttribute('data-target-width');
-                    });
+                    const bars = barsContainer.querySelectorAll('[data-target-width]');
+                    bars.forEach(bar => { bar.style.width = bar.getAttribute('data-target-width'); });
                 }, 100);
             }
         }
