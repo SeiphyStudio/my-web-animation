@@ -442,40 +442,45 @@
 
         function setupListeners({ onSnapshot, setDoc }) {
             // 監聽設定
-            onSnapshot(settingsRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    state.settings = { ...state.settings, ...docSnap.data() };
-                    document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
-                    document.getElementById('setting-password').value = state.settings.teacherPassword;
-                    
-                    if(state.settings.isPublished) {
-                        document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
-                        document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
-                    } else {
-                        document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
-                        document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
-                    }
-                    if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
-                } else {
-                    setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
-                }
-            }, (err) => console.error(err));
-
-            // 監聽學生名單
-            onSnapshot(studentsRef, (snapshot) => {
-                state.students = [];
-                snapshot.forEach(doc => {
-                    state.students.push({ id: doc.id, ...doc.data() });
-                });
-                // 依照智慧萃取出的「座號」數字來排序
-                state.students.sort((a, b) => a.seat - b.seat);
+        onSnapshot(settingsRef, (docSnap) => {
+            if (docSnap.exists()) {
+                state.settings = { ...state.settings, ...docSnap.data() };
+                document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
+                document.getElementById('setting-password').value = state.settings.teacherPassword;
                 
-                populateStudentDropdown();
-                if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
-            }, (err) => console.error(err));
+                if(state.settings.isPublished) {
+                    document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
+                    document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
+                } else {
+                    document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
+                    document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
+                }
+                if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
+            } else {
+                setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
+            }
+        }, (err) => console.error(err));
 
-            // 監聽評分
-            onSnapshot(votesRef, (snapshot) => {
+        // 監聽學生名單
+        onSnapshot(studentsRef, (snapshot) => {
+            state.students = [];
+            snapshot.forEach(doc => {
+                state.students.push({ id: doc.id, ...doc.data() });
+            });
+            // 依照智慧萃取出的「座號」數字來排序
+            state.students.sort((a, b) => a.seat - b.seat);
+            
+            populateStudentDropdown();
+            if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
+        }, (err) => {
+            console.error("學生名單監聽錯誤:", err);
+            if (err.code === 'permission-denied') {
+                alert("⚠️ 雲端資料庫權限不足！\n請回 Firebase 後台開啟 Firestore Database，並設定為「測試模式」(Test Mode)。");
+            }
+        });
+
+        // 監聽評分
+        onSnapshot(votesRef, (snapshot) => {
                 state.votes = [];
                 snapshot.forEach(doc => {
                     state.votes.push({ id: doc.id, ...doc.data() });
@@ -744,6 +749,7 @@
             btn.disabled = true;
 
             let promises = [];
+            let validCount = 0;
             
             for (let line of lines) {
                 const name = line.trim();
@@ -756,15 +762,28 @@
                 // 建立資料，group 預設給 null，等學生登入自己選
                 const newStudent = { seat: seat, name: name, group: null, isOnline: false };
                 promises.push(window.addDocFn(studentsRef, newStudent));
+                validCount++;
             }
 
             try {
-                await Promise.all(promises);
-                alert(`✅ 成功匯入 ${promises.length} 位學生名單！`);
+                // 設定 8 秒的逾時機制，避免因為雲端未開通導致畫面永遠卡住
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error("TIMEOUT")), 8000)
+                );
+                
+                await Promise.race([Promise.all(promises), timeoutPromise]);
+                
+                alert(`✅ 成功匯入 ${validCount} 位學生名單！`);
                 document.getElementById('batch-student-names').value = ''; // 清空文字框
             } catch (e) {
-                console.error(e);
-                alert("匯入過程中發生錯誤，部分名單可能未成功寫入。");
+                console.error("匯入錯誤:", e);
+                if (e.message === "TIMEOUT") {
+                    alert("⚠️ 雲端連線逾時！\n名單雖已出現在下方，但「尚未同步到學生的裝置」。\n\n👉 發生原因：您尚未在 Firebase 建立資料庫，或測試模式已過期。\n請前往 Firebase 後台點擊「建立 Firestore Database」，並設定為「測試模式」。");
+                } else if (e.code === 'permission-denied') {
+                    alert("⚠️ 雲端權限不足！\n請確認您的 Firestore Database 規則已設定為「測試模式」(Test Mode)。");
+                } else {
+                    alert("匯入過程中發生錯誤，部分名單可能未成功寫入。");
+                }
             } finally {
                 btn.innerHTML = originalBtnText;
                 btn.disabled = false;
