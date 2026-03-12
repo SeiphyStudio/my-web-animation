@@ -214,7 +214,7 @@
                             </button>
                         </div>
 
-                        <!-- 批次新增學生表單 (改良版) -->
+                        <!-- 批次新增學生表單 -->
                         <div class="bg-indigo-50 p-5 rounded-2xl mb-6 border border-indigo-100 shadow-inner">
                             <h4 class="text-base font-bold text-indigo-800 mb-2"><i class="fa-solid fa-file-import mr-2"></i>批次匯入學生名單</h4>
                             <div class="flex flex-col gap-3">
@@ -228,7 +228,13 @@
                             </div>
                         </div>
 
-                        <!-- 學生狀態表格 -->
+                        <!-- 學生狀態表格與清空按鈕 -->
+                        <div class="flex justify-between items-end mb-2 px-1 mt-4">
+                            <span class="text-sm font-bold text-gray-700">名單與狀態列表</span>
+                            <button id="btn-delete-all-students" onclick="deleteAllStudents()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-bold py-1.5 px-3 rounded-lg border border-red-100 transition-colors flex items-center">
+                                <i class="fa-solid fa-trash-can mr-1"></i> 清空全部名單
+                            </button>
+                        </div>
                         <div class="overflow-x-auto rounded-xl border border-gray-200">
                             <table class="w-full text-left border-collapse text-sm">
                                 <thead>
@@ -442,45 +448,45 @@
 
         function setupListeners({ onSnapshot, setDoc }) {
             // 監聽設定
-        onSnapshot(settingsRef, (docSnap) => {
-            if (docSnap.exists()) {
-                state.settings = { ...state.settings, ...docSnap.data() };
-                document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
-                document.getElementById('setting-password').value = state.settings.teacherPassword;
-                
-                if(state.settings.isPublished) {
-                    document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
-                    document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
+            onSnapshot(settingsRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    state.settings = { ...state.settings, ...docSnap.data() };
+                    document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
+                    document.getElementById('setting-password').value = state.settings.teacherPassword;
+                    
+                    if(state.settings.isPublished) {
+                        document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
+                        document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
+                    } else {
+                        document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
+                        document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
+                    }
+                    if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
                 } else {
-                    document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
-                    document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
+                    setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
                 }
-                if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
-            } else {
-                setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
-            }
-        }, (err) => console.error(err));
+            }, (err) => console.error(err));
 
-        // 監聽學生名單
-        onSnapshot(studentsRef, (snapshot) => {
-            state.students = [];
-            snapshot.forEach(doc => {
-                state.students.push({ id: doc.id, ...doc.data() });
+            // 監聽學生名單
+            onSnapshot(studentsRef, (snapshot) => {
+                state.students = [];
+                snapshot.forEach(doc => {
+                    state.students.push({ id: doc.id, ...doc.data() });
+                });
+                // 依照智慧萃取出的「座號」數字來排序
+                state.students.sort((a, b) => a.seat - b.seat);
+                
+                populateStudentDropdown();
+                if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
+            }, (err) => {
+                console.error("學生名單監聽錯誤:", err);
+                if (err.code === 'permission-denied') {
+                    alert("⚠️ 雲端資料庫權限不足！\n請回 Firebase 後台開啟 Firestore Database，並設定為「測試模式」(Test Mode)。");
+                }
             });
-            // 依照智慧萃取出的「座號」數字來排序
-            state.students.sort((a, b) => a.seat - b.seat);
-            
-            populateStudentDropdown();
-            if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
-        }, (err) => {
-            console.error("學生名單監聽錯誤:", err);
-            if (err.code === 'permission-denied') {
-                alert("⚠️ 雲端資料庫權限不足！\n請回 Firebase 後台開啟 Firestore Database，並設定為「測試模式」(Test Mode)。");
-            }
-        });
 
-        // 監聽評分
-        onSnapshot(votesRef, (snapshot) => {
+            // 監聽評分
+            onSnapshot(votesRef, (snapshot) => {
                 state.votes = [];
                 snapshot.forEach(doc => {
                     state.votes.push({ id: doc.id, ...doc.data() });
@@ -790,10 +796,53 @@
             }
         }
 
+        // --- 單筆刪除學生 ---
         function deleteStudent(id, name) {
             if(confirm(`確定要刪除學生「${name}」嗎？`)) {
                 if(deleteDocFn && docFn) {
                     deleteDocFn(docFn(db, studentsRef.path, id)).catch(e=>console.error(e));
+                }
+            }
+        }
+
+        // --- 全部刪除 (清空名單) ---
+        async function deleteAllStudents() {
+            if (state.students.length === 0) {
+                alert("目前沒有名單可以刪除喔！");
+                return;
+            }
+            if (confirm("⚠️ 警告：確定要清空「全部」學生名單嗎？\n此操作會將下方列表的學生全部刪除，且無法復原！")) {
+                const btn = document.getElementById('btn-delete-all-students');
+                if(btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 刪除中...';
+                    btn.disabled = true;
+                }
+
+                if (deleteDocFn && docFn && db) {
+                    let promises = [];
+                    // 將所有的刪除動作加入等待清單
+                    state.students.forEach(s => {
+                        promises.push(deleteDocFn(docFn(db, studentsRef.path, s.id)));
+                    });
+
+                    try {
+                        await Promise.all(promises);
+                        // 刪除成功後 UI 會因為監聽器自動刷新，不需要特別寫 alert
+                    } catch (e) {
+                        console.error("全部刪除失敗", e);
+                        alert("刪除過程中發生錯誤，請檢查網路連線。");
+                    }
+                } else {
+                    // 單機測試模式的刪除
+                    state.students = [];
+                    renderTeacherStudents();
+                    populateStudentDropdown();
+                }
+                
+                // 恢復按鈕狀態
+                if(btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i> 清空全部名單';
+                    btn.disabled = false;
                 }
             }
         }
