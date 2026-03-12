@@ -107,7 +107,7 @@
                 <div class="mb-6 border-b pb-6">
                     <h2 class="text-2xl font-bold text-gray-800 mb-3"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>進行評分</h2>
                     <div class="flex flex-wrap gap-2">
-                        <span id="student-identity-badge" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm">座號 姓名</span>
+                        <span id="student-identity-badge" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm">座號與姓名</span>
                         <span id="student-group-badge" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold text-sm">第 X 組</span>
                     </div>
                 </div>
@@ -213,13 +213,9 @@
                         <div class="bg-indigo-50 p-4 rounded-xl mb-6 border border-indigo-100">
                             <h4 class="text-sm font-bold text-indigo-800 mb-2">快速新增學生</h4>
                             <div class="flex flex-wrap gap-2 items-end">
-                                <div>
-                                    <label class="block text-xs text-gray-600 mb-1">座號</label>
-                                    <input type="number" id="add-student-seat" class="w-20 p-2 border rounded text-sm" placeholder="如: 1">
-                                </div>
                                 <div class="flex-grow">
-                                    <label class="block text-xs text-gray-600 mb-1">姓名</label>
-                                    <input type="text" id="add-student-name" class="w-full p-2 border rounded text-sm" placeholder="輸入姓名">
+                                    <label class="block text-xs text-gray-600 mb-1">座號與姓名</label>
+                                    <input type="text" id="add-student-name" class="w-full p-2 border rounded text-sm" placeholder="如: 01王小明">
                                 </div>
                                 <div>
                                     <label class="block text-xs text-gray-600 mb-1">所屬組別</label>
@@ -237,7 +233,7 @@
                                 <thead>
                                     <tr class="bg-gray-100 text-gray-700">
                                         <th class="p-3 w-16 text-center">狀態</th>
-                                        <th class="p-3">座號 姓名</th>
+                                        <th class="p-3">座號與姓名</th>
                                         <th class="p-3 text-center">組別</th>
                                         <th class="p-3 text-center">已評組數</th>
                                         <th class="p-3 text-center">操作</th>
@@ -470,7 +466,7 @@
                 snapshot.forEach(doc => {
                     state.students.push({ id: doc.id, ...doc.data() });
                 });
-                // 座號排序
+                // 依照智慧萃取出的「座號」數字來排序
                 state.students.sort((a, b) => a.seat - b.seat);
                 
                 populateStudentDropdown();
@@ -531,7 +527,7 @@
                 select.innerHTML += '<option value="" disabled>目前無名單，請老師至後台新增</option>';
             } else {
                 state.students.forEach(s => {
-                    select.innerHTML += `<option value="${s.id}">座號 ${s.seat} - ${s.name}</option>`;
+                    select.innerHTML += `<option value="${s.id}">${s.name}</option>`;
                 });
             }
         }
@@ -595,7 +591,7 @@
         function initStudentView() {
             if(!state.currentStudent) return;
             
-            document.getElementById('student-identity-badge').innerText = `座號 ${state.currentStudent.seat} ${state.currentStudent.name}`;
+            document.getElementById('student-identity-badge').innerText = state.currentStudent.name;
             document.getElementById('student-group-badge').innerText = `第 ${state.currentStudent.group} 組`;
             
             const targetSelect = document.getElementById('target-group-select');
@@ -664,7 +660,7 @@
 
             const newVote = {
                 studentId: state.currentStudent.id,
-                raterSeat: state.currentStudent.seat,
+                raterSeat: state.currentStudent.seat, // 保留內部用作排序判斷
                 raterName: state.currentStudent.name,
                 raterGroup: state.currentStudent.group,
                 targetGroup: targetId,
@@ -705,20 +701,22 @@
 
         // --- 學生名單管理 ---
         function addStudent() {
-            const seat = parseInt(document.getElementById('add-student-seat').value);
-            const name = document.getElementById('add-student-name').value.trim();
+            const rawName = document.getElementById('add-student-name').value.trim();
             const group = parseInt(document.getElementById('add-student-group').value);
 
-            if(!seat || !name || !group) {
-                alert("請填寫完整的座號、姓名與組別！");
+            if(!rawName || !group) {
+                alert("請填寫完整的姓名與組別！");
                 return;
             }
 
-            const newStudent = { seat, name, group, isOnline: false };
+            // 自動從字串開頭萃取數字作為「座號」，若沒有數字則預設為 999 避免報錯
+            const match = rawName.match(/^\s*(\d+)/);
+            const seat = match ? parseInt(match[1], 10) : 999;
+
+            const newStudent = { seat: seat, name: rawName, group: group, isOnline: false };
             
             if(window.addDocFn && studentsRef) {
                 window.addDocFn(studentsRef, newStudent).then(()=>{
-                    document.getElementById('add-student-seat').value = '';
                     document.getElementById('add-student-name').value = '';
                     document.getElementById('add-student-group').value = '';
                 }).catch(e=>console.error(e));
@@ -761,7 +759,7 @@
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="p-3 border-b">${statusDot}</td>
-                        <td class="p-3 border-b font-medium text-gray-800">${s.seat}. ${s.name}</td>
+                        <td class="p-3 border-b font-medium text-gray-800">${s.name}</td>
                         <td class="p-3 border-b text-center"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">第 ${s.group} 組</span></td>
                         <td class="p-3 border-b text-center">
                             <span class="${votesCount>0 ? 'text-green-600 font-bold' : 'text-gray-400'}">${votesCount} 份</span>
@@ -887,7 +885,7 @@
         function exportToCSV() {
             if (state.votes.length === 0) { alert('⚠️ 目前還沒有資料喔！'); return; }
             let csvContent = "\uFEFF";
-            let headers = ["評分時間", "評分者座號", "評分者姓名", "評分者組別", "被評組別", "總分"];
+            let headers = ["評分時間", "評分者", "評分者組別", "被評組別", "總分"];
             state.criteria.forEach(c => headers.push(c.name));
             csvContent += headers.join(",") + "\n";
 
@@ -895,7 +893,6 @@
                 const timeStr = v.timestamp ? new Date(v.timestamp).toLocaleString() : new Date().toLocaleString();
                 let row = [
                     `"${timeStr}"`,
-                    v.raterSeat || "",
                     `"${v.raterName || 'unknown'}"`,
                     `"第 ${v.raterGroup} 組"`,
                     `"第 ${v.targetGroup} 組"`,
