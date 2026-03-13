@@ -128,6 +128,25 @@
             h1 { font-size: 3em; }
         }
     </style>
+
+    <script>
+        function checkPersonalPassword(event) {
+            // 阻止原本的直接跳轉行為
+            event.preventDefault(); 
+            
+            // 1. 彈出視窗詢問密碼
+            var password = prompt("請輸入 6 位數個人工具專用密碼：");
+
+            // 2. 檢查密碼 (這裡預設是 123456，老師可以在這裡修改)
+            if (password === "601021") {
+                // 密碼正確 -> 跳轉到目標檔案
+                window.location.href = "personal.html"; 
+            } else if (password != null) {
+                // 密碼錯誤 -> 顯示警告 (排除按取消的情況)
+                alert("密碼錯誤，存取被拒絕 🚫");
+            }
+        }
+    </script>
 </head>
 <body>
 
@@ -181,7 +200,7 @@
 
         <!-- 右側區塊：新增的個人工具卡片 -->
         <div class="right-area">
-            <a href="personal.html" class="category-card card-personal">
+            <a href="personal.html" onclick="checkPersonalPassword(event)" class="category-card card-personal">
                 <div class="icon">⚙️</div>
                 <div class="title">個人工具</div>
                 <div class="desc">自訂實驗參數、儲存模擬進度與教學筆記。</div>
@@ -192,4 +211,3 @@
 
 </body>
 </html>
-
