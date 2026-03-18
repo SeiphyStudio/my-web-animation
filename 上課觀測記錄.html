@@ -585,8 +585,16 @@
 
                     const nameSpan = document.createElement('div');
                     nameSpan.className = 'seat-name';
-                    // 👨‍🏫 老師修改：不顯示姓名，統一強制只顯示「排-列」的座號 (例如 1-1, 1-2)
-                    nameSpan.innerText = `${r}-${c}`;
+                    
+                    // 👨‍🏫 老師修改：智慧擷取座號，隱藏姓名
+                    let displayText = `${r}-${c}`; // 如果是空位，預設顯示「排-列」
+                    if (name) {
+                        // 使用「正規表達式」尋找開頭的連續數字 (例如 "03王靖瑀" -> "03")
+                        const match = name.match(/^\d+/); 
+                        // 如果有找到數字就顯示數字，萬一遇到沒有座號的名字就顯示原名
+                        displayText = match ? match[0] : name;
+                    }
+                    nameSpan.innerText = displayText;
                     
                     const badge = document.createElement('div');
                     badge.className = 'seat-badge';
