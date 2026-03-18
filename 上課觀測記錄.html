@@ -73,7 +73,7 @@
 
         #seating-grid {
             display: grid;
-            gap: 10px;
+            gap: 3px; /* 👨‍🏫 老師修改：將走道寬度從原本的 10px 縮小為 3px (約三分之一) */
             padding: 10px;
             background: #f8f9fa;
             border-radius: 8px;
@@ -585,7 +585,8 @@
 
                     const nameSpan = document.createElement('div');
                     nameSpan.className = 'seat-name';
-                    nameSpan.innerText = name || `${r}-${c}`;
+                    // 👨‍🏫 老師修改：不顯示姓名，統一強制只顯示「排-列」的座號 (例如 1-1, 1-2)
+                    nameSpan.innerText = `${r}-${c}`;
                     
                     const badge = document.createElement('div');
                     badge.className = 'seat-badge';
