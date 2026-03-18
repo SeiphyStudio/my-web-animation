@@ -59,6 +59,7 @@
             background-color: #fff;
             overflow: auto; /* 允許上下左右滑動 */
             position: relative;
+            touch-action: pan-x pan-y; /* 確保單指可以捲動，雙指交給 JS 處理 */
         }
 
         .seating-wrapper {
@@ -67,6 +68,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            transform-origin: top center;
         }
 
         #seating-grid {
@@ -254,7 +256,7 @@
 
     <!-- 分頁 1: 座位表 -->
     <main id="tab-seating" class="tab-content active">
-        <div class="seating-wrapper">
+        <div class="seating-wrapper" id="seating-wrapper">
             <div id="seating-grid">
                 <!-- 座位動態生成 -->
             </div>
@@ -315,10 +317,10 @@
             </div>
 
             <div class="setting-card">
-                <h3>🔍 畫面微調</h3>
+                <h3>🔍 畫面微調 (亦可用雙指縮放)</h3>
                 <div class="form-group">
                     <label>座位大小縮放</label>
-                    <input type="range" min="60" max="120" value="80" class="form-control" oninput="document.documentElement.style.setProperty('--seat-size', this.value + 'px')">
+                    <input type="range" id="zoom-slider" min="40" max="160" value="80" class="form-control" oninput="document.documentElement.style.setProperty('--seat-size', this.value + 'px')">
                 </div>
             </div>
         </div>
@@ -395,7 +397,64 @@
             
             renderBehaviors();
             loadFromStorage();
+            
+            // 啟用兩指縮放功能
+            initPinchZoom();
         };
+
+        // --- 兩指縮放 (Pinch-to-zoom) 功能實作 ---
+        function initPinchZoom() {
+            const seatingTab = document.getElementById('tab-seating');
+            let initialDistance = 0;
+            let initialSeatSize = 80;
+
+            seatingTab.addEventListener('touchstart', (e) => {
+                // 當兩指觸碰螢幕時
+                if (e.touches.length === 2) {
+                    initialDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    
+                    // 取得當前 CSS 變數定義的座位大小，將 'px' 濾掉並轉成數字
+                    const currentSizeStr = getComputedStyle(document.documentElement).getPropertyValue('--seat-size');
+                    initialSeatSize = parseFloat(currentSizeStr.replace('px', '').trim()) || 80;
+                }
+            }, { passive: false });
+
+            seatingTab.addEventListener('touchmove', (e) => {
+                // 如果是兩指滑動且已經記錄過初始距離
+                if (e.touches.length === 2 && initialDistance > 0) {
+                    e.preventDefault(); // 阻止瀏覽器原生的網頁捲動與縮放
+                    
+                    const currentDistance = Math.hypot(
+                        e.touches[0].pageX - e.touches[1].pageX,
+                        e.touches[0].pageY - e.touches[1].pageY
+                    );
+                    
+                    // 計算兩指拉開的比例
+                    const zoomRatio = currentDistance / initialDistance;
+                    let newSize = initialSeatSize * zoomRatio;
+                    
+                    // 限制大小在 40px (極小) 到 160px (極大) 之間
+                    newSize = Math.max(40, Math.min(newSize, 160));
+                    
+                    // 動態將新的座位大小更新到 CSS 的 Root 變數中
+                    document.documentElement.style.setProperty('--seat-size', newSize + 'px');
+                    
+                    // 讓設定頁面裡面的調整拉桿跟著一起連動
+                    const zoomSlider = document.getElementById('zoom-slider');
+                    if(zoomSlider) zoomSlider.value = newSize;
+                }
+            }, { passive: false });
+
+            seatingTab.addEventListener('touchend', (e) => {
+                // 當其中一指離開螢幕，就重置縮放狀態
+                if (e.touches.length < 2) {
+                    initialDistance = 0;
+                }
+            });
+        }
 
         // UI: 切換底部 Tab
         function switchTab(tabId, el) {
