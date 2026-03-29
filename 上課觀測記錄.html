@@ -417,7 +417,7 @@
             initPinchZoom();
         };
 
-        // --- 👨‍🏫 修改：兩指縮放 (分割成兩個獨立的區塊監聽) ---
+        // --- 兩指縮放 (分割成兩個獨立的區塊監聽) ---
         function initPinchZoom() {
             // 監聽座位區 (使用 --zoom 變數)
             createPinchZoom('seating-area', '--zoom', '--seat-size', true);
@@ -513,13 +513,14 @@
             showToast("網址已儲存");
         }
 
-        // 👨‍🏫 修改：精準還原截圖的「淡色底 + 彩色字」設計
+        // 👨‍🏫 修改：修復 DOM 生命週期 Bug，先插入文件再進行上色！
         function renderBehaviors() {
             const container = document.getElementById('behavior-btn-container');
             container.innerHTML = '';
             colorMap = {}; 
             
-            behaviorsList.forEach((b, index) => {
+            // 步驟一：先把所有的按鈕創造出來，放進網頁中
+            behaviorsList.forEach((b) => {
                 colorMap[b.value] = b.color;
                 const btn = document.createElement('div');
                 btn.className = 'inline-behavior-btn';
@@ -543,9 +544,14 @@
                     });
                 };
                 
-                if (index === 0) btn.onclick(); 
-                container.appendChild(btn);
+                container.appendChild(btn); // 放進容器裡
             });
+
+            // 步驟二：確定所有按鈕都在畫面上了，再觸發第一個按鈕的點擊事件來上色
+            const firstBtn = container.querySelector('.inline-behavior-btn');
+            if (firstBtn) {
+                firstBtn.click();
+            }
         }
 
         function loadFromStorage() {
