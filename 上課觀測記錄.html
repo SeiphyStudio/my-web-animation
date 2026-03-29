@@ -13,8 +13,13 @@
             --bg-color: #f0f2f5;
             --text-color: #333;
             --nav-height: 60px;
-            --seat-size: 80px; /* 手機上的座位預設大小 */
-            --zoom: 1; /* 新增：全域縮放比例 */
+            
+            /* 座位區專用變數 */
+            --seat-size: 80px; 
+            --zoom: 1; 
+            
+            /* 行為區專用變數 */
+            --behavior-zoom: 1; 
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -27,7 +32,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* 防止整個網頁滾動，交給各分頁自己滾動 */
+            overflow: hidden; 
         }
 
         /* 頂部標題列 */
@@ -45,26 +50,37 @@
         header h1 { margin: 0; font-size: 0.96rem; font-weight: bold; }
         .class-badge { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;}
 
-        /* 分頁容器 */
+        /* 分頁容器基礎設定 */
         .tab-content {
             flex: 1;
-            overflow-y: auto;
-            display: none; /* 預設隱藏，透過 JS 切換 */
-            padding-bottom: var(--nav-height); /* 👨‍🏫 修改：移除了浮動操作列，調整底部留白 */
+            display: none; /* 預設隱藏 */
+            padding-bottom: var(--nav-height); 
         }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        
+        .tab-content.active { 
+            display: flex; /* 顯示時以 flex 佈局 */
+            flex-direction: column;
+            animation: fadeIn 0.3s; 
+        }
 
-        /* --- 座位表分頁 --- */
-        #tab-seating {
-            background-color: #fff;
-            overflow: auto; /* 允許上下左右滑動 */
+        /* 記錄區與設定區可以整頁捲動 */
+        #tab-logs, #tab-settings { overflow-y: auto; }
+
+        /* --- 座位表主分頁 (禁止整頁捲動，交給子區塊) --- */
+        #tab-seating { overflow: hidden; }
+
+        /* 👨‍🏫 修改：上半部座位區 */
+        #seating-area {
+            flex: 1; /* 佔據剩餘的所有空間 */
+            overflow: auto; /* 自己獨立捲動 */
+            touch-action: pan-x pan-y; 
+            background: #fff;
             position: relative;
-            touch-action: pan-x pan-y; /* 確保單指可以捲動，雙指交給 JS 處理 */
         }
 
         .seating-wrapper {
             padding: 20px;
-            min-width: max-content; /* 確保內容不會被擠壓，可向右滑動 */
+            min-width: max-content; 
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -73,7 +89,7 @@
 
         #seating-grid {
             display: grid;
-            gap: calc(3px * var(--zoom)); /* 加入縮放變數 */
+            gap: calc(3px * var(--zoom)); 
             padding: calc(10px * var(--zoom));
             background: #f8f9fa;
             border-radius: calc(8px * var(--zoom));
@@ -96,8 +112,7 @@
         }
 
         .lab-mode .seat { border-radius: 0; border: 1px solid #ccc; }
-
-        .seat:active { transform: scale(0.95); } /* 手機按壓回饋 */
+        .seat:active { transform: scale(0.95); }
 
         .seat-name {
             font-size: calc(1.1rem * var(--zoom));
@@ -130,44 +145,50 @@
             font-size: calc(1rem * var(--zoom));
         }
 
-        /* --- 👨‍🏫 新增：結合在座位表下方的行為選項區塊 --- */
+        /* 👨‍🏫 修改：下半部行為選項區塊 */
+        #behavior-area {
+            flex: 0 0 35%; /* 高度固定佔約 35% */
+            min-height: 160px;
+            max-height: 45vh;
+            overflow: auto; /* 自己獨立捲動 */
+            touch-action: pan-x pan-y;
+            border-top: 2px solid #ddd;
+            background: #fff;
+            padding: 15px;
+            position: relative;
+            z-index: 5;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.03);
+        }
+
         .behavior-section {
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            margin-top: calc(20px * var(--zoom));
-        }
-
-        .divider {
-            width: 100%;
-            border: none;
-            border-top: calc(2px * var(--zoom)) solid #000;
-            margin-bottom: calc(15px * var(--zoom));
         }
 
         .behavior-section h3 {
-            margin: 0 0 calc(10px * var(--zoom)) 0;
-            font-size: calc(1.1rem * var(--zoom));
+            margin: 0 0 calc(12px * var(--behavior-zoom)) 0;
+            font-size: calc(1.05rem * var(--behavior-zoom));
             color: #333;
+            font-weight: bold;
         }
 
         .inline-behavior-grid {
             display: grid; 
             grid-template-columns: repeat(3, 1fr); 
-            gap: calc(10px * var(--zoom)); 
+            gap: calc(10px * var(--behavior-zoom)); 
             width: 100%;
         }
 
         .inline-behavior-btn {
-            padding: calc(12px * var(--zoom)) calc(5px * var(--zoom)); 
-            border-radius: calc(6px * var(--zoom)); 
-            font-size: calc(0.95rem * var(--zoom)); 
+            padding: calc(12px * var(--behavior-zoom)) calc(5px * var(--behavior-zoom)); 
+            border-radius: calc(8px * var(--behavior-zoom)); 
+            font-size: calc(0.95rem * var(--behavior-zoom)); 
             font-weight: bold; 
             text-align: center;
             transition: all 0.2s;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .inline-behavior-btn:active { transform: scale(0.95); }
@@ -250,23 +271,29 @@
         <div class="class-badge" id="header-class-code">班級：未設定</div>
     </header>
 
-    <!-- 分頁 1: 座位表 -->
+    <!-- 分頁 1: 座位表與行為區 -->
     <main id="tab-seating" class="tab-content active">
-        <div class="seating-wrapper" id="seating-wrapper">
-            <div id="seating-grid">
-                <!-- 座位動態生成 -->
+        
+        <!-- 上半部：座位區 (獨立捲動與縮放) -->
+        <div id="seating-area">
+            <div class="seating-wrapper" id="seating-wrapper">
+                <div id="seating-grid">
+                    <!-- 座位動態生成 -->
+                </div>
+                <div class="podium-marker" id="podium">講台 TEACHER</div>
             </div>
-            <div class="podium-marker" id="podium">講台 TEACHER</div>
-            
-            <!-- 👨‍🏫 新增：行為選項區塊 (包在座位區內，可一起縮放) -->
+        </div>
+        
+        <!-- 下半部：行為按鍵區 (獨立捲動與縮放) -->
+        <div id="behavior-area">
             <div class="behavior-section">
-                <hr class="divider">
                 <h3>選擇要記錄的行為</h3>
                 <div class="inline-behavior-grid" id="behavior-btn-container">
                     <!-- 行為按鈕動態產生 -->
                 </div>
             </div>
         </div>
+
     </main>
 
     <!-- 分頁 2: 記錄區 -->
@@ -314,10 +341,9 @@
             </div>
 
             <div class="setting-card">
-                <h3>🔍 畫面微調 (亦可用雙指縮放)</h3>
+                <h3>🔍 畫面微調 (亦可直接雙指縮放)</h3>
                 <div class="form-group">
                     <label>座位大小縮放</label>
-                    <!-- 👨‍🏫 修改：加入同時修改 --zoom 變數的邏輯 -->
                     <input type="range" id="zoom-slider" min="40" max="160" value="80" class="form-control" oninput="
                         document.documentElement.style.setProperty('--seat-size', this.value + 'px'); 
                         document.documentElement.style.setProperty('--zoom', this.value / 80);
@@ -347,7 +373,7 @@
     <div class="toast" id="toast">已記錄！</div>
 
     <script>
-        // === 核心資料 ===
+        // === 核心資料 (預設對齊試算表的色彩) ===
         let currentBehavior = { name: '認真聽講', value: '認真', color: '#28a745' };
         let logs = [];
         let currentMode = 'classroom'; 
@@ -360,10 +386,10 @@
             { name: '睡覺', value: '睡覺', color: '#6f42c1' },
             { name: '聊天', value: '聊天', color: '#fd7e14' },
             { name: '滑手機', value: '滑手機', color: '#dc3545' },
-            { name: '分心/發呆', value: '分心', color: '#6c757d' },
+            { name: '分心/發呆', value: '分心', color: '#8b4513' },
             { name: '換座位', value: '換座位', color: '#17a2b8' },
-            { name: '認真筆記', value: '筆記', color: '#28a745' },
-            { name: '大聲問好', value: '問好', color: '#007bff' }
+            { name: '認真筆記', value: '認真筆記', color: '#28a745' },
+            { name: '大聲問好', value: '大聲問好', color: '#007bff' }
         ];
 
         // 輔助函式
@@ -386,27 +412,42 @@
             
             renderBehaviors();
             loadFromStorage();
+            
+            // 啟用獨立的雙指縮放功能
             initPinchZoom();
         };
 
-        // --- 兩指縮放 (包含 --zoom 同步邏輯) ---
+        // --- 👨‍🏫 修改：兩指縮放 (分割成兩個獨立的區塊監聽) ---
         function initPinchZoom() {
-            const seatingTab = document.getElementById('tab-seating');
+            // 監聽座位區 (使用 --zoom 變數)
+            createPinchZoom('seating-area', '--zoom', '--seat-size', true);
+            
+            // 監聽行為區 (使用 --behavior-zoom 變數)
+            createPinchZoom('behavior-area', '--behavior-zoom', null, false);
+        }
+
+        function createPinchZoom(elementId, zoomVarName, seatSizeVar, isSeatArea) {
+            const area = document.getElementById(elementId);
+            if (!area) return;
+            
             let initialDistance = 0;
+            let initialZoom = 1;
             let initialSeatSize = 80;
 
-            seatingTab.addEventListener('touchstart', (e) => {
+            area.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
                     initialDistance = Math.hypot(
                         e.touches[0].pageX - e.touches[1].pageX,
                         e.touches[0].pageY - e.touches[1].pageY
                     );
-                    const currentSizeStr = getComputedStyle(document.documentElement).getPropertyValue('--seat-size');
-                    initialSeatSize = parseFloat(currentSizeStr.replace('px', '').trim()) || 80;
+                    initialZoom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(zoomVarName)) || 1;
+                    if(isSeatArea) {
+                        initialSeatSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue(seatSizeVar).replace('px', '').trim()) || 80;
+                    }
                 }
             }, { passive: false });
 
-            seatingTab.addEventListener('touchmove', (e) => {
+            area.addEventListener('touchmove', (e) => {
                 if (e.touches.length === 2 && initialDistance > 0) {
                     e.preventDefault(); 
                     const currentDistance = Math.hypot(
@@ -415,19 +456,25 @@
                     );
                     
                     const zoomRatio = currentDistance / initialDistance;
-                    let newSize = initialSeatSize * zoomRatio;
-                    newSize = Math.max(40, Math.min(newSize, 160));
+                    let newZoom = initialZoom * zoomRatio;
                     
-                    // 👨‍🏫 修改：同時設定 px 大小與純數字的 zoom 比例
-                    document.documentElement.style.setProperty('--seat-size', newSize + 'px');
-                    document.documentElement.style.setProperty('--zoom', newSize / 80);
+                    // 限制縮放極限，避免版面破圖
+                    newZoom = Math.max(0.4, Math.min(newZoom, 2.5));
                     
-                    const zoomSlider = document.getElementById('zoom-slider');
-                    if(zoomSlider) zoomSlider.value = newSize;
+                    document.documentElement.style.setProperty(zoomVarName, newZoom);
+                    
+                    if (isSeatArea) {
+                        let newSize = initialSeatSize * zoomRatio;
+                        newSize = Math.max(40, Math.min(newSize, 160));
+                        document.documentElement.style.setProperty(seatSizeVar, newSize + 'px');
+                        
+                        const zoomSlider = document.getElementById('zoom-slider');
+                        if(zoomSlider) zoomSlider.value = newSize;
+                    }
                 }
             }, { passive: false });
 
-            seatingTab.addEventListener('touchend', (e) => {
+            area.addEventListener('touchend', (e) => {
                 if (e.touches.length < 2) initialDistance = 0;
             });
         }
@@ -466,7 +513,7 @@
             showToast("網址已儲存");
         }
 
-        // 👨‍🏫 修改：全新渲染行為按鈕邏輯
+        // 👨‍🏫 修改：精準還原截圖的「淡色底 + 彩色字」設計
         function renderBehaviors() {
             const container = document.getElementById('behavior-btn-container');
             container.innerHTML = '';
@@ -476,26 +523,27 @@
                 colorMap[b.value] = b.color;
                 const btn = document.createElement('div');
                 btn.className = 'inline-behavior-btn';
-                btn.dataset.color = b.color; // 記住原本的顏色
+                btn.dataset.color = b.color; 
                 btn.innerText = b.name;
                 
                 btn.onclick = () => {
                     currentBehavior = b;
                     
-                    // 讓所有按鈕更新外觀：選中的變成實心深色，沒選中的變成淡彩底色
                     document.querySelectorAll('.inline-behavior-btn').forEach(el => {
                         const baseColor = el.dataset.color;
                         if (el === btn) {
+                            // 選中狀態：實心色彩背景，白色字體
                             el.style.backgroundColor = baseColor;
                             el.style.color = 'white';
                         } else {
-                            el.style.backgroundColor = baseColor + '22'; // '22' 讓背景帶有該顏色的超淡透明度
+                            // 未選狀態：淡彩色背景 (色碼後加 22 產生透明效果)，彩色字體
+                            el.style.backgroundColor = baseColor + '22'; 
                             el.style.color = baseColor;
                         }
                     });
                 };
                 
-                if (index === 0) btn.onclick(); // 預設點擊第一個
+                if (index === 0) btn.onclick(); 
                 container.appendChild(btn);
             });
         }
