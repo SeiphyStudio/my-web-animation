@@ -299,7 +299,8 @@
     <!-- 分頁 2: 記錄區 -->
     <main id="tab-logs" class="tab-content">
         <div class="log-header">
-            <h3 style="margin:0;">觀測流水帳</h3>
+            <!-- 👨‍🏫 修改：標題更改 -->
+            <h3 style="margin:0;">暫時記錄區</h3>
             <span id="log-count" style="background:#eee; padding:2px 8px; border-radius:10px; font-size:0.8rem;">0 筆</span>
         </div>
         <div style="padding: 10px;">
@@ -339,17 +340,9 @@
                 <button class="btn btn-success" onclick="loadBehaviorsFromCloud()"><i class="fa-solid fa-sync"></i> 同步雲端行為設定</button>
                 <button class="btn btn-danger" style="margin-top:20px;" onclick="clearAllLogs()"><i class="fa-solid fa-trash"></i> 清空手機上的記錄</button>
             </div>
+            
+            <!-- 👨‍🏫 修改：原本在這裡的「畫面微調」拉桿已依據需求移除 -->
 
-            <div class="setting-card">
-                <h3>🔍 畫面微調 (亦可直接雙指縮放)</h3>
-                <div class="form-group">
-                    <label>座位大小縮放</label>
-                    <input type="range" id="zoom-slider" min="40" max="160" value="80" class="form-control" oninput="
-                        document.documentElement.style.setProperty('--seat-size', this.value + 'px'); 
-                        document.documentElement.style.setProperty('--zoom', this.value / 80);
-                    ">
-                </div>
-            </div>
         </div>
     </main>
 
@@ -467,9 +460,6 @@
                         let newSize = initialSeatSize * zoomRatio;
                         newSize = Math.max(40, Math.min(newSize, 160));
                         document.documentElement.style.setProperty(seatSizeVar, newSize + 'px');
-                        
-                        const zoomSlider = document.getElementById('zoom-slider');
-                        if(zoomSlider) zoomSlider.value = newSize;
                     }
                 }
             }, { passive: false });
@@ -513,7 +503,6 @@
             showToast("網址已儲存");
         }
 
-        // 👨‍🏫 修改：修復 DOM 生命週期 Bug，先插入文件再進行上色！
         function renderBehaviors() {
             const container = document.getElementById('behavior-btn-container');
             container.innerHTML = '';
@@ -635,6 +624,34 @@
             const seatDiv = document.getElementById(`seat-${seatId}`);
             const originalBg = seatDiv.style.backgroundColor;
             
+            // 👨‍🏫 修改重點：新增「取消(Undo)」防呆機制
+            // 反向搜尋最近一次的記錄，看看這個座位是不是剛好已經被記了同一個行為
+            let existingLogIndex = -1;
+            for(let i = logs.length - 1; i >= 0; i--) {
+                if(logs[i].seatId === seatId && logs[i].behavior === currentBehavior.value) {
+                    existingLogIndex = i;
+                    break;
+                }
+            }
+
+            // 如果找到了，代表老師連點了第二下 -> 觸發取消機制
+            if (existingLogIndex !== -1) {
+                // 從記錄清單中抽掉這筆
+                logs.splice(existingLogIndex, 1);
+                localStorage.setItem('class_logs', JSON.stringify(logs));
+                
+                updateSeatCount(seatId, -1);
+                updateLogDisplay();
+                
+                // 取消時的視覺特效 (閃爍灰色)
+                seatDiv.style.backgroundColor = '#dcdcdc'; 
+                setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
+                
+                showToast(`已取消：${name} - ${currentBehavior.value}`);
+                return; // 直接中斷，不要往下跑新增記錄的程式碼
+            }
+
+            // 新增時的視覺特效 (閃爍該行為的顏色)
             seatDiv.style.backgroundColor = currentBehavior.color + '66'; 
             setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
 
@@ -669,6 +686,7 @@
             if (counts[seatId] > 0) {
                 badge.innerText = counts[seatId];
                 badge.style.opacity = 1;
+                // 注意：如果取消了一個行為，但還有其他行為的計數，這裡維持當前的顏色也是 OK 的
                 badge.style.backgroundColor = colorMap[currentBehavior.value] || '#dc3545';
             } else {
                 badge.style.opacity = 0;
