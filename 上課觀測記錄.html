@@ -13,8 +13,8 @@
             --bg-color: #f0f2f5;
             --text-color: #333;
             --nav-height: 60px;
-            --action-bar-height: 50px;
             --seat-size: 80px; /* 手機上的座位預設大小 */
+            --zoom: 1; /* 新增：全域縮放比例 */
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -42,7 +42,7 @@
             z-index: 10;
         }
 
-        header h1 { margin: 0; font-size: 0.96rem; font-weight: bold; } /* 👨‍🏫 老師修改：原本是 1.2rem，縮小 0.8 倍變成 0.96rem */
+        header h1 { margin: 0; font-size: 0.96rem; font-weight: bold; }
         .class-badge { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;}
 
         /* 分頁容器 */
@@ -50,7 +50,7 @@
             flex: 1;
             overflow-y: auto;
             display: none; /* 預設隱藏，透過 JS 切換 */
-            padding-bottom: calc(var(--nav-height) + var(--action-bar-height));
+            padding-bottom: var(--nav-height); /* 👨‍🏫 修改：移除了浮動操作列，調整底部留白 */
         }
         .tab-content.active { display: block; animation: fadeIn 0.3s; }
 
@@ -73,10 +73,10 @@
 
         #seating-grid {
             display: grid;
-            gap: 3px; /* 👨‍🏫 老師修改：將走道寬度從原本的 10px 縮小為 3px (約三分之一) */
-            padding: 10px;
+            gap: calc(3px * var(--zoom)); /* 加入縮放變數 */
+            padding: calc(10px * var(--zoom));
             background: #f8f9fa;
-            border-radius: 8px;
+            border-radius: calc(8px * var(--zoom));
         }
 
         #seating-grid.lab-mode { gap: 0; padding: 0; border: 1px solid #ccc; }
@@ -84,8 +84,8 @@
         .seat {
             width: var(--seat-size);
             height: calc(var(--seat-size) * 0.75);
-            border: 2px solid #ccc;
-            border-radius: 6px;
+            border: calc(2px * var(--zoom)) solid #ccc;
+            border-radius: calc(6px * var(--zoom));
             background: #ffff99;
             display: flex;
             flex-direction: column;
@@ -100,7 +100,7 @@
         .seat:active { transform: scale(0.95); } /* 手機按壓回饋 */
 
         .seat-name {
-            font-size: 1.1rem;
+            font-size: calc(1.1rem * var(--zoom));
             font-weight: bold;
             color: #333;
             width: 100%;
@@ -113,45 +113,64 @@
 
         .seat-badge {
             position: absolute;
-            top: -5px; right: -5px;
+            top: calc(-5px * var(--zoom)); right: calc(-5px * var(--zoom));
             background: #dc3545; color: white;
             border-radius: 50%;
-            width: 22px; height: 22px;
-            font-size: 12px;
+            width: calc(22px * var(--zoom)); height: calc(22px * var(--zoom));
+            font-size: calc(12px * var(--zoom));
             display: flex; justify-content: center; align-items: center;
             opacity: 0; font-weight: bold;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .podium-marker {
-            width: 80%; text-align: center; margin-top: 15px;
-            background: #00CC00; padding: 8px; border-radius: 4px;
-            color: #000; font-weight: bold; border: 2px solid #ced4da;
+            width: 80%; text-align: center; margin-top: calc(15px * var(--zoom));
+            background: #00CC00; padding: calc(8px * var(--zoom)); border-radius: calc(4px * var(--zoom));
+            color: #000; font-weight: bold; border: calc(2px * var(--zoom)) solid #ced4da;
+            font-size: calc(1rem * var(--zoom));
         }
 
-        /* --- 目前行為操作列 (浮動在座位表底部) --- */
-        .current-action-bar {
-            position: fixed;
-            bottom: var(--nav-height);
-            left: 0; width: 100%;
-            height: var(--action-bar-height);
-            background: white;
-            border-top: 1px solid #ddd;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 15px;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            z-index: 20;
+        /* --- 👨‍🏫 新增：結合在座位表下方的行為選項區塊 --- */
+        .behavior-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: calc(20px * var(--zoom));
         }
 
-        .current-action-btn {
-            flex: 1;
-            padding: 6px 15px;
-            background: #28a745;
-            color: white;
-            border: none; border-radius: 20px;
-            font-size: 1rem; font-weight: bold;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
+        .divider {
+            width: 100%;
+            border: none;
+            border-top: calc(2px * var(--zoom)) solid #000;
+            margin-bottom: calc(15px * var(--zoom));
         }
+
+        .behavior-section h3 {
+            margin: 0 0 calc(10px * var(--zoom)) 0;
+            font-size: calc(1.1rem * var(--zoom));
+            color: #333;
+        }
+
+        .inline-behavior-grid {
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: calc(10px * var(--zoom)); 
+            width: 100%;
+        }
+
+        .inline-behavior-btn {
+            padding: calc(12px * var(--zoom)) calc(5px * var(--zoom)); 
+            border-radius: calc(6px * var(--zoom)); 
+            font-size: calc(0.95rem * var(--zoom)); 
+            font-weight: bold; 
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .inline-behavior-btn:active { transform: scale(0.95); }
 
         /* --- 記錄分頁 --- */
         .log-header {
@@ -212,29 +231,6 @@
         .nav-item i { font-size: 1.4rem; margin-bottom: 2px; }
         .nav-item.active { color: var(--primary-color); }
 
-        /* --- 行為選擇 Modal (BottomSheet) --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 100;
-            display: none; opacity: 0; transition: opacity 0.3s;
-        }
-        .bottom-sheet {
-            position: absolute; bottom: -100%; left: 0; width: 100%;
-            background: white; border-radius: 20px 20px 0 0;
-            padding: 20px; transition: bottom 0.3s cubic-bezier(0.1, 0.8, 0.2, 1);
-            max-height: 80vh; overflow-y: auto;
-        }
-        .modal-overlay.show { display: block; opacity: 1; }
-        .modal-overlay.show .bottom-sheet { bottom: 0; }
-        
-        .behavior-grid {
-            display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 15px;
-        }
-        .behavior-btn {
-            padding: 12px 5px; border-radius: 8px; border: 2px solid transparent;
-            font-size: 1rem; font-weight: bold; text-align: center;
-        }
-
         /* 提示小吐司 (Toast) */
         .toast {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
@@ -261,16 +257,17 @@
                 <!-- 座位動態生成 -->
             </div>
             <div class="podium-marker" id="podium">講台 TEACHER</div>
+            
+            <!-- 👨‍🏫 新增：行為選項區塊 (包在座位區內，可一起縮放) -->
+            <div class="behavior-section">
+                <hr class="divider">
+                <h3>選擇要記錄的行為</h3>
+                <div class="inline-behavior-grid" id="behavior-btn-container">
+                    <!-- 行為按鈕動態產生 -->
+                </div>
+            </div>
         </div>
     </main>
-
-    <!-- 浮動在座位表底部的「目前行為」列 -->
-    <div class="current-action-bar" id="action-bar">
-        <span style="font-size: 0.9rem; color: #666; font-weight: bold; margin-right: 10px;">目前狀態:</span>
-        <div class="current-action-btn" id="current-behavior-btn" onclick="openBehaviorModal()">
-            <span>認真聽講</span> <i class="fa-solid fa-chevron-up"></i>
-        </div>
-    </div>
 
     <!-- 分頁 2: 記錄區 -->
     <main id="tab-logs" class="tab-content">
@@ -320,7 +317,11 @@
                 <h3>🔍 畫面微調 (亦可用雙指縮放)</h3>
                 <div class="form-group">
                     <label>座位大小縮放</label>
-                    <input type="range" id="zoom-slider" min="40" max="160" value="80" class="form-control" oninput="document.documentElement.style.setProperty('--seat-size', this.value + 'px')">
+                    <!-- 👨‍🏫 修改：加入同時修改 --zoom 變數的邏輯 -->
+                    <input type="range" id="zoom-slider" min="40" max="160" value="80" class="form-control" oninput="
+                        document.documentElement.style.setProperty('--seat-size', this.value + 'px'); 
+                        document.documentElement.style.setProperty('--zoom', this.value / 80);
+                    ">
                 </div>
             </div>
         </div>
@@ -342,24 +343,11 @@
         </div>
     </nav>
 
-    <!-- 行為選擇 Bottom Sheet -->
-    <div class="modal-overlay" id="behavior-modal" onclick="closeBehaviorModal(event)">
-        <div class="bottom-sheet" onclick="event.stopPropagation()">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">選擇要記錄的行為</h3>
-                <i class="fa-solid fa-times" style="font-size:1.5rem; color:#888; padding:5px;" onclick="closeBehaviorModal()"></i>
-            </div>
-            <div class="behavior-grid" id="behavior-btn-container">
-                <!-- 動態產生 -->
-            </div>
-        </div>
-    </div>
-
     <!-- 小吐司提示 -->
     <div class="toast" id="toast">已記錄！</div>
 
     <script>
-        // === 核心資料 (完全相容於桌機版 localStorage 結構) ===
+        // === 核心資料 ===
         let currentBehavior = { name: '認真聽講', value: '認真', color: '#28a745' };
         let logs = [];
         let currentMode = 'classroom'; 
@@ -372,15 +360,17 @@
             { name: '睡覺', value: '睡覺', color: '#6f42c1' },
             { name: '聊天', value: '聊天', color: '#fd7e14' },
             { name: '滑手機', value: '滑手機', color: '#dc3545' },
-            { name: '分心/發呆', value: '分心', color: '#6c757d' }
+            { name: '分心/發呆', value: '分心', color: '#6c757d' },
+            { name: '換座位', value: '換座位', color: '#17a2b8' },
+            { name: '認真筆記', value: '筆記', color: '#28a745' },
+            { name: '大聲問好', value: '問好', color: '#007bff' }
         ];
 
-        // 輔助函式：取得目前模式的 key
+        // 輔助函式
         const getKey = (prefix) => `${prefix}_${currentMode}`;
 
-        // 頁面載入時初始化
+        // 初始化
         window.onload = function() {
-            // 讀取全域設定
             gasUrl = localStorage.getItem('gas_url') || '';
             document.getElementById('gas-url').value = gasUrl;
             
@@ -391,68 +381,54 @@
             document.getElementById('class-code').value = savedCode;
             updateClassCodeUI(savedCode);
 
-            // 讀取當前模式並初始化
             currentMode = localStorage.getItem('current_mode') || 'classroom';
             document.getElementById('mode-select').value = currentMode;
             
             renderBehaviors();
             loadFromStorage();
-            
-            // 啟用兩指縮放功能
             initPinchZoom();
         };
 
-        // --- 兩指縮放 (Pinch-to-zoom) 功能實作 ---
+        // --- 兩指縮放 (包含 --zoom 同步邏輯) ---
         function initPinchZoom() {
             const seatingTab = document.getElementById('tab-seating');
             let initialDistance = 0;
             let initialSeatSize = 80;
 
             seatingTab.addEventListener('touchstart', (e) => {
-                // 當兩指觸碰螢幕時
                 if (e.touches.length === 2) {
                     initialDistance = Math.hypot(
                         e.touches[0].pageX - e.touches[1].pageX,
                         e.touches[0].pageY - e.touches[1].pageY
                     );
-                    
-                    // 取得當前 CSS 變數定義的座位大小，將 'px' 濾掉並轉成數字
                     const currentSizeStr = getComputedStyle(document.documentElement).getPropertyValue('--seat-size');
                     initialSeatSize = parseFloat(currentSizeStr.replace('px', '').trim()) || 80;
                 }
             }, { passive: false });
 
             seatingTab.addEventListener('touchmove', (e) => {
-                // 如果是兩指滑動且已經記錄過初始距離
                 if (e.touches.length === 2 && initialDistance > 0) {
-                    e.preventDefault(); // 阻止瀏覽器原生的網頁捲動與縮放
-                    
+                    e.preventDefault(); 
                     const currentDistance = Math.hypot(
                         e.touches[0].pageX - e.touches[1].pageX,
                         e.touches[0].pageY - e.touches[1].pageY
                     );
                     
-                    // 計算兩指拉開的比例
                     const zoomRatio = currentDistance / initialDistance;
                     let newSize = initialSeatSize * zoomRatio;
-                    
-                    // 限制大小在 40px (極小) 到 160px (極大) 之間
                     newSize = Math.max(40, Math.min(newSize, 160));
                     
-                    // 動態將新的座位大小更新到 CSS 的 Root 變數中
+                    // 👨‍🏫 修改：同時設定 px 大小與純數字的 zoom 比例
                     document.documentElement.style.setProperty('--seat-size', newSize + 'px');
+                    document.documentElement.style.setProperty('--zoom', newSize / 80);
                     
-                    // 讓設定頁面裡面的調整拉桿跟著一起連動
                     const zoomSlider = document.getElementById('zoom-slider');
                     if(zoomSlider) zoomSlider.value = newSize;
                 }
             }, { passive: false });
 
             seatingTab.addEventListener('touchend', (e) => {
-                // 當其中一指離開螢幕，就重置縮放狀態
-                if (e.touches.length < 2) {
-                    initialDistance = 0;
-                }
+                if (e.touches.length < 2) initialDistance = 0;
             });
         }
 
@@ -460,25 +436,10 @@
         function switchTab(tabId, el) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            
             document.getElementById(`tab-${tabId}`).classList.add('active');
             el.classList.add('active');
-
-            // 只有在座位表分頁，才顯示「目前行為」的操作列
-            document.getElementById('action-bar').style.display = (tabId === 'seating') ? 'flex' : 'none';
         }
 
-        // UI: 行為選單控制
-        function openBehaviorModal() {
-            document.getElementById('behavior-modal').classList.add('show');
-        }
-        function closeBehaviorModal(e) {
-            if(!e || e.target.id === 'behavior-modal') {
-                document.getElementById('behavior-modal').classList.remove('show');
-            }
-        }
-
-        // UI: 小吐司提示
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.innerText = msg;
@@ -490,7 +451,6 @@
             }, 2000);
         }
 
-        // 資料同步: 更新班級代碼
         function updateClassCode() {
             const val = document.getElementById('class-code').value.trim();
             localStorage.setItem('current_class_code', val);
@@ -506,7 +466,7 @@
             showToast("網址已儲存");
         }
 
-        // 資料處理: 渲染行為按鈕
+        // 👨‍🏫 修改：全新渲染行為按鈕邏輯
         function renderBehaviors() {
             const container = document.getElementById('behavior-btn-container');
             container.innerHTML = '';
@@ -515,32 +475,36 @@
             behaviorsList.forEach((b, index) => {
                 colorMap[b.value] = b.color;
                 const btn = document.createElement('div');
-                btn.className = 'behavior-btn';
-                btn.style.color = b.color;
-                btn.style.backgroundColor = b.color + '1A'; // 加一點透明底色
+                btn.className = 'inline-behavior-btn';
+                btn.dataset.color = b.color; // 記住原本的顏色
                 btn.innerText = b.name;
                 
                 btn.onclick = () => {
                     currentBehavior = b;
-                    // 更新主畫面的按鈕狀態
-                    const mainBtn = document.getElementById('current-behavior-btn');
-                    mainBtn.style.backgroundColor = b.color;
-                    mainBtn.innerHTML = `<span>${b.name}</span> <i class="fa-solid fa-chevron-up"></i>`;
-                    closeBehaviorModal();
+                    
+                    // 讓所有按鈕更新外觀：選中的變成實心深色，沒選中的變成淡彩底色
+                    document.querySelectorAll('.inline-behavior-btn').forEach(el => {
+                        const baseColor = el.dataset.color;
+                        if (el === btn) {
+                            el.style.backgroundColor = baseColor;
+                            el.style.color = 'white';
+                        } else {
+                            el.style.backgroundColor = baseColor + '22'; // '22' 讓背景帶有該顏色的超淡透明度
+                            el.style.color = baseColor;
+                        }
+                    });
                 };
                 
-                if (index === 0) btn.onclick(); // 預設選中第一個
+                if (index === 0) btn.onclick(); // 預設點擊第一個
                 container.appendChild(btn);
             });
         }
 
-        // --- 核心邏輯 (與桌機版共用結構) ---
         function loadFromStorage() {
             const savedLogs = localStorage.getItem('class_logs');
             if (savedLogs) logs = JSON.parse(savedLogs);
             updateLogDisplay();
 
-            // 從 localStorage 抓取座位資料
             let r = 5, c = 6;
             if (currentMode === 'lab') {
                 r = 5; c = 10;
@@ -578,7 +542,6 @@
                     const seatDiv = document.createElement('div');
                     seatDiv.className = 'seat';
                     seatDiv.id = `seat-${seatId}`;
-                    // 如果沒名字，讓它變灰色一點表示空位
                     if(!name) seatDiv.style.opacity = '0.5';
 
                     seatDiv.onclick = () => handleSeatClick(seatId, name);
@@ -586,12 +549,9 @@
                     const nameSpan = document.createElement('div');
                     nameSpan.className = 'seat-name';
                     
-                    // 👨‍🏫 老師修改：智慧擷取座號，隱藏姓名
-                    let displayText = `${r}-${c}`; // 如果是空位，預設顯示「排-列」
+                    let displayText = `${r}-${c}`; 
                     if (name) {
-                        // 使用「正規表達式」尋找開頭的連續數字 (例如 "03王靖瑀" -> "03")
                         const match = name.match(/^\d+/); 
-                        // 如果有找到數字就顯示數字，萬一遇到沒有座號的名字就顯示原名
                         displayText = match ? match[0] : name;
                     }
                     nameSpan.innerText = displayText;
@@ -602,7 +562,7 @@
                     if (savedCounts[seatId] && savedCounts[seatId] > 0) {
                         badge.innerText = savedCounts[seatId];
                         badge.style.opacity = 1;
-                        badge.style.backgroundColor = currentBehavior.color; // 預設用當前顏色
+                        badge.style.backgroundColor = currentBehavior.color; 
                     }
 
                     seatDiv.appendChild(nameSpan);
@@ -621,7 +581,6 @@
             const seatDiv = document.getElementById(`seat-${seatId}`);
             const originalBg = seatDiv.style.backgroundColor;
             
-            // 手機版點擊特效
             seatDiv.style.backgroundColor = currentBehavior.color + '66'; 
             setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
 
@@ -644,7 +603,6 @@
             updateSeatCount(seatId, 1);
             updateLogDisplay();
             
-            // 畫面提示
             showToast(`${name} - ${currentBehavior.value}`);
         }
 
@@ -700,7 +658,6 @@
             showToast("記錄已清空");
         }
 
-        // --- GAS 雲端通訊功能 (與桌機完全一致的 API 呼叫) ---
         function loadClassDataFromCloud() {
             const code = document.getElementById('class-code').value.trim();
             if (!code) { alert('請先輸入班級代碼'); return; }
@@ -722,7 +679,7 @@
                         localStorage.setItem('pref_cols_classroom', sd.cols);
                     }
                     localStorage.setItem(getKey('student_names'), JSON.stringify(sd.names));
-                    localStorage.setItem(getKey('student_counts'), '{}'); // 讀檔時重置計數
+                    localStorage.setItem(getKey('student_counts'), '{}'); 
                     logs = []; localStorage.setItem('class_logs', '[]');
                     
                     loadFromStorage();
