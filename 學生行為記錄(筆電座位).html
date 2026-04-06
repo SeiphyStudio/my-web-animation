@@ -191,7 +191,6 @@
         }
 
         .seat {
-            /* 👨‍🏫 老師修改：寬度從 100px 放大 1.5 倍成 150px，高度維持 90px */
             width: calc(150px * var(--zoom));
             height: calc(90px * var(--zoom));
             border: 2px solid #ccc;
@@ -201,7 +200,7 @@
             justify-content: flex-start;
             align-items: center;
             position: relative;
-            background: #ffff99; /* 👨‍🏫 老師修改：將底色改為 #ffff99 (淡黃色) */
+            background: #ffff99; 
             transition: transform 0.1s, border-color 0.2s;
             cursor: pointer;
             overflow: hidden;
@@ -228,12 +227,10 @@
 
         .seat input {
             width: 100%;
-            /* 👨‍🏫 老師修改：將高度固定佔整體的 50%，達成 1:1 的視覺比例 */
             height: 50%;
             border: none;
             border-bottom: 1px solid #bbb;
             text-align: center;
-            /* 👨‍🏫 老師修改：文字大小從 1rem 放大 1.5 倍到 1.5rem */
             font-size: calc(1.5rem * var(--zoom));
             background: #e9ecef;
             color: #333;
@@ -249,14 +246,11 @@
 
         .seat::after {
             content: "點擊記錄";
-            /* 👨‍🏫 老師修改：同樣給它 50% 的高度 */
             height: 50%;
             width: 100%;
-            /* 👨‍🏫 老師修改：利用 flex 排版讓裡面的文字完美地垂直與水平置中 */
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 👨‍🏫 老師修改：文字大小從 0.75rem 放大 1.5 倍到 1.125rem */
             font-size: calc(1.125rem * var(--zoom));
             color: #aaa;
             pointer-events: none;
@@ -269,10 +263,8 @@
             background: #333;
             color: white;
             border-radius: 50%;
-            /* 👨‍🏫 老師修改：將計數圈圈的長寬從 24px 放大到 36px (1.5倍) */
             width: calc(36px * var(--zoom));
             height: calc(36px * var(--zoom));
-            /* 👨‍🏫 老師修改：將計數圈圈的數字從 12px 放大到 18px (1.5倍) */
             font-size: calc(18px * var(--zoom));
             display: flex;
             justify-content: center;
@@ -302,11 +294,11 @@
             margin-bottom: 20px;
         }
 
+        /* 👨‍🏫 修改：按鈕的樣式配合新的淡彩設計 */
         .behavior-btn {
             padding: 8px 4px; 
             border: 2px solid transparent;
             border-radius: 8px;
-            background: #f8f9fa;
             cursor: pointer;
             font-size: 1rem; 
             font-weight: bold;
@@ -317,6 +309,11 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .behavior-btn:active {
+            transform: scale(0.95);
         }
 
         .behavior-input-wrapper {
@@ -395,10 +392,10 @@
             width: 100%;
             text-align: center;
             margin-top: calc(15px * var(--zoom));
-            background: #00CC00; /* 👨‍🏫 老師修改：將背景顏色改成 #00CC00 */
+            background: #00CC00; 
             padding: calc(8px * var(--zoom));
             border-radius: 4px;
-            color: #000000; /* 👨‍🏫 老師修改：將字體顏色改成純黑色 #000000 */
+            color: #000000; 
             font-weight: bold;
             letter-spacing: 2px;
             border: 2px solid #ced4da;
@@ -435,7 +432,6 @@
         
         <div class="config-group">
             <span class="config-label">班級代碼(3碼):</span>
-            <!-- 加入了 oninput 事件，打字時同步更新班級顯示區 -->
             <input type="text" id="class-code" placeholder="如: 101" maxlength="3" oninput="updateDisplayClassCode(this.value)">
             <button class="btn-info" onclick="saveClassData()" title="儲存當前座位與名單">存檔</button>
             <button class="btn-warning" onclick="loadClassData()" title="讀取該代碼的座位表">讀檔</button>
@@ -450,13 +446,11 @@
             <input type="number" id="cols" value="6" min="1" max="15">
             <button class="btn-primary" onclick="manualGenerate()" title="清空並生成新的座位表">生成空座位</button>
             
-            <!-- 【新增】畫面縮放拉桿 -->
             <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
             <span class="config-label">🔍 縮放:</span>
             <input type="range" id="zoom-slider" min="0.6" max="1.5" step="0.05" value="1" oninput="document.documentElement.style.setProperty('--zoom', this.value)" style="width: 80px;" title="調整座位表大小">
         </div>
 
-        <!-- 這裡就是新加入的「動態班級顯示區」 -->
         <div id="display-class-code" style="color: var(--primary-color); font-size: 1.8rem; font-weight: 900; flex: 1; text-align: center; letter-spacing: 2px;"></div>
 
         <div class="config-group">
@@ -482,8 +476,7 @@
 
     <aside>
         <h3 style="display: flex; justify-content: space-between; align-items: center;">
-            1. 學生上課行為
-            
+            1. 選擇學生上課行為
             <button id="sync-behavior-btn" class="btn-info" style="font-size: 1rem; padding: 4px 10px;" onclick="loadBehaviorsFromCloud()" title="從雲端試算表讀取最新的行為設定">🔄 同步雲端設定</button>
         </h3>
         <div class="behavior-selector" id="behavior-group">
@@ -496,8 +489,9 @@
         </div>
 
         <div class="log-header">
-            <h3>2. 觀測記錄</h3>
-            <button class="btn-danger-outline" onclick="clearAllLogs()">刪除所有觀測記錄</button>
+            <!-- 👨‍🏫 修改名稱保持一致 -->
+            <h3>2. 暫時記錄區</h3>
+            <button class="btn-danger-outline" onclick="clearAllLogs()">刪除所有記錄</button>
         </div>
         
         <div class="log-container" id="log-list"></div>
@@ -536,18 +530,20 @@
     let logs = [];
     let currentMode = 'classroom'; 
     let gasUrl = ''; 
-    let colorMap = {}; // 改為動態產生
+    let colorMap = {}; 
     const CUSTOM_COLOR = '#d63384';
 
-    // 預設行為清單 (如果雲端或本機沒有資料時的備案)
+    // 👨‍🏫 預設對齊最新的藍紅設計
     let behaviorsList = [
-        { name: '認真聽講', value: '認真', color: '#28a745' },
-        { name: '積極搶答', value: '搶答', color: '#007bff' },
-        { name: '睡覺', value: '睡覺', color: '#6f42c1' },
-        { name: '聊天', value: '聊天', color: '#fd7e14' },
-        { name: '滑手機', value: '滑手機', color: '#dc3545' },
-        { name: '分心/發呆', value: '分心', color: '#6c757d' },
-        { name: '換座位', value: '換座位', color: '#17a2b8' }
+        { name: '認真聽講', value: '認真聽講', color: '#0000FF' },
+        { name: '積極搶答', value: '搶答', color: '#0000FF' },
+        { name: '大聲問好', value: '大聲問好', color: '#0000FF' },
+        { name: '認真筆記', value: '認真筆記', color: '#0000FF' },
+        { name: '睡覺', value: '睡覺', color: '#FF0000' },
+        { name: '聊天', value: '聊天', color: '#FF0000' },
+        { name: '滑手機', value: '滑手機', color: '#FF0000' },
+        { name: '分心/發呆', value: '分心', color: '#FF0000' },
+        { name: '換座位', value: '換座位', color: '#FF0000' }
     ];
 
     window.onload = function() {
@@ -555,7 +551,6 @@
         gasUrl = localStorage.getItem('gas_url') || '';
         updateDisplayClassCode(document.getElementById('class-code').value);
         
-        // 嘗試讀取本機存儲的自訂行為
         const savedBehaviors = localStorage.getItem('custom_behaviors');
         if (savedBehaviors) {
             behaviorsList = JSON.parse(savedBehaviors);
@@ -563,44 +558,57 @@
         renderBehaviors();
     };
 
-    // --- 【新增：動態渲染行為按鈕】 ---
+    // --- 👨‍🏫 修改：自動排序與淡彩上色的渲染邏輯 ---
     function renderBehaviors() {
         const container = document.getElementById('behavior-btn-container');
         container.innerHTML = '';
-        colorMap = {}; // 重置對應表
+        colorMap = {}; 
         
-        // 👨‍🏫 老師新增：準備一組備用調色盤。如果雲端傳來的資料沒有提供顏色，就自動幫它上色！
-        const fallbackColors = ['#28a745', '#007bff', '#6f42c1', '#fd7e14', '#dc3545', '#6c757d', '#17a2b8', '#e83e8c', '#20c997', '#6610f2'];
+        // 藍前紅後排序
+        const sortedBehaviors = [...behaviorsList].sort((a, b) => {
+            const getWeight = (c) => {
+                const color = String(c).toUpperCase();
+                if (color === '#0000FF') return 1;
+                if (color === '#FF0000') return 2;
+                return 3;
+            };
+            return getWeight(a.color) - getWeight(b.color);
+        });
         
-        behaviorsList.forEach((b, index) => {
-            // 檢查行為有沒有自帶顏色，沒有的話就從備用調色盤依序挑一個
-            const btnColor = b.color || fallbackColors[index % fallbackColors.length];
-            colorMap[b.value] = btnColor;
-            
+        sortedBehaviors.forEach((b) => {
+            colorMap[b.value] = b.color;
             const btn = document.createElement('div');
             btn.className = 'behavior-btn';
-            btn.dataset.color = btnColor;
-            btn.style.color = btnColor;
-            btn.style.borderColor = btnColor + '55'; // 加上透明度的邊框
+            btn.dataset.color = b.color;
             btn.innerText = b.name;
             
-            btn.onclick = function() { selectBehavior(b.value, this, btnColor); };
-            
-            // 預設選中第一個
-            if (index === 0) {
-                btn.classList.add('selected');
-                btn.style.background = btnColor;
-                btn.style.color = 'white';
+            btn.onclick = function() {
+                isCustomMode = false;
                 currentBehavior = b.value;
-            } else {
-                btn.style.background = '#f8f9fa';
-            }
+                document.getElementById('custom-input').classList.remove('active');
+                
+                document.querySelectorAll('.behavior-btn').forEach(el => {
+                    const baseColor = el.dataset.color;
+                    if (el === btn) {
+                        el.style.backgroundColor = baseColor;
+                        el.style.color = 'white';
+                        el.style.borderColor = baseColor;
+                    } else {
+                        el.style.backgroundColor = baseColor + '22';
+                        el.style.color = baseColor;
+                        el.style.borderColor = baseColor + '55';
+                    }
+                });
+            };
             
             container.appendChild(btn);
         });
+
+        // 預設觸發點擊第一個
+        const firstBtn = container.querySelector('.behavior-btn');
+        if (firstBtn) firstBtn.click();
     }
 
-    // --- 【新增：從雲端讀取行為設定】 ---
     function loadBehaviorsFromCloud() {
         if (!gasUrl) {
             alert("請先在右下方設定 Google Sheet (GAS) 網址！");
@@ -639,32 +647,13 @@
         });
     }
 
-    // 修改過的選擇行為邏輯，支援動態顏色
-    function selectBehavior(behavior, btnElement, color) {
-        isCustomMode = false;
-        currentBehavior = behavior;
-        
-        // 將所有按鈕恢復成未選取狀態
-        document.querySelectorAll('.behavior-btn').forEach(btn => {
-            btn.classList.remove('selected');
-            btn.style.background = '#f8f9fa';
-            btn.style.color = btn.dataset.color;
-        });
-        
-        document.getElementById('custom-input').classList.remove('active');
-        
-        // 設定當前選中按鈕樣式
-        btnElement.classList.add('selected');
-        btnElement.style.background = color;
-        btnElement.style.color = 'white';
-    }
-
     function handleCustomFocus(input) {
         isCustomMode = true;
         document.querySelectorAll('.behavior-btn').forEach(btn => {
-            btn.classList.remove('selected');
-            btn.style.background = '#f8f9fa';
-            btn.style.color = btn.dataset.color;
+            const baseColor = btn.dataset.color;
+            btn.style.backgroundColor = baseColor + '22';
+            btn.style.color = baseColor;
+            btn.style.borderColor = baseColor + '55';
         });
         input.classList.add('active');
         if(input.value.trim()) {
@@ -674,7 +663,6 @@
         }
     }
 
-    // 更新畫面中間的班級代碼顯示
     function updateDisplayClassCode(val) {
         const display = document.getElementById('display-class-code');
         if (val && val.trim() !== '') {
@@ -727,7 +715,6 @@
         reader.readAsText(file);
     }
 
-    // --- 雲端功能 ---
     function openCloudConfig() {
         document.getElementById('cloudModal').style.display = 'flex';
         document.getElementById('gas-url-input').value = gasUrl;
@@ -766,11 +753,11 @@
             classCode = prompt("您尚未輸入班級代碼，請輸入代碼 (例如 101) 以便分類分頁：", "未分類班級");
             if (!classCode) return;
             document.getElementById('class-code').value = classCode;
-            updateDisplayClassCode(classCode); // 同步更新顯示
+            updateDisplayClassCode(classCode); 
         }
         
         const payload = {
-            action: "log", // 明確標示這是流水帳任務
+            action: "log", 
             classCode: classCode,
             logs: logs
         };
@@ -788,9 +775,7 @@
         .then(response => response.json())
         .then(data => {
             if(data.result === 'success') {
-                // 👨‍🏫 老師修改：更新提示訊息，讓使用者知道記錄被清空了
                 alert(`上傳成功！共 ${data.count} 筆記錄已寫入 Google Sheet。\n\n系統已自動為您清除目前的觀測記錄。`);
-                // 👨‍🏫 老師修改：呼叫清除功能，並傳入 true，告訴系統「不用再跳出確認視窗了」
                 clearAllLogs(true); 
             } else {
                 alert("上傳失敗：" + data.error);
@@ -820,14 +805,14 @@
         };
 
         const key = `class_setup_${code}_${currentMode}`;
-        localStorage.setItem(key, JSON.stringify(dataToSave)); // 依然保留單機備份
+        localStorage.setItem(key, JSON.stringify(dataToSave)); 
         
         if (!gasUrl) {
             alert(`已儲存於本機！\n(提示：若要啟用雲端跨裝置存檔，請在右下方設定 Google Sheet 網址)`);
             return;
         }
 
-        const btn = document.querySelector('.btn-info'); // 抓取存檔按鈕
+        const btn = document.querySelector('.btn-info'); 
         const originalText = btn.innerText;
         btn.innerText = "雲端存檔中...";
         btn.disabled = true;
@@ -835,7 +820,7 @@
         fetch(gasUrl, {
             method: 'POST',
             body: JSON.stringify({
-                action: "saveSeat", // 貼上標籤：我是來存座位的！
+                action: "saveSeat", 
                 classCode: code,
                 mode: currentMode,
                 seatData: dataToSave
@@ -862,7 +847,6 @@
         if (!code) { alert('請輸入班級代碼'); return; }
 
         if (!gasUrl) {
-            // 沒網址，走原來的單機讀檔
             const key = `class_setup_${code}_${currentMode}`;
             const savedDataStr = localStorage.getItem(key);
             if (!savedDataStr) {
@@ -873,7 +857,7 @@
             return;
         }
 
-        const btn = document.querySelector('.btn-warning'); // 抓取讀檔按鈕
+        const btn = document.querySelector('.btn-warning'); 
         const originalText = btn.innerText;
         btn.innerText = "雲端讀取中...";
         btn.disabled = true;
@@ -881,7 +865,7 @@
         fetch(gasUrl, {
             method: 'POST',
             body: JSON.stringify({
-                action: "loadSeat", // 貼上標籤：把座位交出來！
+                action: "loadSeat", 
                 classCode: code,
                 mode: currentMode
             }),
@@ -891,7 +875,6 @@
         .then(data => {
             if(data.result === 'success') {
                 alert(`✅ 成功從雲端讀取座位表！`);
-                // 把雲端資料同步回本機
                 const key = `class_setup_${code}_${currentMode}`;
                 localStorage.setItem(key, JSON.stringify(data.seatData));
                 applyLoadedData(code, data.seatData);
@@ -909,7 +892,6 @@
         });
     }
 
-    // 小幫手：負責把讀取到的資料畫上畫面
     function applyLoadedData(code, data) {
         if(confirm(`確定要套用班級 [${code}] 的【${currentMode === 'classroom' ? '教室' : '實驗室'}】座位表嗎？`)) {
             document.getElementById('rows').value = data.rows;
@@ -922,7 +904,6 @@
         }
     }
 
-    // --- 模式切換邏輯 ---
     function switchMode(mode) {
         if (currentMode === mode) return; 
         currentMode = mode;
@@ -1019,6 +1000,8 @@
                 if (savedCounts[seatId] && savedCounts[seatId] > 0) {
                     badge.innerText = savedCounts[seatId];
                     badge.style.opacity = 1;
+                    // 👨‍🏫 修改：計數標記也對應目前選擇的顏色
+                    badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
                 }
 
                 seatDiv.appendChild(input);
@@ -1160,24 +1143,46 @@
         }
 
         const seatDiv = document.getElementById(`seat-${seatId}`);
+        const originalBg = seatDiv.style.backgroundColor;
         const behaviorColor = colorMap[currentBehavior] || CUSTOM_COLOR;
         
+        // 👨‍🏫 修改重點：新增「點兩下取消(Undo)」防呆機制
+        let existingLogIndex = -1;
+        for(let i = logs.length - 1; i >= 0; i--) {
+            if(logs[i].seatId === seatId && logs[i].behavior === currentBehavior) {
+                existingLogIndex = i;
+                break;
+            }
+        }
+
+        if (existingLogIndex !== -1) {
+            // 觸發取消機制
+            logs.splice(existingLogIndex, 1);
+            localStorage.setItem('class_logs', JSON.stringify(logs));
+            updateSeatCount(seatId, -1);
+            updateLogDisplay();
+            
+            // 取消視覺特效：閃爍灰色
+            seatDiv.style.backgroundColor = '#dcdcdc'; 
+            setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
+            return;
+        }
+
+        // 新增記錄特效
         seatDiv.style.borderColor = behaviorColor;
-        /* 👨‍🏫 老師修改：點擊特效顏色稍微加深一點，避免覆蓋掉原有的黃底 */
         seatDiv.style.backgroundColor = behaviorColor + '33'; 
         seatDiv.classList.add('active-click');
         setTimeout(() => {
             seatDiv.style.borderColor = '';
-            seatDiv.style.backgroundColor = '#ffff99'; /* 👨‍🏫 老師修改：特效結束後，確保它恢復成新的 #ffff99 淡黃色 */
+            seatDiv.style.backgroundColor = '#ffff99'; 
             seatDiv.classList.remove('active-click');
         }, 300);
 
         const timestamp = new Date();
         const timeString = timestamp.toLocaleTimeString('zh-TW', { hour12: false });
         
-        // 👨‍🏫 老師修改：將時間格式化為台灣本地時間 (YYYY-MM-DD HH:mm:ss)
         const year = timestamp.getFullYear();
-        const month = String(timestamp.getMonth() + 1).padStart(2, '0'); // 月份是從 0 開始的，所以要 +1
+        const month = String(timestamp.getMonth() + 1).padStart(2, '0'); 
         const day = String(timestamp.getDate()).padStart(2, '0');
         const localFullTime = `${year}-${month}-${day} ${timeString}`;
         
@@ -1187,7 +1192,7 @@
             name: name,
             behavior: currentBehavior,
             time: timeString,
-            fullTime: localFullTime // 👨‍🏫 老師修改：使用本地時間，不用 toISOString() 了
+            fullTime: localFullTime 
         };
 
         logs.push(logEntry);
@@ -1222,9 +1227,7 @@
         saveLogsToStorage();
     }
     
-    // 👨‍🏫 老師修改：給函數加上一個名為 skipConfirm 的參數（預設是 false）
     function clearAllLogs(skipConfirm = false) {
-        // 如果 skipConfirm 是 false，而且使用者按了取消，才中斷執行
         if(!skipConfirm && !confirm("確定要刪除「所有」觀測記錄嗎？\n這將會把所有學生的行為計數歸零！")) return;
         
         logs = [];
@@ -1250,6 +1253,8 @@
         if (current > 0) {
             badge.innerText = current;
             badge.style.opacity = 1;
+            // 計數標記也對應目前選擇的顏色
+            badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
         } else {
             badge.style.opacity = 0;
         }
@@ -1310,20 +1315,6 @@
                   xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-                <!--[if gte mso 9]>
-                <xml>
-                <x:ExcelWorkbook>
-                <x:ExcelWorksheets>
-                <x:ExcelWorksheet>
-                <x:Name>上課記錄</x:Name>
-                <x:WorksheetOptions>
-                <x:DisplayGridlines/>
-                </x:WorksheetOptions>
-                </x:ExcelWorksheet>
-                </x:ExcelWorksheets>
-                </x:ExcelWorkbook>
-                </x:xml>
-                <![endif]-->
                 <style>
                     table { border-collapse: collapse; }
                     td, th { 
@@ -1368,7 +1359,6 @@
         const link = document.createElement("a");
         link.href = url;
         
-        // 👨‍🏫 老師修改：匯出檔名也一併改成使用本地日期，避免出現跨日時區差異
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         
