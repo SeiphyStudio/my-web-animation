@@ -26,8 +26,7 @@
         <div class="absolute top-6 right-6 bg-white/90 backdrop-blur p-5 rounded-xl shadow-lg pointer-events-none text-[26px] font-mono leading-relaxed border border-red-100">
             <div class="font-bold text-red-800 border-b-2 border-red-200 pb-2 mb-2 text-[29px]">即時物理量</div>
             <div>狀態: <span id="lblMode" class="text-blue-600 font-bold">斜坡下滑</span></div>
-            <div>速度 <span class="math-font">v</span> : <span id="lblV">0.00</span> m/s</div>
-            <div>正向力 <span class="math-font">N</span> : <span id="lblN">0.00</span> N</div>
+            <div>正向力 <span class="math-font">N</span> : <span id="lblN">0.00</span> <span class="math-font">mg</span></div>
             <div>向心加速 <span class="math-font">a<sub>c</sub></span> : <span id="lblAc">0.00</span> m/s²</div>
         </div>
     </div>
@@ -36,6 +35,7 @@
     <div class="w-full md:w-96 bg-white border-l border-gray-200 p-6 flex flex-col gap-5 overflow-y-auto shadow-[-4px_0_20px_rgba(0,0,0,0.05)] z-10 relative">
         <div>
             <h1 class="text-2xl font-bold text-gray-800 mb-1">雲霄飛車軌道模擬</h1>
+            <h2 class="text-[19px] text-[#0000FF] font-bold mb-2">台中二中阿發老師設計</h2>
             <p class="text-sm text-gray-500">質量 m=1kg, 半徑 R=2m, g=9.8m/s²</p>
         </div>
 
@@ -86,7 +86,7 @@
             </label>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" id="slowMotion" class="rounded text-red-600 focus:ring-red-500 w-5 h-5">
-                <span class="text-sm text-gray-700 font-bold">慢動作 (1/4 倍速)</span>
+                <span class="text-sm text-gray-700 font-bold">慢動作 (1/10 倍速)</span>
             </label>
         </div>
 
@@ -211,7 +211,7 @@
         const dt = timeStep / subSteps;
 
         function physicsStep() {
-            let currentDt = slowMotion.checked ? dt / 4 : dt;
+            let currentDt = slowMotion.checked ? dt / 10 : dt;
             const slopeAngle = Math.PI / 4; 
 
             for (let i = 0; i < subSteps; i++) {
@@ -302,7 +302,7 @@
                     }
                 }
 
-                let pathFreq = slowMotion.checked ? 30 : 5;
+                let pathFreq = slowMotion.checked ? 50 : 5;
                 if (stepCount++ % pathFreq === 0) {
                     pathHistory.push({ x: ball.x, y: ball.y });
                     if (pathHistory.length > 250) pathHistory.shift();
@@ -532,10 +532,10 @@
             lblMode.innerText = modeName[ball.mode];
             lblMode.className = `font-bold ${modeColors[ball.mode]}`;
             
-            let currentV = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-            document.getElementById('lblV').innerText = currentV.toFixed(2);
-            document.getElementById('lblN').innerText = Math.max(0, ball.N).toFixed(2);
+            let nInMg = Math.max(0, ball.N) / (m * g);
+            document.getElementById('lblN').innerText = nInMg.toFixed(2);
             
+            let currentV = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
             let ac = 0;
             if (ball.mode === 'CIRCLE') {
                 ac = (currentV * currentV) / R;
