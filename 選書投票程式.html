@@ -15,71 +15,72 @@
         <h2 class="text-xl font-bold text-gray-700">正在連線至 Firebase 雲端資料庫...</h2>
     </div>
 
-    <!-- 加入 px-4 讓手機兩側有安全邊距 -->
     <div class="container mx-auto px-4 py-6 max-w-5xl hidden" id="main-app">
 
         <!-- ==========================================
-             1. 登入版面 (支援多租戶分流)
+             1. 登入版面 (全新智慧分流介面)
              ========================================== -->
         <div id="login-section" class="bg-white p-6 sm:p-8 rounded-lg shadow-md max-w-md mx-auto mt-4 sm:mt-10">
             <h1 class="text-[16px] sm:text-[19.2px] font-bold text-center mb-2 text-blue-600 leading-snug">☁️ 選書計分系統(台中二中阿發老師設計)</h1>
             <p class="text-center text-gray-500 mb-6 text-xs sm:text-sm">Firebase 即時連線版</p>
 
-            <!-- ★ 新增：首頁的科別選擇器 (決定進入哪個資料庫) ★ -->
-            <div id="login-subject-group" class="mb-5 border-b border-gray-200 pb-5">
-                <label class="block text-blue-800 font-bold mb-2 text-sm sm:text-base">📍 1. 請選擇科別 (進入專屬空間)：</label>
-                <div class="flex flex-col gap-2">
-                    <select id="login-subject-select" class="border p-3 rounded w-full bg-blue-50 text-base focus:ring-2 focus:ring-blue-400 outline-none transition font-bold text-blue-800" onchange="window.handleLoginSubjectChange()">
-                        <option value="">-- 請先選擇科別 --</option>
-                        <option value="國文">國文</option>
-                        <option value="英文">英文</option>
-                        <option value="數學">數學</option>
-                        <option value="物理">物理</option>
-                        <option value="化學">化學</option>
-                        <option value="生物">生物</option>
-                        <option value="地球科學">地球科學</option>
-                        <option value="地理">地理</option>
-                        <option value="歷史">歷史</option>
-                        <option value="公民">公民</option>
-                        <option value="音樂">音樂</option>
-                        <option value="體育">體育</option>
-                        <option value="家政">家政</option>
-                        <option value="美術">美術</option>
-                        <option value="資訊">資訊</option>
-                        <option value="custom" class="font-bold text-pink-600">✍️ 自訂其他科別...</option>
+            <!-- 視圖 A：管理者專用登入區 (主網址進入時顯示) -->
+            <div id="admin-login-view" class="hidden">
+                <div class="mb-5 border-b border-gray-200 pb-5">
+                    <label class="block text-blue-800 font-bold mb-2 text-sm sm:text-base">📍 1. 請選擇要管理或建立的科別：</label>
+                    <div class="flex flex-col gap-2">
+                        <select id="login-subject-select" class="border p-3 rounded w-full bg-blue-50 text-base focus:ring-2 focus:ring-blue-400 outline-none transition font-bold text-blue-800" onchange="window.handleLoginSubjectChange()">
+                            <option value="">-- 請先選擇科別 --</option>
+                            <option value="國文">國文</option>
+                            <option value="英文">英文</option>
+                            <option value="數學">數學</option>
+                            <option value="物理">物理</option>
+                            <option value="化學">化學</option>
+                            <option value="生物">生物</option>
+                            <option value="地球科學">地球科學</option>
+                            <option value="地理">地理</option>
+                            <option value="歷史">歷史</option>
+                            <option value="公民">公民</option>
+                            <option value="音樂">音樂</option>
+                            <option value="體育">體育</option>
+                            <option value="家政">家政</option>
+                            <option value="美術">美術</option>
+                            <option value="資訊">資訊</option>
+                            <option value="custom" class="font-bold text-pink-600">✍️ 自訂其他科別...</option>
+                        </select>
+                        <input type="text" id="login-custom-subject-input" class="hidden border p-3 rounded w-full bg-white focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="請輸入自訂科別" onblur="window.handleLoginSubjectChange()">
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label id="admin-password-label" class="block text-gray-700 font-bold mb-2 text-sm sm:text-base transition-colors duration-300">請先選擇上方科別</label>
+                    <input type="password" id="admin-password" maxlength="4" placeholder="****" class="w-full border p-3 rounded bg-gray-50 text-base text-center tracking-widest focus:ring-2 focus:ring-blue-400 outline-none" disabled>
+                </div>
+
+                <button id="admin-login-btn" onclick="window.handleAdminLogin()" class="w-full bg-gray-400 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md cursor-not-allowed" disabled>
+                    請先選擇科別
+                </button>
+            </div>
+
+            <!-- 視圖 B：選書委員專用登入區 (專屬連結進入時顯示) -->
+            <div id="committee-login-view" class="hidden">
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6 text-center shadow-inner">
+                    <p class="text-gray-600 text-sm font-bold">目前進入的評分空間為</p>
+                    <p class="text-2xl font-black text-blue-800 mt-1">【<span id="committee-login-subject-display"></span>科】</p>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-bold mb-2 text-sm sm:text-base">請選擇您的姓名：</label>
+                    <select id="committee-dropdown" class="w-full border p-3 rounded bg-white text-base focus:ring-2 focus:ring-blue-400 outline-none shadow-sm">
+                        <option value="">載入名單中...</option>
                     </select>
-                    <input type="text" id="login-custom-subject-input" class="hidden border p-3 rounded w-full bg-white focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="請輸入自訂科別" onblur="window.handleLoginSubjectChange()">
                 </div>
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-gray-700 font-bold mb-2 text-sm sm:text-base">2. 請選擇身分：</label>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                    <label class="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer">
-                        <input type="radio" name="role" value="admin" class="mr-2 w-4 h-4" checked onchange="window.toggleLoginRole()"> 管理者
-                    </label>
-                    <label class="flex items-center p-2 border rounded hover:bg-gray-50 cursor-pointer">
-                        <input type="radio" name="role" value="committee" class="mr-2 w-4 h-4" onchange="window.toggleLoginRole()"> 選書委員
-                    </label>
-                </div>
+
+                <button onclick="window.handleCommitteeLogin()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md flex items-center justify-center gap-2">
+                    進入評分系統 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </button>
             </div>
 
-            <!-- 管理者密碼輸入框 -->
-            <div id="admin-password-group" class="mb-6">
-                <label class="block text-gray-700 font-bold mb-2 text-sm sm:text-base">請輸入管理者密碼 (4位數)：</label>
-                <input type="password" id="admin-password" maxlength="4" placeholder="****" class="w-full border p-3 rounded bg-gray-50 text-base text-center tracking-widest">
-            </div>
-
-            <div id="committee-select-group" class="mb-6 hidden">
-                <label class="block text-gray-700 font-bold mb-2 text-sm sm:text-base">請選擇您的姓名：</label>
-                <select id="committee-dropdown" class="w-full border p-3 rounded bg-gray-50 text-base">
-                    <option value="">-- 請先選擇上方科別 --</option>
-                </select>
-            </div>
-
-            <button onclick="window.handleLogin()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition duration-200 shadow-md">
-                登入系統
-            </button>
         </div>
 
         <!-- ==========================================
@@ -91,7 +92,6 @@
                     👨‍💼 管理者控制台 <span id="admin-subject-title" class="ml-2 text-lg text-gray-500"></span>
                 </h1>
                 
-                <!-- ★ 修改點：加入專屬連結複製按鈕 ★ -->
                 <div class="flex flex-wrap w-full sm:w-auto gap-2">
                     <button onclick="window.copyVotingLink()" class="flex-1 sm:flex-none bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded shadow transition font-bold flex items-center justify-center gap-1 text-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
@@ -293,7 +293,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // ★ 新增匯入 getDoc 用於單次讀取資料 ★
         import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -305,12 +304,10 @@
             appId: "1:996605263028:web:0cb6c0a481512ca4d8ebe1"
         };
         
-        // ★ 核心多租戶變數 ★
         const baseAppId = 'school-book-system-2026';
         let tenantId = new URLSearchParams(window.location.search).get('dept') || ''; 
         let activeAppId = baseAppId;
         
-        // Firebase 參照改為動態
         let configDocRef = null;
         let scoresCollectionRef = null;
         let unsubscribeConfig = null;
@@ -320,7 +317,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: '' };
+        // ★ 新增 adminPassword 屬性，用於儲存動態設定的密碼 ★
+        let globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: '', adminPassword: '' };
         let globalScores = {}; 
         let currentRole = null;
         let currentUserLabel = null;
@@ -335,34 +333,34 @@
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("登入失敗：", error);
-                alert("無法登入資料庫！請確認您的 apiKey。");
+                let errorMsg = "無法登入資料庫！\n\n";
+                if (error.code === 'auth/operation-not-allowed') {
+                    errorMsg += "🚨 錯誤：您尚未在 Firebase 後台啟用「匿名 (Anonymous)」登入功能！請回 Firebase 控制台開啟。";
+                } else if (error.code === 'auth/api-key-not-valid') {
+                    errorMsg += "🚨 錯誤：API Key 無效！請確認您的 apiKey 沒有複製錯誤或漏字。";
+                } else {
+                    errorMsg += "錯誤代碼：" + error.code;
+                }
+                alert(errorMsg);
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
             }
         };
 
-        // ★ 當身份驗證完成時，檢查網址是否有自帶科別參數 ★
+        // ★ 修改：身分驗證完成後，根據有無 tenantId (網址參數) 來切換顯示介面 ★
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 if (tenantId) {
-                    // 如果網址有參數，鎖定該科別並預載入名單
-                    const select = document.getElementById('login-subject-select');
-                    const customInput = document.getElementById('login-custom-subject-input');
-                    
-                    if (predefinedSubjects.includes(tenantId)) {
-                        select.value = tenantId;
-                    } else {
-                        select.value = 'custom';
-                        customInput.value = tenantId;
-                        customInput.classList.remove('hidden');
-                    }
-                    
-                    // 鎖定選單避免委員改到
-                    select.disabled = true;
-                    customInput.disabled = true;
-                    select.classList.add('bg-gray-200', 'cursor-not-allowed');
+                    // 如果有帶參數，代表是【選書委員】使用專屬連結進入
+                    document.getElementById('admin-login-view').classList.add('hidden');
+                    document.getElementById('committee-login-view').classList.remove('hidden');
+                    document.getElementById('committee-login-subject-display').innerText = tenantId;
                     
                     await loadTenantConfig(tenantId);
+                } else {
+                    // 如果沒有帶參數，代表是【管理者】從主網址進入
+                    document.getElementById('admin-login-view').classList.remove('hidden');
+                    document.getElementById('committee-login-view').classList.add('hidden');
                 }
 
                 document.getElementById('loading-screen').classList.add('hidden');
@@ -372,7 +370,6 @@
 
         initAuth();
 
-        // ★ 動態載入該科目的資料庫設定 ★
         window.handleLoginSubjectChange = async () => {
             const select = document.getElementById('login-subject-select');
             const custom = document.getElementById('login-custom-subject-input');
@@ -390,12 +387,20 @@
                 await loadTenantConfig(tenantId);
             } else if (!val) {
                 tenantId = '';
-                document.getElementById('committee-dropdown').innerHTML = '<option value="">-- 請先選擇上方科別 --</option>';
+                // 尚未輸入科別時，鎖定密碼與登入按鈕
+                const pwdInput = document.getElementById('admin-password');
+                const btn = document.getElementById('admin-login-btn');
+                pwdInput.disabled = true;
+                pwdInput.value = '';
+                btn.disabled = true;
+                btn.classList.replace('bg-blue-500', 'bg-gray-400');
+                btn.classList.replace('hover:bg-blue-600', 'cursor-not-allowed');
+                document.getElementById('admin-password-label').innerText = '請先選擇上方科別';
+                document.getElementById('admin-password-label').classList.remove('text-red-600');
             }
         };
 
         async function loadTenantConfig(tenant) {
-            // 動態組合出獨立的資料夾名稱 (例如: school-book-system-2026-國文)
             activeAppId = baseAppId + '-' + encodeURIComponent(tenant);
             configDocRef = doc(db, 'artifacts', activeAppId, 'public', 'data', 'appConfig', 'main');
             scoresCollectionRef = collection(db, 'artifacts', activeAppId, 'public', 'data', 'scores');
@@ -405,26 +410,49 @@
                 if (docSnap.exists()) {
                     globalConfig = docSnap.data();
                     if (!globalConfig.subject) globalConfig.subject = tenant;
+                    if (globalConfig.adminPassword === undefined) globalConfig.adminPassword = '';
                 } else {
-                    globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: tenant };
+                    globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: tenant, adminPassword: '' };
                 }
                 
-                // 預先載入委員名單給登入選單
+                // ★ 根據是否設定過密碼，動態更新管理員登入區塊的 UI ★
+                const pwdInput = document.getElementById('admin-password');
+                const btn = document.getElementById('admin-login-btn');
+                const pwdLabel = document.getElementById('admin-password-label');
+                
+                if (pwdInput && btn && pwdLabel) {
+                    pwdInput.disabled = false;
+                    btn.disabled = false;
+                    btn.innerText = '管理者登入';
+                    btn.classList.replace('bg-gray-400', 'bg-blue-500');
+                    btn.classList.replace('cursor-not-allowed', 'hover:bg-blue-600');
+
+                    if (globalConfig.adminPassword) {
+                        pwdLabel.innerHTML = '請輸入管理者密碼 (4位數)：';
+                        pwdLabel.classList.remove('text-red-600');
+                    } else {
+                        pwdLabel.innerHTML = '⚠️ 首次登入，請設定管理者密碼 (4位數字)：';
+                        pwdLabel.classList.add('text-red-600');
+                    }
+                }
+
+                // 載入委員名單給委員登入選單
                 const dropdown = document.getElementById('committee-dropdown');
-                dropdown.innerHTML = '<option value="">-- 請選擇您的姓名 --</option>';
-                if (globalConfig.committees && globalConfig.committees.length > 0) {
-                    globalConfig.committees.forEach(name => {
-                        dropdown.innerHTML += `<option value="${name}">${name}</option>`;
-                    });
-                } else {
-                    dropdown.innerHTML = '<option value="">請等待管理者建立名單...</option>';
+                if (dropdown) {
+                    dropdown.innerHTML = '<option value="">-- 請選擇您的姓名 --</option>';
+                    if (globalConfig.committees && globalConfig.committees.length > 0) {
+                        globalConfig.committees.forEach(name => {
+                            dropdown.innerHTML += `<option value="${name}">${name}</option>`;
+                        });
+                    } else {
+                        dropdown.innerHTML = '<option value="">請等待管理者建立名單...</option>';
+                    }
                 }
             } catch (e) {
                 console.error("載入科別設定失敗", e);
             }
         }
 
-        // ★ 登入後才開啟該科目的即時監聽 ★
         function setupRealtimeListeners() {
             unsubscribeConfig = onSnapshot(configDocRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -432,6 +460,7 @@
                     if (!globalConfig.gradeRanges) globalConfig.gradeRanges = {};
                     if (globalConfig.isAnonymous === undefined) globalConfig.isAnonymous = false;
                     if (globalConfig.subject === undefined) globalConfig.subject = tenantId;
+                    if (globalConfig.adminPassword === undefined) globalConfig.adminPassword = '';
                 } else {
                     setDoc(configDocRef, globalConfig);
                 }
@@ -448,7 +477,6 @@
         }
 
         function updateUI() {
-            // 更新名單列表
             const list = document.getElementById('committee-list');
             if(list) {
                 list.innerHTML = (globalConfig.committees || []).map(name => {
@@ -456,7 +484,6 @@
                 }).join('');
             }
 
-            // 更新報表標題輸入框
             const displayInput = document.getElementById('admin-subject-display-input');
             if (displayInput) displayInput.value = globalConfig.subject;
 
@@ -874,83 +901,90 @@
             }
         }
 
-        // ==========================================
-        // 互動功能
-        // ==========================================
-        window.toggleLoginRole = () => {
-            const role = document.querySelector('input[name="role"]:checked').value;
-            const dropdown = document.getElementById('committee-select-group');
-            const passwordGroup = document.getElementById('admin-password-group');
+        // ★ 修改：拆分管理者登入與委員登入邏輯，並加入動態密碼驗證 ★
+        window.handleAdminLogin = async () => {
+            const subjectSelect = document.getElementById('login-subject-select');
+            const customInput = document.getElementById('login-custom-subject-input');
+            let val = subjectSelect.value === 'custom' ? customInput.value.trim() : subjectSelect.value;
             
-            if(role === 'committee') {
-                dropdown.classList.remove('hidden');
-                passwordGroup.classList.add('hidden');
-            } else {
-                dropdown.classList.add('hidden');
-                passwordGroup.classList.remove('hidden');
-            }
-        };
-
-        window.handleLogin = async () => {
-            if (!tenantId) {
-                alert('請先在第一步選擇您的科別！');
+            if (!val) {
+                alert('請先選擇或輸入要管理的科別！');
                 return;
             }
 
-            const role = document.querySelector('input[name="role"]:checked').value;
-            currentRole = role;
+            const passwordInput = document.getElementById('admin-password');
+            const password = passwordInput.value;
 
-            if(role === 'admin') {
-                const passwordInput = document.getElementById('admin-password');
-                const password = passwordInput.value;
-                if (password !== '1910') {
-                    alert('密碼錯誤！請重新輸入。');
+            if (!/^\d{4}$/.test(password)) {
+                alert('密碼格式錯誤！請輸入 4 位數字。');
+                return;
+            }
+
+            // 確保已載入該科別的雲端設定
+            if (tenantId !== val) {
+                tenantId = val;
+                await loadTenantConfig(tenantId);
+            }
+
+            // 判斷密碼邏輯
+            if (!globalConfig.adminPassword) {
+                // 第一次登入，設定新密碼
+                if (confirm(`確定要將【${tenantId}科】的管理者密碼設定為「${password}」嗎？\n請牢記此密碼，設定後將無法更改！`)) {
+                    globalConfig.adminPassword = password;
+                    await saveConfigToCloud();
+                    alert('✅ 密碼設定成功！');
+                } else {
+                    return;
+                }
+            } else {
+                // 非第一次登入，驗證密碼
+                if (password !== globalConfig.adminPassword) {
+                    alert('❌ 密碼錯誤！請重新輸入。');
                     passwordInput.value = ''; 
                     return; 
                 }
-                
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('admin-section').classList.remove('hidden');
-                
-                window.switchAdminTab('tab-setup');
-                setupRealtimeListeners(); // 登入後才開啟即時連線
-            } else if (role === 'committee') {
-                const name = document.getElementById('committee-dropdown').value;
-                if(!name) {
-                    alert('請先選擇您的姓名！');
-                    return;
-                }
-                currentUserLabel = name;
-                document.getElementById('current-committee-name').innerText = name;
-                document.getElementById('login-section').classList.add('hidden');
-                document.getElementById('committee-section').classList.remove('hidden');
-                setupRealtimeListeners(); // 登入後才開啟即時連線
             }
+            
+            currentRole = 'admin';
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('admin-section').classList.remove('hidden');
+            
+            window.switchAdminTab('tab-setup');
+            setupRealtimeListeners();
+        };
+
+        window.handleCommitteeLogin = () => {
+            const name = document.getElementById('committee-dropdown').value;
+            if(!name) {
+                alert('請先選擇您的姓名！');
+                return;
+            }
+            
+            currentRole = 'committee';
+            currentUserLabel = name;
+            document.getElementById('current-committee-name').innerText = name;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('committee-section').classList.remove('hidden');
+            
+            setupRealtimeListeners();
         };
 
         window.logout = () => {
             currentRole = null;
             currentUserLabel = null;
-            // 登出時取消即時連線，避免資料串線
             if(unsubscribeConfig) unsubscribeConfig();
             if(unsubscribeScores) unsubscribeScores();
 
-            document.getElementById('admin-password').value = '';
-            document.getElementById('admin-section').classList.add('hidden');
-            document.getElementById('committee-section').classList.add('hidden');
-            document.getElementById('login-section').classList.remove('hidden');
-            window.scrollTo(0, 0); 
+            // 若原本就是從專屬連結進來的，刷新頁面後一樣會回到專屬登入畫面
+            window.location.reload(); 
         };
 
-        // ★ 新增：產生與複製專屬邀請連結的魔法 ★
         window.copyVotingLink = () => {
             if (!tenantId) return;
-            // 自動組合目前的網址 + 參數
             const url = new URL(window.location.href);
             url.searchParams.set('dept', tenantId);
             const fullLink = url.toString();
 
-            // 為了相容所有設備，我們建立一個隱形的文字框來拷貝
             const tempInput = document.createElement("input");
             tempInput.value = fullLink;
             document.body.appendChild(tempInput);
@@ -1164,7 +1198,9 @@
                 }
                 await Promise.all(deletePromises);
 
-                globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: tenantId };
+                // ★ 清除資料時，保留管理者原本設定的密碼 ★
+                const currentPassword = globalConfig.adminPassword || '';
+                globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: tenantId, adminPassword: currentPassword };
                 await setDoc(configDocRef, globalConfig);
 
                 alert('✅ 所有資料已成功清除！系統已重置為初始狀態。');
