@@ -90,6 +90,7 @@
 
             <!-- [分頁 1] 基本設定 -->
             <div id="tab-setup" class="admin-tab-content grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                <!-- 委員名單 -->
                 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
                     <h3 class="text-base sm:text-lg font-bold mb-3 flex items-center gap-2"><span class="text-indigo-600">👥</span> 委員名單管理</h3>
                     <div class="flex flex-col gap-2 mb-4">
@@ -100,6 +101,7 @@
                     <ul id="committee-list" class="pl-2 text-gray-700 max-h-40 overflow-y-auto bg-gray-50 p-2 rounded border space-y-1"></ul>
                 </div>
 
+                <!-- 計分模式 -->
                 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
                     <h3 class="text-base sm:text-lg font-bold mb-3 flex items-center gap-2"><span class="text-purple-500">⚙️</span> 計分模式設定</h3>
                     <div class="space-y-3 mb-4 border-b border-gray-100 pb-4">
@@ -115,6 +117,25 @@
                     <div class="bg-purple-50 p-4 rounded border border-purple-100 flex-grow">
                         <label class="block text-sm font-bold text-purple-800 mb-2 flex items-center gap-1">💡 計分範圍說明：</label>
                         <p class="text-sm text-gray-700 leading-relaxed">請在「書單管理」分頁中，針對每個年級設定專屬的評分範圍！</p>
+                    </div>
+                </div>
+
+                <!-- ★ 新增：記名/不記名投票設定 ★ -->
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col lg:col-span-2 xl:col-span-1">
+                    <h3 class="text-base sm:text-lg font-bold mb-3 flex items-center gap-2"><span class="text-pink-500">🕵️</span> 投票記名設定</h3>
+                    <div class="space-y-3 mb-4 border-b border-gray-100 pb-4">
+                        <label class="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer transition">
+                            <input type="radio" name="isAnonymous" value="false" class="mr-3 w-4 h-4 accent-blue-600" onchange="window.updateIsAnonymous(false)"> 
+                            <span class="font-medium text-sm sm:text-base">記名投票 <span class="text-xs text-gray-500 hidden sm:inline">(可查看與匯出投票明細)</span></span>
+                        </label>
+                        <label class="flex items-center p-3 border rounded hover:bg-gray-50 cursor-pointer transition">
+                            <input type="radio" name="isAnonymous" value="true" class="mr-3 w-4 h-4 accent-blue-600" onchange="window.updateIsAnonymous(true)"> 
+                            <span class="font-medium text-sm sm:text-base">不記名投票 <span class="text-xs text-gray-500 hidden sm:inline">(隱藏投票明細，保護隱私)</span></span>
+                        </label>
+                    </div>
+                    <div class="bg-pink-50 p-4 rounded border border-pink-100 flex-grow">
+                        <label class="block text-sm font-bold text-pink-800 mb-2 flex items-center gap-1">💡 記名模式說明：</label>
+                        <p class="text-sm text-gray-700 leading-relaxed">若選擇「不記名投票」，系統會將「投票明細」分頁隱藏，且下載的 Excel 不會包含委員各自的評分紀錄。</p>
                     </div>
                 </div>
             </div>
@@ -135,7 +156,7 @@
                 </div>
             </div>
 
-            <!-- [分頁 3] 投票明細 (新增的分頁) -->
+            <!-- [分頁 3] 投票明細 -->
             <div id="tab-details" class="admin-tab-content hidden mb-6">
                 <div id="voting-details-container" class="space-y-6">
                     <!-- 投票明細表格動態產生在這裡 -->
@@ -226,7 +247,8 @@
         const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'appConfig', 'main');
         const scoresCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
 
-        let globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {} };
+        // ★ 新增 globalConfig.isAnonymous 欄位，預設 false (記名) ★
+        let globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false };
         let globalScores = {}; 
         let currentRole = null;
         let currentUserLabel = null;
@@ -268,6 +290,7 @@
                 if (docSnap.exists()) {
                     globalConfig = docSnap.data();
                     if (!globalConfig.gradeRanges) globalConfig.gradeRanges = {};
+                    if (globalConfig.isAnonymous === undefined) globalConfig.isAnonymous = false;
                 } else {
                     setDoc(configDocRef, globalConfig);
                 }
@@ -304,14 +327,21 @@
                 return `<li class="border-b border-gray-100 py-2 last:border-0 text-sm text-gray-700 flex items-center before:content-['•'] before:mr-2 before:text-blue-500">${name}</li>`;
             }).join('');
 
+            // 更新計分模式
             const radios = document.getElementsByName('sortMode');
             radios.forEach(radio => {
                 radio.checked = (radio.value === globalConfig.sortMode);
             });
+            
+            // 更新記名模式
+            const anonRadios = document.getElementsByName('isAnonymous');
+            anonRadios.forEach(radio => {
+                radio.checked = (radio.value === String(!!globalConfig.isAnonymous));
+            });
 
             if (currentRole === 'admin') {
                 renderAdminGradesAndBooks();
-                renderVotingDetails(); // ★ 新增渲染第三分頁：投票明細
+                renderVotingDetails(); 
                 renderLiveRanking();
             }
             if (currentRole === 'committee' && currentUserLabel) {
@@ -320,21 +350,18 @@
         }
 
         // ==========================================
-        // 分頁切換功能 (Tab Switcher)
+        // 分頁切換功能
         // ==========================================
         window.switchAdminTab = (tabId) => {
-            // 隱藏所有分頁內容
             const contents = document.querySelectorAll('.admin-tab-content');
             contents.forEach(el => el.classList.add('hidden'));
             
-            // 重置所有按鈕樣式
             const btns = document.querySelectorAll('.admin-tab-btn');
             btns.forEach(btn => {
                 btn.classList.remove('border-blue-500', 'text-blue-600', 'font-bold');
                 btn.classList.add('border-transparent', 'text-gray-500');
             });
 
-            // 顯示目標分頁並切換按鈕樣式
             document.getElementById(tabId).classList.remove('hidden');
             const activeBtn = document.querySelector(`button[onclick="window.switchAdminTab('${tabId}')"]`);
             if (activeBtn) {
@@ -426,12 +453,27 @@
         }
 
         // ==========================================
-        // ★ 新增功能：渲染第三分頁的「投票明細」 ★
+        // 渲染第三分頁：「投票明細」
         // ==========================================
         function renderVotingDetails() {
             const container = document.getElementById('voting-details-container');
-            container.innerHTML = '';
             
+            // ★ 防呆機制：如果不記名投票，隱藏明細 ★
+            if (globalConfig.isAnonymous) {
+                container.innerHTML = `
+                    <div class="bg-pink-50 p-8 rounded-lg shadow-sm border border-pink-200 text-center my-4">
+                        <p class="text-pink-800 font-bold text-xl mb-3 flex items-center justify-center gap-2">
+                            <span class="text-3xl">🕵️</span> 目前為「不記名投票」模式
+                        </p>
+                        <p class="text-gray-700 text-sm sm:text-base">
+                            為保護委員隱私，系統已主動隱藏此分頁的投票明細表。<br>
+                            下載的 Excel 報表也僅會提供結算總表。
+                        </p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
             const mode = globalConfig.sortMode; 
             const scoreLabel = mode === 'score' ? '分數加總' : '名次加總';
 
@@ -439,7 +481,6 @@
                 const books = globalConfig.books[grade] || [];
                 if (books.length === 0) return;
 
-                // 1. 計算總分與排名
                 let totalScores = {};
                 books.forEach(b => totalScores[b] = 0);
 
@@ -452,6 +493,7 @@
                     }
                 }
 
+                // ★ 新增：計算同分相同名次的演算法 ★
                 let sortedBooks = Object.keys(totalScores).map(b => ({ name: b, score: totalScores[b] })).sort((a,b) => {
                     if (mode === 'score') return b.score - a.score;
                     let scoreA = a.score === 0 ? 9999 : a.score;
@@ -459,7 +501,15 @@
                     return scoreA - scoreB;
                 });
 
-                // 2. 建立表格 HTML
+                // 賦予名次 (處理 Tie-breaking)
+                sortedBooks.forEach((item, index) => {
+                    if (index > 0 && item.score === sortedBooks[index - 1].score) {
+                        item.rank = sortedBooks[index - 1].rank;
+                    } else {
+                        item.rank = index + 1;
+                    }
+                });
+
                 let html = `
                     <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <h3 class="text-base sm:text-lg font-bold mb-4 text-blue-800 flex items-center gap-2">📊 ${grade} 成績明細</h3>
@@ -475,7 +525,6 @@
                                 </thead>
                                 <tbody>`;
                 
-                // 3. 填入每位委員的成績
                 globalConfig.committees.forEach(c => {
                     let v = globalScores[c] && globalScores[c][grade] ? globalScores[c][grade] : {};
                     html += `<tr class="border-b hover:bg-gray-50 transition bg-white">
@@ -487,7 +536,6 @@
                     html += `</tr>`;
                 });
 
-                // 4. 填入底部加總與排名
                 html += `       <tr class="bg-yellow-50 font-bold text-gray-800 border-b">
                                     <td class="p-2 border-r sticky left-0 bg-yellow-50 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">${scoreLabel}</td>`;
                 books.forEach(b => {
@@ -497,8 +545,9 @@
                                 <tr class="bg-green-50 font-bold text-gray-800">
                                     <td class="p-2 border-r sticky left-0 bg-green-50 z-10 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">最終排名</td>`;
                 books.forEach(b => {
-                    let rank = sortedBooks.findIndex(item => item.name === b) + 1;
-                    html += `<td class="p-2 border-r last:border-0">${totalScores[b] === 0 ? '-' : rank}</td>`;
+                    let bookObj = sortedBooks.find(item => item.name === b);
+                    let displayRank = (bookObj && bookObj.score !== 0) ? bookObj.rank : '-';
+                    html += `<td class="p-2 border-r last:border-0 text-red-600">${displayRank}</td>`;
                 });
                 html += `       </tr>
                                 </tbody>
@@ -534,6 +583,7 @@
                     }
                 }
 
+                // ★ 新增：計算同分相同名次的演算法 ★
                 let sortedBooks = Object.keys(totalScores).map(book => {
                     return { name: book, score: totalScores[book] };
                 }).sort((a, b) => {
@@ -543,6 +593,15 @@
                     return scoreA - scoreB;
                 });
 
+                // 賦予名次 (處理 Tie-breaking)
+                sortedBooks.forEach((item, index) => {
+                    if (index > 0 && item.score === sortedBooks[index - 1].score) {
+                        item.rank = sortedBooks[index - 1].rank;
+                    } else {
+                        item.rank = index + 1;
+                    }
+                });
+
                 let html = `
                     <div class="border rounded-lg bg-white shadow-sm overflow-hidden flex flex-col border-gray-200">
                         <div class="bg-green-100 font-bold p-2 sm:p-3 text-center border-b text-green-800 text-sm sm:text-base">${grade} ${modeText}榜單</div>
@@ -550,11 +609,19 @@
                 
                 if (sortedBooks.length === 0) html += `<p class="text-sm text-gray-500 text-center py-4">尚無書籍</p>`;
                 else {
-                    sortedBooks.forEach((item, index) => {
-                        let medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span class="inline-block w-5 text-center text-xs text-gray-400 font-bold">${index+1}.</span>`;
+                    sortedBooks.forEach((item) => {
+                        // 使用計算出來的真實名次 (item.rank) 來發獎牌
+                        let rank = item.rank;
+                        let medal = '';
+                        if (item.score === 0) {
+                            medal = `<span class="inline-block w-5 text-center text-xs text-gray-400 font-bold">-</span>`;
+                        } else {
+                            medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `<span class="inline-block w-5 text-center text-xs text-gray-400 font-bold">${rank}.</span>`;
+                        }
+                        
                         let displayScore = item.score === 0 ? '-' : item.score;
                         let unit = mode === 'score' ? '分' : '名次加總';
-                        let rowBg = index === 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100';
+                        let rowBg = rank === 1 && item.score !== 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-gray-100';
                         
                         html += `
                             <div class="flex justify-between items-center border rounded p-2 sm:p-3 shadow-sm ${rowBg}">
@@ -702,7 +769,6 @@
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('admin-section').classList.remove('hidden');
                 
-                // 預設開啟第一個分頁
                 window.switchAdminTab('tab-setup');
                 updateUI();
             } else if (role === 'committee') {
@@ -785,6 +851,12 @@
 
         window.updateSortMode = (mode) => {
             globalConfig.sortMode = mode;
+            saveConfigToCloud();
+        };
+        
+        // ★ 更新不記名設定 ★
+        window.updateIsAnonymous = (val) => {
+            globalConfig.isAnonymous = val;
             saveConfigToCloud();
         };
 
@@ -878,7 +950,7 @@
                 }
                 await Promise.all(deletePromises);
 
-                globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {} };
+                globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false };
                 await setDoc(configDocRef, globalConfig);
 
                 alert('✅ 所有資料已成功清除！系統已重置為初始狀態。');
@@ -944,6 +1016,15 @@
                     let scoreB = b.score === 0 ? 9999 : b.score;
                     return scoreA - scoreB;
                 });
+                
+                // 處理並列名次的演算法
+                sortedBooks.forEach((item, index) => {
+                    if (index > 0 && item.score === sortedBooks[index - 1].score) {
+                        item.rank = sortedBooks[index - 1].rank;
+                    } else {
+                        item.rank = index + 1;
+                    }
+                });
 
                 gradeResults[grade] = {
                     sorted: sortedBooks,
@@ -969,7 +1050,8 @@
                 globalConfig.grades.forEach((grade, index) => {
                     let sortedBooks = gradeResults[grade].sorted;
                     if (i < sortedBooks.length) {
-                        dataRow.push(grade, i + 1, sortedBooks[i].name); 
+                        let displayRank = sortedBooks[i].score === 0 ? '-' : sortedBooks[i].rank;
+                        dataRow.push(grade, displayRank, sortedBooks[i].name); 
                     } else {
                         dataRow.push("", "", ""); 
                     }
@@ -1027,52 +1109,55 @@
             XLSX.utils.book_append_sheet(wb, summarySheet, "🏆 排名總表");
 
             // ==========================================
-            // 工作表二...N：各年級投票明細表
+            // 工作表二...N：各年級投票明細表 (若為記名投票才輸出)
             // ==========================================
-            globalConfig.grades.forEach(grade => {
-                let detailData = [];
-                const books = globalConfig.books[grade] || [];
-                if (books.length === 0) return; 
+            if (!globalConfig.isAnonymous) {
+                globalConfig.grades.forEach(grade => {
+                    let detailData = [];
+                    const books = globalConfig.books[grade] || [];
+                    if (books.length === 0) return; 
 
-                globalConfig.committees.forEach(committeeName => {
-                    let row = { "委員姓名": committeeName };
-                    let committeeVotes = globalScores[committeeName] && globalScores[committeeName][grade] ? globalScores[committeeName][grade] : {};
-                    books.forEach(book => {
-                        let score = committeeVotes[book];
-                        row[book] = score !== undefined ? score : '未評';
+                    globalConfig.committees.forEach(committeeName => {
+                        let row = { "委員姓名": committeeName };
+                        let committeeVotes = globalScores[committeeName] && globalScores[committeeName][grade] ? globalScores[committeeName][grade] : {};
+                        books.forEach(book => {
+                            let score = committeeVotes[book];
+                            row[book] = score !== undefined ? score : '未評';
+                        });
+                        detailData.push(row);
                     });
-                    detailData.push(row);
-                });
 
-                let totals = gradeResults[grade].totals;
-                
-                let summaryRow = { "委員姓名": `【${scoreLabel}】` };
-                books.forEach(book => {
-                    summaryRow[book] = totals[book] === 0 ? '-' : totals[book];
-                });
-                detailData.push(summaryRow);
+                    let totals = gradeResults[grade].totals;
+                    
+                    let summaryRow = { "委員姓名": `【${scoreLabel}】` };
+                    books.forEach(book => {
+                        summaryRow[book] = totals[book] === 0 ? '-' : totals[book];
+                    });
+                    detailData.push(summaryRow);
 
-                let rankRow = { "委員姓名": "【最終排名】" };
-                books.forEach(book => {
-                    let rank = gradeResults[grade].sorted.findIndex(b => b.name === book) + 1;
-                    rankRow[book] = totals[book] === 0 ? '-' : rank;
-                });
-                detailData.push(rankRow);
+                    let rankRow = { "委員姓名": "【最終排名】" };
+                    books.forEach(book => {
+                        let bookObj = gradeResults[grade].sorted.find(b => b.name === book);
+                        let rank = (bookObj && bookObj.score !== 0) ? bookObj.rank : '-';
+                        rankRow[book] = totals[book] === 0 ? '-' : rank;
+                    });
+                    detailData.push(rankRow);
 
-                const detailSheet = XLSX.utils.json_to_sheet(detailData);
-                
-                const detailRange = XLSX.utils.decode_range(detailSheet['!ref']);
-                for (let R = detailRange.s.r; R <= detailRange.e.r; ++R) {
-                    for (let C = detailRange.s.c; C <= detailRange.e.c; ++C) {
-                        const cellAdd = XLSX.utils.encode_cell({ r: R, c: C });
-                        if(detailSheet[cellAdd]) {
-                            detailSheet[cellAdd].s = { alignment: { horizontal: "center", vertical: "center" } };
+                    const detailSheet = XLSX.utils.json_to_sheet(detailData);
+                    
+                    const detailRange = XLSX.utils.decode_range(detailSheet['!ref']);
+                    for (let R = detailRange.s.r; R <= detailRange.e.r; ++R) {
+                        for (let C = detailRange.s.c; C <= detailRange.e.c; ++C) {
+                            const cellAdd = XLSX.utils.encode_cell({ r: R, c: C });
+                            if(detailSheet[cellAdd]) {
+                                detailSheet[cellAdd].s = { alignment: { horizontal: "center", vertical: "center" } };
+                            }
                         }
                     }
-                }
 
-                XLSX.utils.book_append_sheet(wb, detailSheet, `${grade} 明細`);
-            });
+                    XLSX.utils.book_append_sheet(wb, detailSheet, `${grade} 明細`);
+                });
+            }
 
             XLSX.writeFile(wb, "選書計分結果_報表.xlsx");
         };
