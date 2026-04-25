@@ -92,21 +92,31 @@
 
             <!-- [分頁 1] 基本設定 -->
             <div id="tab-setup" class="admin-tab-content grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
-                <!-- ★ 新增：科別設定區塊 ★ -->
+                <!-- ★ 修改：智慧型科別設定區塊 ★ -->
                 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 flex flex-col">
                     <h3 class="text-base sm:text-lg font-bold mb-3 flex items-center gap-2"><span class="text-teal-600">🏷️</span> 科別設定</h3>
                     <div class="flex flex-col gap-2 mb-4 flex-grow">
                         <label class="text-sm font-bold text-gray-700">請選擇或輸入本次選書的科別：</label>
-                        <div class="flex gap-2 mt-2">
-                            <!-- 結合 datalist 讓使用者可下拉選擇，也可手打 -->
-                            <input type="text" list="subject-list" id="subject-input" class="border p-2 rounded w-full text-base bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="例如：國文">
-                            <datalist id="subject-list">
-                                <option value="國文"></option><option value="英文"></option><option value="數學"></option>
-                                <option value="物理"></option><option value="化學"></option><option value="生物"></option>
-                                <option value="地球科學"></option><option value="地理"></option><option value="歷史"></option>
-                                <option value="公民"></option><option value="音樂"></option><option value="體育"></option>
-                                <option value="家政"></option><option value="美術"></option><option value="資訊"></option>
-                            </datalist>
+                        <div class="flex flex-col sm:flex-row gap-2 mt-2">
+                            <select id="subject-select" class="border p-2 rounded w-full sm:w-auto flex-grow text-base bg-gray-50 focus:ring-2 focus:ring-blue-400 outline-none transition" onchange="window.handleSubjectChange()">
+                                <option value="國文">國文</option>
+                                <option value="英文">英文</option>
+                                <option value="數學">數學</option>
+                                <option value="物理">物理</option>
+                                <option value="化學">化學</option>
+                                <option value="生物">生物</option>
+                                <option value="地球科學">地球科學</option>
+                                <option value="地理">地理</option>
+                                <option value="歷史">歷史</option>
+                                <option value="公民">公民</option>
+                                <option value="音樂">音樂</option>
+                                <option value="體育">體育</option>
+                                <option value="家政">家政</option>
+                                <option value="美術">美術</option>
+                                <option value="資訊">資訊</option>
+                                <option value="custom" class="font-bold text-blue-600">✍️ 自訂其他科別...</option>
+                            </select>
+                            <input type="text" id="custom-subject-input" class="hidden border p-2 rounded w-full sm:w-auto flex-grow text-base bg-white focus:ring-2 focus:ring-blue-400 outline-none transition" placeholder="請輸入自訂科別">
                             <button onclick="window.updateSubject()" class="bg-teal-500 hover:bg-teal-600 text-white px-5 py-2 rounded font-bold transition shadow-sm whitespace-nowrap">儲存</button>
                         </div>
                         <p id="subject-save-status" class="text-sm text-green-600 font-bold hidden mt-2">✅ 科別已更新！</p>
@@ -288,7 +298,6 @@
         const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'appConfig', 'main');
         const scoresCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'scores');
 
-        // ★ 新增 subject (科別) 屬性 ★
         let globalConfig = { committees: [], grades: [], books: {}, sortMode: 'score', gradeRanges: {}, isAnonymous: false, subject: '國文' };
         let globalScores = {}; 
         let currentRole = null;
@@ -296,6 +305,9 @@
         
         let pendingSubmitGrade = '';
         let pendingSubmitVotes = {};
+
+        // 預設科別清單
+        const predefinedSubjects = ['國文', '英文', '數學', '物理', '化學', '生物', '地球科學', '地理', '歷史', '公民', '音樂', '體育', '家政', '美術', '資訊'];
 
         const initAuth = async () => {
             try {
@@ -367,10 +379,20 @@
             const list = document.getElementById('committee-list');
             list.innerHTML = globalConfig.committees.map(name => {
                 return `<li class="border-b border-gray-100 py-2 last:border-0 text-sm text-gray-700 flex items-center before:content-['•'] before:mr-2 before:text-blue-500">${name}</li>`;
-            });
+            }).join('');
 
-            // 更新科別欄位顯示
-            document.getElementById('subject-input').value = globalConfig.subject;
+            // ★ 更新科別設定區塊的顯示邏輯 ★
+            const subjectSelect = document.getElementById('subject-select');
+            const customInput = document.getElementById('custom-subject-input');
+            
+            if (predefinedSubjects.includes(globalConfig.subject)) {
+                subjectSelect.value = globalConfig.subject;
+                customInput.classList.add('hidden');
+            } else {
+                subjectSelect.value = 'custom';
+                customInput.value = globalConfig.subject;
+                customInput.classList.remove('hidden');
+            }
 
             // 更新計分模式
             const radios = document.getElementsByName('sortMode');
@@ -846,9 +868,33 @@
             }
         }
 
-        // ★ 新增：儲存科別設定 ★
+        // ★ 新增：處理下拉選單切換邏輯 ★
+        window.handleSubjectChange = () => {
+            const val = document.getElementById('subject-select').value;
+            const customInput = document.getElementById('custom-subject-input');
+            if (val === 'custom') {
+                customInput.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customInput.classList.add('hidden');
+            }
+        };
+
+        // ★ 修改：儲存科別設定邏輯 ★
         window.updateSubject = () => {
-            const val = document.getElementById('subject-input').value.trim();
+            const selectVal = document.getElementById('subject-select').value;
+            let val = '';
+            
+            if (selectVal === 'custom') {
+                val = document.getElementById('custom-subject-input').value.trim();
+                if(!val) {
+                    alert('請輸入自訂科別名稱！');
+                    return;
+                }
+            } else {
+                val = selectVal;
+            }
+
             if (val) {
                 globalConfig.subject = val;
                 saveConfigToCloud();
@@ -1061,9 +1107,6 @@
             }
         };
 
-        // ==========================================
-        // ★ 重構升級：客製化 Excel 下載邏輯 ★
-        // ==========================================
         window.downloadExcel = () => {
             const wb = XLSX.utils.book_new();
             const mode = globalConfig.sortMode; 
@@ -1072,7 +1115,6 @@
 
             let gradeResults = {};
             let maxRows = 0; 
-            // 計算跨欄置中時，總共有幾個 Column (以利完美覆蓋所有年級的表格區塊)
             const totalCols = Math.max(11, globalConfig.grades.length * 4 - 1); 
 
             globalConfig.grades.forEach(grade => {
@@ -1118,20 +1160,17 @@
             // ==========================================
             let summaryAoA = []; 
 
-            // 第 1 列：大標題 (跨欄置中)
             let titleRow = new Array(totalCols).fill("");
             titleRow[0] = `${subjectName}科選書結果一覽表`;
             summaryAoA.push(titleRow);
 
-            // 第 2 列：表頭
             let headerRow = [];
             globalConfig.grades.forEach((grade, index) => {
-                headerRow.push("年級", "排名", "版本"); // 依需求更名為「版本」
+                headerRow.push("年級", "排名", "版本"); 
                 if (index < globalConfig.grades.length - 1) headerRow.push(""); 
             });
             summaryAoA.push(headerRow);
 
-            // 第 3 列開始：成績資料
             for (let i = 0; i < maxRows; i++) {
                 let dataRow = [];
                 globalConfig.grades.forEach((grade, index) => {
@@ -1147,10 +1186,8 @@
                 summaryAoA.push(dataRow);
             }
 
-            // 空 1 列
             summaryAoA.push(new Array(totalCols).fill(""));
 
-            // 加入「選書委員簽名欄」
             const signatureRowIdx = summaryAoA.length; 
             let sigRow = new Array(totalCols).fill("");
             sigRow[0] = "選書委員簽名欄";
@@ -1158,22 +1195,18 @@
 
             const summarySheet = XLSX.utils.aoa_to_sheet(summaryAoA);
 
-            // 設定版面方向為橫向 (Landscape) 與邊界
             summarySheet['!pageSetup'] = { orientation: 'landscape' };
             summarySheet['!margins'] = { left: 1.3, right: 1.3, top: 1.4, bottom: 1.4, header: 0.3, footer: 0.3 };
 
-            // 設定合併儲存格
             summarySheet['!merges'] = [
-                { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }, // 大標題合併
-                { s: { r: signatureRowIdx, c: 0 }, e: { r: signatureRowIdx, c: totalCols - 1 } } // 簽名欄合併
+                { s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } }, 
+                { s: { r: signatureRowIdx, c: 0 }, e: { r: signatureRowIdx, c: totalCols - 1 } } 
             ];
 
-            // 設定列高
             summarySheet['!rows'] = [];
-            summarySheet['!rows'][0] = { hpt: 40 }; // 標題列高 40
-            summarySheet['!rows'][signatureRowIdx] = { hpt: 200 }; // 簽名欄列高 200
+            summarySheet['!rows'][0] = { hpt: 40 }; 
+            summarySheet['!rows'][signatureRowIdx] = { hpt: 200 }; 
 
-            // 設定欄寬 (皆為 9)
             let colWidths = [];
             globalConfig.grades.forEach((grade, index) => {
                 colWidths.push({ wch: 9 });  
@@ -1183,7 +1216,6 @@
             });
             summarySheet['!cols'] = colWidths;
 
-            // 定義通用格線樣式
             const thinBorder = {
                 top: { style: "thin", color: { auto: 1 } },
                 bottom: { style: "thin", color: { auto: 1 } },
@@ -1191,13 +1223,11 @@
                 right: { style: "thin", color: { auto: 1 } }
             };
 
-            // 套用所有自訂樣式 (色彩、字體、置中、邊框)
             const range = XLSX.utils.decode_range(summarySheet['!ref']);
             for (let R = range.s.r; R <= range.e.r; ++R) {
                 for (let C = range.s.c; C <= range.e.c; ++C) {
                     const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                     
-                    // 針對簽名欄的特例：因為是合併儲存格，需確保每個底層 cell 都存在，邊框才能完美畫滿外框
                     if (R === signatureRowIdx && !summarySheet[cellAddress]) {
                         summarySheet[cellAddress] = { v: "", t: "s" };
                     }
@@ -1206,7 +1236,6 @@
                     let cell = summarySheet[cellAddress];
 
                     if (R === 0) {
-                        // 標題樣式
                         if (C === 0) {
                             cell.s = {
                                 font: { sz: 20, bold: true },
@@ -1214,7 +1243,6 @@
                             };
                         }
                     } else if (R === 1) {
-                        // 表頭樣式 (綠色字)
                         if (cell.v !== "") {
                             cell.s = {
                                 font: { color: { rgb: "00B050" }, bold: true },
@@ -1223,9 +1251,7 @@
                             };
                         }
                     } else if (R > 1 && R < signatureRowIdx - 1) {
-                        // 成績資料樣式
                         if (cell.v !== "") {
-                            // 判斷是否為第一名 (透過尋找同一筆資料的排名欄位)
                             let rankCol = Math.floor(C / 4) * 4 + 1;
                             let rankCell = summarySheet[XLSX.utils.encode_cell({ r: R, c: rankCol })];
                             let isFirstPlace = rankCell && rankCell.v === 1;
@@ -1237,7 +1263,6 @@
                             };
                         }
                     } else if (R === signatureRowIdx) {
-                        // 簽名欄樣式
                         cell.s = {
                             font: { sz: 14 },
                             alignment: { vertical: "top", horizontal: "left" },
