@@ -1156,17 +1156,19 @@
             const workbook = new ExcelJS.Workbook();
             
             // 工作表一：排名總表
-            const summarySheet = workbook.addWorksheet('🏆 排名總表', {
-                pageSetup: { 
-                    paperSize: 9, // A4
-                    orientation: 'landscape', // 橫向列印
-                    margins: {
-                        left: 1.3 / 2.54, right: 1.3 / 2.54, // ExcelJS 使用英吋，需除以 2.54
-                        top: 1.4 / 2.54, bottom: 1.4 / 2.54,
-                        header: 0.3 / 2.54, footer: 0.3 / 2.54
-                    }
-                }
-            });
+            const summarySheet = workbook.addWorksheet('🏆 排名總表');
+            
+            // ★ 強制設定橫向列印與邊界 (獨立屬性宣告以確保軟體能正確讀取) ★
+            summarySheet.pageSetup.paperSize = 9; // A4
+            summarySheet.pageSetup.orientation = 'landscape'; // 強制橫向
+            summarySheet.pageSetup.fitToPage = true; // 縮放至一頁寬
+            summarySheet.pageSetup.fitToWidth = 1;
+            summarySheet.pageSetup.fitToHeight = 0;
+            summarySheet.pageSetup.margins = {
+                left: 1.3 / 2.54, right: 1.3 / 2.54, 
+                top: 1.4 / 2.54, bottom: 1.4 / 2.54,
+                header: 0.3 / 2.54, footer: 0.3 / 2.54
+            };
 
             // 第 1 列：大標題
             summarySheet.mergeCells(1, 1, 1, totalCols);
@@ -1258,9 +1260,14 @@
                     const books = globalConfig.books[grade] || [];
                     if (books.length === 0) return; 
 
-                    const detailSheet = workbook.addWorksheet(`${grade} 明細`, {
-                        pageSetup: { paperSize: 9, orientation: 'landscape' }
-                    });
+                    const detailSheet = workbook.addWorksheet(`${grade} 明細`);
+                    
+                    // ★ 明細表也強制設定橫向列印 ★
+                    detailSheet.pageSetup.paperSize = 9; 
+                    detailSheet.pageSetup.orientation = 'landscape'; 
+                    detailSheet.pageSetup.fitToPage = true;
+                    detailSheet.pageSetup.fitToWidth = 1;
+                    detailSheet.pageSetup.fitToHeight = 0;
 
                     let headers = ["委員姓名", ...books];
                     const hr = detailSheet.addRow(headers);
