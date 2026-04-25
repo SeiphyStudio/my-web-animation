@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>選書計分即時連動系統 (Firebase版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- ★ 老師幫你把引擎升級為更強大的 ExcelJS 囉！支援完美的列印與邊距設定 ★ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
@@ -493,9 +492,18 @@
                             
                             <div class="bg-white p-2 rounded border border-gray-200 mb-3 flex-grow">
                                 <h4 class="text-xs font-bold text-gray-500 mb-1 border-b pb-1">已選入版本：</h4>
-                                <ul class="text-xs sm:text-sm list-inside list-disc text-gray-700 space-y-1 pl-1">
-                                    ${books.map(b => `<li>${b}</li>`).join('')}
-                                    ${books.length === 0 ? '<li class="text-gray-400 list-none text-center italic text-xs py-2">尚未加入任何版本</li>' : ''}
+                                <!-- ★ 修改點：加入了紅色的刪除按鈕 ★ -->
+                                <ul class="text-xs sm:text-sm text-gray-700 space-y-1 mt-1">
+                                    ${books.map(b => `
+                                        <li class="flex justify-between items-center py-1 border-b border-gray-50 last:border-0 px-1 hover:bg-gray-100 rounded transition">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-1 h-1 bg-gray-500 rounded-full"></span>
+                                                <span>${b}</span>
+                                            </div>
+                                            <button onclick="window.removeBook('${grade}', '${b}')" class="text-red-500 hover:text-white hover:bg-red-500 rounded w-5 h-5 flex items-center justify-center font-bold transition text-xs" title="刪除此版本">✕</button>
+                                        </li>
+                                    `).join('')}
+                                    ${books.length === 0 ? '<li class="text-gray-400 text-center italic text-xs py-2 border border-dashed border-gray-200 rounded">尚未加入任何版本</li>' : ''}
                                 </ul>
                             </div>
 
@@ -941,6 +949,14 @@
 
             if(bookName && !globalConfig.books[grade].includes(bookName)) {
                 globalConfig.books[grade].push(bookName);
+                saveConfigToCloud();
+            }
+        };
+
+        // ★ 新增：刪除書籍版本的邏輯 ★
+        window.removeBook = (grade, bookName) => {
+            if(confirm(`確定要刪除「${bookName}」嗎？\n(注意：這只會從表單中移除選項，但不會刪除已經收到的成績)`)) {
+                globalConfig.books[grade] = globalConfig.books[grade].filter(b => b !== bookName);
                 saveConfigToCloud();
             }
         };
