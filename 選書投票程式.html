@@ -27,10 +27,10 @@
             <!-- 視圖 A：管理者專用登入區 (主網址進入時顯示) -->
             <div id="admin-login-view" class="hidden">
                 <div class="mb-5 border-b border-gray-200 pb-5">
-                    <label class="block text-blue-800 font-bold mb-2 text-sm sm:text-base">請輸入暱稱：</label>
+                    <label class="block text-blue-800 font-bold mb-2 text-sm sm:text-base">請輸入暱稱或學校名稱：</label>
                     <div class="flex flex-col gap-3 mt-2">
                         <!-- ★ 修改：徹底移除會讓人混淆的「台中二中」等單位提示文字 ★ -->
-                        <input type="text" id="login-school-input" class="border p-3 rounded w-full bg-blue-50 text-base focus:ring-2 focus:ring-blue-400 outline-none transition font-bold text-blue-800 placeholder-blue-300" placeholder="請輸入暱稱" oninput="window.checkTenantInputs()">
+                        <input type="text" id="login-school-input" class="border p-3 rounded w-full bg-blue-50 text-base focus:ring-2 focus:ring-blue-400 outline-none transition font-bold text-blue-800 placeholder-blue-300" placeholder="請輸入暱稱或學校名稱" oninput="window.checkTenantInputs()">
                         
                         <select id="login-subject-select" class="border p-3 rounded w-full bg-blue-50 text-base focus:ring-2 focus:ring-blue-400 outline-none transition font-bold text-blue-800" onchange="window.checkTenantInputs()">
                             <option value="">-- 請選擇科別 --</option>
@@ -57,7 +57,7 @@
 
                 <div class="mb-6">
                     <!-- ★ 修改：同步修正密碼上方的提示文字 ★ -->
-                    <label id="admin-password-label" class="block text-gray-700 font-bold mb-2 text-sm sm:text-base transition-colors duration-300">請先填寫上方「暱稱」與「科別」</label>
+                    <label id="admin-password-label" class="block text-gray-700 font-bold mb-2 text-sm sm:text-base transition-colors duration-300">請先填寫上方「暱稱或學校名稱」與「科別」</label>
                     <input type="password" id="admin-password" maxlength="4" placeholder="****" class="w-full border p-3 rounded bg-gray-50 text-base text-center tracking-widest focus:ring-2 focus:ring-blue-400 outline-none transition" disabled>
                 </div>
 
@@ -404,7 +404,7 @@
                 btn.classList.replace('bg-blue-500', 'bg-gray-400');
                 btn.classList.replace('hover:bg-blue-600', 'cursor-not-allowed');
                 // ★ 修改：JavaScript 裡面的提示文字也要同步更新 ★
-                pwdLabel.innerText = '請先填寫上方「暱稱」與「科別」';
+                pwdLabel.innerText = '請先填寫上方「暱稱或學校名稱」與「科別」';
                 pwdLabel.classList.remove('text-red-600');
             }
         };
