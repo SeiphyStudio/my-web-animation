@@ -3,1095 +3,1199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>課堂共同評分系統</title>
+    <title>課堂共同評分系統 v4.5 (師生分流版)</title>
+    <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 引入 React 和 ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- 引入 Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 引入 xlsx-js-style (支援樣式匯出) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    
+    <!-- 引入 Firebase Compat Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 8px; }
+        /* 自定義捲軸 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
-        /* Modal background */
-        .modal-bg { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #aaa; }
+        #global-error-box { display: none; position: fixed; top: 0; left: 0; width: 100%; padding: 20px; background: #fee2e2; color: #b91c1c; z-index: 9999; border-bottom: 2px solid #ef4444; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+<body class="bg-gray-50 text-gray-800">
+    <div id="global-error-box">
+        <h3 class="font-bold text-lg">⚠️ 發生錯誤</h3>
+        <pre id="global-error-msg" class="mt-2 text-sm whitespace-pre-wrap"></pre>
+        <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">重新整理</button>
+    </div>
+    <div id="root"></div>
 
-    <!-- 頂部導覽列 (已移除開發者測試按鈕) -->
-    <nav class="bg-blue-600 text-white shadow-md p-4 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 class="text-2xl font-bold flex items-center gap-3">
-                <i class="fa-solid fa-star-half-stroke"></i>課堂共同評分系統
-                <span id="global-connection-status" class="bg-red-500/20 text-red-100 text-xs font-bold px-3 py-1 rounded-full border border-red-200/30">
-                    <i class="fa-solid fa-triangle-exclamation mr-1"></i> 未登入雲端
-                </span>
-            </h1>
-        </div>
-    </nav>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            document.getElementById('global-error-box').style.display = 'block';
+            document.getElementById('global-error-msg').innerText = `錯誤: ${msg}\n位置: ${line}:${col}`;
+            return false;
+        };
+    </script>
 
-    <!-- 主要內容區塊 -->
-    <main class="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+    <script type="text/babel">
+        // --- 1. Firebase Config & Init ---
+        const firebaseConfig = {
+           apiKey: "AIzaSyAmqdU3AimELr5sa9FIFd_eb5zbM0nCFkI",
+           authDomain: "evaluate-each-other-5d4bf.firebaseapp.com",
+           projectId: "evaluate-each-other-5d4bf",
+           storageBucket: "evaluate-each-other-5d4bf.firebasestorage.app",
+           messagingSenderId: "323924183931",
+           appId: "1:323924183931:web:945c1feceaa4593d000bde",
+           measurementId: "G-GBZKXN3H26"
+        };
         
-        <!-- 視圖 1：統一登入畫面 -->
-        <div id="view-login" class="view-section hidden fade-in max-w-md mx-auto mt-10">
-            <div class="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 text-center">
-                <div class="bg-blue-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 text-blue-600 text-4xl shadow-inner">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                </div>
-                <h2 class="text-3xl font-extrabold mb-3 text-gray-800">系統登入</h2>
-                <p class="text-gray-500 mb-8 text-sm">請使用您的 Google 帳號進行身分驗證</p>
-                
-                <button onclick="realGoogleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition-all flex justify-center items-center gap-3 shadow-lg hover:shadow-blue-500/30 transform hover:-translate-y-1 text-lg">
-                    <i class="fa-brands fa-google text-xl"></i> Google 帳號登入
-                </button>
-            </div>
-        </div>
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
 
-        <!-- 視圖 2：身分選擇畫面 (登入後) -->
-        <div id="view-role-select" class="view-section hidden fade-in max-w-5xl mx-auto mt-10">
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold text-gray-800">請選擇您的身分</h2>
-                <p class="text-gray-500 mt-2" id="welcome-user-name">歡迎！</p>
-            </div>
+        // --- 預設評分項目 ---
+        const DEFAULT_CRITERIA = [
+            { id: 'c1', name: '內容深度', max: 10 },
+            { id: 'c2', name: '表達技巧', max: 10 },
+            { id: 'c3', name: '投影片設計', max: 10 },
+            { id: 'c4', name: '團隊合作', max: 10 },
+            { id: 'c5', name: '時間控制', max: 10 },
+        ];
+
+        // --- 2. Icons 圖示 ---
+        const Icons = {
+            Award: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+            User: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Users: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+            CheckCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+            Lock: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            BarChart3: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
+            LogOut: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+            Key: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+            Trash2: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+            Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+            X: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            ArrowLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+            Link: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        };
+
+        // --- 3. Main App ---
+        function App() {
+            // 解析網址列參數 ?room=XXX 來決定是否為學生模式
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialRoom = urlParams.get('room');
+            const isStudentMode = !!initialRoom;
+
+            const [user, setUser] = React.useState(null);
+            const [loading, setLoading] = React.useState(true);
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- 學生入口 -->
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 text-center hover:border-blue-300 transition-colors flex flex-col justify-between">
-                    <div>
-                        <div class="text-5xl mb-4 text-blue-500"><i class="fa-solid fa-users"></i></div>
-                        <h3 class="text-2xl font-bold mb-4">學生進入</h3>
-                        <div class="text-left mb-4">
-                            <label class="block text-gray-700 font-medium mb-2 text-sm">1. 請選擇您的姓名：</label>
-                            <select id="student-name-select" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 bg-gray-50">
-                                <!-- JS 動態生成 -->
-                            </select>
-                        </div>
-                        <div class="text-left mb-6">
-                            <label class="block text-gray-700 font-medium mb-2 text-sm">2. 請選擇您所屬的組別：</label>
-                            <select id="student-group-select" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 bg-gray-50">
-                                <!-- JS 動態生成 -->
-                            </select>
-                        </div>
-                    </div>
-                    <button onclick="enterAsStudent()" class="w-full bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white font-bold py-3 px-4 rounded-xl transition-colors mt-auto">
-                        進入評分系統
-                    </button>
-                </div>
+            // 系統狀態
+            const [currentRoom, setCurrentRoom] = React.useState(initialRoom);
+            const [role, setRole] = React.useState(null); // 'teacher' 或 'student'
+            const [sessionData, setSessionData] = React.useState(null);
+            
+            // 登入表單狀態 (僅老師需要)
+            const [inputRoomName, setInputRoomName] = React.useState('');
+            const [inputPassword, setInputPassword] = React.useState('');
+            const [errorMsg, setErrorMsg] = React.useState(null);
+            const [isLoggingIn, setIsLoggingIn] = React.useState(false);
 
-                <!-- 老師入口 -->
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 text-center hover:border-purple-300 transition-colors flex flex-col justify-between">
-                    <div>
-                        <div class="text-5xl mb-4 text-purple-500"><i class="fa-solid fa-chalkboard-user"></i></div>
-                        <h3 class="text-2xl font-bold mb-4">老師進入 (管理後台)</h3>
-                        <p class="text-gray-500 text-sm mb-6 text-left">輸入管理密碼即可建立名單、修改評分權重與監控全班評分進度。</p>
-                        <div class="text-left mb-6">
-                            <label class="block text-gray-700 font-medium mb-2 text-sm">請輸入後台密碼：</label>
-                            <input type="password" id="teacher-password-input" placeholder="預設密碼 1234" class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-purple-500 focus:border-purple-500 bg-gray-50">
-                        </div>
-                    </div>
-                    <button onclick="enterAsTeacher()" class="w-full bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white font-bold py-3 px-4 rounded-xl transition-colors mt-auto">
-                        登入後台
-                    </button>
-                </div>
+            // App 載入時，監聽登入狀態
+            React.useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(u => {
+                    if (isStudentMode) {
+                        // 學生模式：必須是使用 Google (非匿名) 登入
+                        if (u && !u.isAnonymous) {
+                            setUser(u);
+                        } else {
+                            setUser(null);
+                        }
+                    } else {
+                        // 老師模式：接收所有登入狀態 (包含匿名)
+                        setUser(u);
+                    }
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, [isStudentMode]);
 
-                <!-- 大螢幕入口 -->
-                <div class="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 text-center hover:border-green-300 transition-colors flex flex-col justify-between">
-                    <div>
-                        <div class="text-5xl mb-4 text-green-500"><i class="fa-solid fa-desktop"></i></div>
-                        <h3 class="text-2xl font-bold mb-4">教室大螢幕</h3>
-                        <p class="text-gray-500 text-sm mb-6 text-left">點擊開啟排行榜與全班評分收集進度。<br><b>💡 小撇步：</b>請將此畫面投影至黑板大螢幕供全班觀看，並用另一分頁開啟「老師後台」來控制結果公佈。</p>
-                    </div>
-                    <button onclick="switchRole('screen')" class="w-full bg-green-100 text-green-700 hover:bg-green-600 hover:text-white font-bold py-3 px-4 rounded-xl transition-colors mt-auto">
-                        開啟大螢幕
-                    </button>
-                </div>
-            </div>
-        </div>
+            // 當學生登入 Google 後，驗證該教室是否存在
+            React.useEffect(() => {
+                let isMounted = true;
+                if (isStudentMode && user && !user.isAnonymous && !role && currentRoom) {
+                    db.collection('sessions').doc(currentRoom).get().then(docSnap => {
+                        if (!isMounted) return;
+                        if (docSnap.exists) {
+                            setRole('student');
+                            setErrorMsg(null);
+                        } else {
+                            setErrorMsg(`找不到名為「${currentRoom}」的教室，請確認老師提供的連結是否正確！`);
+                            // 找不到教室則登出，以免卡在錯誤狀態
+                            auth.signOut();
+                        }
+                    }).catch(e => {
+                        if (isMounted) setErrorMsg("連線錯誤: " + e.message);
+                    });
+                }
+                return () => { isMounted = false; };
+            }, [isStudentMode, user, role, currentRoom]);
 
-        <!-- 視圖 3：學生評分介面 -->
-        <div id="view-student" class="view-section hidden fade-in max-w-2xl mx-auto">
-            <div class="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 relative">
-                <!-- 登出按鈕 -->
-                <button onclick="studentLogout()" class="absolute top-6 right-6 text-gray-400 hover:text-red-500 transition-colors" title="登出離開">
-                    <i class="fa-solid fa-right-from-bracket text-xl"></i>
-                </button>
+            // 監聽特定房間 (currentRoom) 的資料變化
+            React.useEffect(() => {
+                if (!currentRoom || !role) return;
+                
+                const unsub = db.collection('sessions').doc(currentRoom).onSnapshot(docSnap => {
+                    if (docSnap.exists) {
+                        setSessionData(docSnap.data());
+                    }
+                }, err => {
+                    console.error("監聽房間資料失敗", err);
+                });
+                return () => unsub();
+            }, [currentRoom, role]);
 
-                <div class="mb-6 border-b pb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-3"><i class="fa-solid fa-pen-to-square text-blue-500 mr-2"></i>進行評分</h2>
-                    <div class="flex flex-wrap gap-2">
-                        <span id="student-identity-badge" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm">座號與姓名</span>
-                        <span id="student-group-badge" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold text-sm">第 X 組</span>
-                    </div>
-                </div>
+            // --- 老師登入/建立房間邏輯 ---
+            const handleTeacherAuth = async () => {
+                if (!inputRoomName.trim() || !inputPassword.trim()) {
+                    setErrorMsg("請輸入班級代號或暱稱與管理密碼！");
+                    return;
+                }
+                setIsLoggingIn(true);
+                setErrorMsg(null);
+                
+                try {
+                    // 若尚未登入，先以匿名方式取得資料庫讀寫權限
+                    if (!user) {
+                        try {
+                            await auth.signInAnonymously();
+                        } catch (authErr) {
+                            if (authErr.code === 'auth/admin-restricted-operation') {
+                                throw new Error("Firebase 安全設定阻擋：請至 Firebase 控制台 -> Authentication -> Settings -> User actions，將「Enable create (sign-up)」打勾開啟。");
+                            } else if (authErr.code === 'auth/operation-not-allowed') {
+                                throw new Error("Firebase 尚未啟用匿名登入：請至 Firebase 控制台 -> Authentication -> Sign-in method，啟用「Anonymous (匿名)」。");
+                            } else {
+                                throw authErr;
+                            }
+                        }
+                    }
+                    
+                    const roomID = inputRoomName.trim();
+                    const roomRef = db.collection('sessions').doc(roomID);
+                    const docSnap = await roomRef.get();
 
-                <div class="mb-6">
-                    <label class="block text-gray-700 font-medium mb-2">請選擇您現在要評分的對象：</label>
-                    <select id="target-group-select" onchange="checkIfVoted()" class="w-full border-gray-300 rounded-xl shadow-sm p-4 border focus:ring-blue-500 focus:border-blue-500 text-lg bg-gray-50 font-bold">
-                        <!-- 選項由 JS 動態生成 -->
-                    </select>
-                </div>
+                    if (docSnap.exists) {
+                        // 房間已存在，檢查密碼
+                        if (docSnap.data().roomPassword !== inputPassword) {
+                            throw new Error("密碼錯誤！這間教室屬於其他老師，或者您輸入了錯誤的密碼。");
+                        }
+                    } else {
+                        // 房間不存在，自動建立新的
+                        const initialData = {
+                            roomPassword: inputPassword,
+                            status: 'setup',
+                            currentGroupId: null,
+                            showResults: false,
+                            criteria: DEFAULT_CRITERIA,
+                            groups: [],
+                            students: [],
+                            studentMappings: {}, 
+                            onlineStudents: {}, // 新增：用來記錄即時上線狀態
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        };
+                        await roomRef.set(initialData);
+                    }
+                    
+                    setCurrentRoom(roomID);
+                    setRole('teacher');
+                } catch (e) {
+                    setErrorMsg(e.message);
+                } finally {
+                    setIsLoggingIn(false);
+                }
+            };
 
-                <!-- 已經評分過的提示訊息 -->
-                <div id="already-voted-msg" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-8 rounded-2xl text-center mb-6">
-                    <i class="fa-solid fa-circle-check text-5xl mb-4 text-green-500"></i>
-                    <p class="text-xl font-bold">您已經完成對此組的評分！</p>
-                    <p class="text-sm mt-2 opacity-80">感謝您的回饋，請切換至其他組別繼續評分。</p>
-                </div>
+            // --- 學生 Google 登入處理 ---
+            const handleGoogleLogin = async () => {
+                try {
+                    setErrorMsg(null);
+                    setLoading(true);
+                    await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+                    // 登入成功後，上方 useEffect 會自動進行教室驗證
+                } catch (e) {
+                    if (e.code === 'auth/unauthorized-domain') {
+                        setErrorMsg(`網域未授權！請新增此網址到 Firebase Console: ${window.location.hostname}`);
+                    } else {
+                        setErrorMsg(`登入錯誤: ${e.message}`);
+                    }
+                    setLoading(false);
+                }
+            };
 
-                <!-- 評分表單 -->
-                <div id="rating-form-container">
-                    <form id="rating-form" onsubmit="submitVote(event)" class="space-y-5">
-                        <div id="criteria-inputs" class="space-y-4">
-                            <!-- 評分項目由 JS 動態生成 -->
-                        </div>
-                        
-                        <div class="pt-6 mt-4">
-                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg transform transition hover:-translate-y-1 text-xl tracking-wider">
-                                <i class="fa-solid fa-paper-plane mr-2"></i> 送出評分
+            const handleLogout = async () => {
+                // 如果是學生登出，僅移除「即時上線狀態」，保留「身分綁定紀錄(studentMappings)」防弊
+                if (role === 'student' && user && currentRoom) {
+                    try {
+                        const update = {};
+                        update[`onlineStudents.${user.uid}`] = firebase.firestore.FieldValue.delete();
+                        await db.collection('sessions').doc(currentRoom).update(update);
+                    } catch (error) {
+                        console.error("清除學生上線狀態失敗:", error);
+                    }
+                }
+
+                auth.signOut();
+                if (isStudentMode) {
+                    setUser(null);
+                    setRole(null);
+                    setSessionData(null);
+                } else {
+                    window.location.reload(); // 老師直接重整畫面最乾淨
+                }
+            };
+
+            if (loading) return <div className="h-screen flex items-center justify-center font-bold text-gray-500">載入系統中...</div>;
+
+            // --- 學生專屬登入畫面 (網址帶有 ?room 參數) ---
+            if (isStudentMode && !role) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+                        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md animate-fade-in text-center border-t-4 border-indigo-500">
+                            <div className="flex justify-center text-indigo-600 mb-4 scale-125">
+                                <Icons.Users />
+                            </div>
+                            <h1 className="text-xl font-bold mb-2 text-gray-800">準備進入教室</h1>
+                            <h2 className="text-2xl font-black text-indigo-700 mb-4">{currentRoom}</h2>
+                            <p className="text-gray-500 mb-6 text-sm">為了確保評分公平性，請使用您的 Google 帳號登入</p>
+                            
+                            {errorMsg && (
+                                <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-start gap-2 mb-4 text-left border border-red-100">
+                                    <div className="mt-0.5"><Icons.X /></div>
+                                    {errorMsg}
+                                </div>
+                            )}
+
+                            <button onClick={handleGoogleLogin} className="w-full py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 flex items-center justify-center gap-2 font-bold transition shadow-lg active:scale-95">
+                                <Icons.User /> Google 帳號登入
                             </button>
                         </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- 視圖 4：老師後台管理 -->
-        <div id="view-teacher" class="view-section hidden fade-in">
-            <div class="flex justify-between items-end mb-6">
-                <h2 class="text-3xl font-bold text-gray-800"><i class="fa-solid fa-chalkboard-user text-purple-600 mr-2"></i>教師管理後台</h2>
-                <button onclick="teacherLogout()" class="text-gray-500 hover:text-red-500 font-medium"><i class="fa-solid fa-right-from-bracket mr-1"></i> 登出後台</button>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- 中左區塊：大螢幕控制 & 設定 -->
-                <div class="lg:col-span-1 space-y-6">
-                    <!-- 大螢幕控制 -->
-                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100 text-center">
-                        <h3 class="text-lg font-bold mb-4 text-left border-b pb-2"><i class="fa-solid fa-tv text-blue-500 mr-2"></i>大螢幕控制</h3>
-                        <div class="flex flex-col gap-3">
-                            <button onclick="togglePublish(false)" id="btn-hide-results" class="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 px-4 rounded-xl transition-colors">
-                                <i class="fa-solid fa-eye-slash mr-2"></i>隱藏成績 (收集中)
-                            </button>
-                            <button onclick="togglePublish(true)" id="btn-show-results" class="bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-xl shadow transition-colors">
-                                <i class="fa-solid fa-trophy mr-2"></i>公布排行榜！
-                            </button>
-                        </div>
                     </div>
+                );
+            }
 
-                    <!-- 系統設定 -->
-                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <h3 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-gear text-gray-500 mr-2"></i>系統參數設定</h3>
-                        
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-gray-700 font-medium">允許同組互評</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="setting-allow-self" class="sr-only peer" onchange="toggleAllowSelf()">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="block text-gray-700 font-medium mb-1 text-sm">修改後台登入密碼</label>
-                            <div class="flex gap-2">
-                                <input type="text" id="setting-password" class="w-full border-gray-300 rounded p-2 text-sm border focus:ring-blue-500">
-                                <button onclick="updateTeacherPassword()" class="bg-purple-100 text-purple-700 px-3 rounded text-sm hover:bg-purple-200 font-bold">儲存</button>
+            // --- 老師專屬登入畫面 (網址沒有 ?room 參數) ---
+            if (!isStudentMode && !role) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200 p-4">
+                        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md animate-fade-in border-t-4 border-blue-600">
+                            <div className="flex justify-center text-blue-600 mb-4">
+                                <Icons.Key />
+                            </div>
+                            <h1 className="text-3xl font-black text-center mb-2 text-blue-600">學生共同評分系統</h1>
+                            <p className="text-blue-600 font-bold text-center mb-6 text-lg">台中二中 阿發老師設計</p>
+                            <h2 className="text-xl font-bold text-center mb-8 text-gray-700">資料設定控制台</h2>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">請輸入班級代號或暱稱</label>
+                                    <input 
+                                        type="text" 
+                                        value={inputRoomName} 
+                                        onChange={e => setInputRoomName(e.target.value)} 
+                                        className="w-full border-2 border-gray-200 p-3 rounded-lg focus:outline-none focus:border-gray-800 transition-colors" 
+                                        placeholder="例如：台中二中 101" 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">管理密碼</label>
+                                    <input 
+                                        type="password" 
+                                        value={inputPassword} 
+                                        onChange={e => setInputPassword(e.target.value)} 
+                                        className="w-full border-2 border-gray-200 p-3 rounded-lg focus:outline-none focus:border-gray-800 transition-colors" 
+                                        placeholder="請輸入密碼" 
+                                        onKeyDown={e => e.key === 'Enter' && handleTeacherAuth()}
+                                    />
+                                </div>
+                                
+                                {errorMsg && (
+                                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-start gap-2 border border-red-100">
+                                        <div className="mt-0.5"><Icons.X /></div>
+                                        {errorMsg}
+                                    </div>
+                                )}
+                                
+                                <div className="pt-4">
+                                    <button 
+                                        onClick={handleTeacherAuth} 
+                                        disabled={isLoggingIn}
+                                        className="w-full py-4 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 flex items-center justify-center gap-2 transition disabled:opacity-50 shadow-lg active:scale-95"
+                                    >
+                                        <Icons.Award /> 進入 / 建立教室
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-400 text-center mt-4">
+                                    提示：若為首次使用，系統將自動以此暱稱及密碼為您建立新教室。
+                                </p>
                             </div>
                         </div>
                     </div>
+                );
+            }
 
-                    <!-- 評分項目設定 -->
-                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <h3 class="text-lg font-bold mb-4 border-b pb-2"><i class="fa-solid fa-list-check text-gray-500 mr-2"></i>評分項目與權重</h3>
-                        <div id="teacher-criteria-list" class="space-y-2 mb-2">
-                            <!-- JS 動態生成 -->
+            // --- 進入系統後的版面 (老師或學生) ---
+            return (
+                <div className="min-h-screen bg-gray-50 pb-10">
+                    <header className="bg-white shadow px-4 py-3 sticky top-0 z-20 flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-indigo-700 font-bold text-xl md:text-2xl truncate">
+                            <Icons.Award /> 學生共同評分系統(台中二中 阿發老師設計)
                         </div>
-                        <p class="text-xs text-gray-400 mt-2">* 修改滿分後系統將自動儲存</p>
-                    </div>
-                </div>
-
-                <!-- 右側區塊：學生名單與即時狀態 -->
-                <div class="lg:col-span-2 space-y-6">
-                    
-                    <!-- 學生名單與即時評分追蹤 -->
-                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                            <h3 class="text-xl font-bold"><i class="fa-solid fa-users-viewfinder text-indigo-500 mr-2"></i>學生名單與即時狀態</h3>
-                            <button onclick="exportToCSV()" class="bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 px-4 rounded-lg shadow transition-colors flex items-center">
-                                <i class="fa-solid fa-file-csv mr-2"></i>匯出成績 CSV
+                        <div className="flex items-center gap-3">
+                            {role === 'student' && user?.displayName && (
+                                <span className="text-sm font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full hidden md:inline-block border border-gray-200">
+                                    {user.displayName}
+                                </span>
+                            )}
+                            <span className={`text-sm font-bold px-3 py-1 rounded-full hidden md:inline-block ${role === 'teacher' ? 'bg-gray-800 text-white' : 'bg-indigo-100 text-indigo-700'}`}>
+                                {role === 'teacher' ? '管理員' : '學生'}
+                            </span>
+                            <button onClick={handleLogout} className="text-red-500 hover:bg-red-50 px-3 py-1 rounded flex items-center gap-1 font-bold text-sm transition border border-red-100">
+                                <Icons.LogOut /> 登出
                             </button>
                         </div>
+                    </header>
+                    <main className="max-w-5xl mx-auto p-4">
+                        {role === 'teacher' ? 
+                            <TeacherDashboard session={sessionData} roomName={currentRoom} /> : 
+                            <StudentView session={sessionData} user={user} roomName={currentRoom} />
+                        }
+                    </main>
+                </div>
+            );
+        }
 
-                        <!-- 批次新增學生表單 -->
-                        <div class="bg-indigo-50 p-5 rounded-2xl mb-6 border border-indigo-100 shadow-inner">
-                            <h4 class="text-base font-bold text-indigo-800 mb-2"><i class="fa-solid fa-file-import mr-2"></i>批次匯入學生名單</h4>
-                            <div class="flex flex-col gap-3">
-                                <textarea id="batch-student-names" rows="4" class="w-full p-3 border border-indigo-200 rounded-xl text-sm focus:ring-indigo-500 focus:border-indigo-500" placeholder="請直接從 Excel 複製貼上名單，每行一位&#10;範例：&#10;01王小明&#10;02李小華&#10;03陳大天"></textarea>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-xs text-gray-500">* 組別將由學生登入時自行選擇綁定</span>
-                                    <button id="btn-batch-import" onclick="batchAddStudents()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors">
-                                        <i class="fa-solid fa-plus mr-1"></i> 確認匯入
+        // --- Teacher Dashboard ---
+        function TeacherDashboard({ session, roomName }) {
+            const [activeTab, setActiveTab] = React.useState('control'); 
+            const [votes, setVotes] = React.useState([]);
+            const [groups, setGroups] = React.useState([]); 
+            const [batchGroups, setBatchGroups] = React.useState('');
+            const [batchStudents, setBatchStudents] = React.useState('');
+            const [newCriName, setNewCriName] = React.useState('');
+            const [newCriMax, setNewCriMax] = React.useState(10);
+            const [monitorGroupId, setMonitorGroupId] = React.useState(null);
+            const [newGroupName, setNewGroupName] = React.useState('');
+            const [showClearCriteriaConfirm, setShowClearCriteriaConfirm] = React.useState(false);
+
+            React.useEffect(() => {
+                if (session) {
+                    setGroups(session.groups || []);
+                }
+            }, [session]);
+
+            React.useEffect(() => {
+                const unsub = db.collection('sessions').doc(roomName).collection('votes').onSnapshot(snap => {
+                    const data = [];
+                    snap.forEach(d => data.push({id: d.id, ...d.data()}));
+                    setVotes(data);
+                });
+                return () => unsub();
+            }, [roomName]);
+
+            const updateSession = (data) => db.collection('sessions').doc(roomName).set(data, { merge: true });
+
+            if (!session) return <div className="p-10 text-center text-gray-500">正在讀取資料...</div>;
+
+            const handleBatchGroups = async () => {
+                const list = batchGroups.split('\n').map(s=>s.trim()).filter(s=>s);
+                const newGroups = list.map(name => ({ id: `g${Date.now()}_${Math.random().toString(36).substr(2,5)}`, name }));
+                await updateSession({ groups: [...(session.groups||[]), ...newGroups] });
+                setBatchGroups('');
+                alert(`已新增 ${newGroups.length} 個組別`);
+            };
+
+            const handleBatchStudents = async () => {
+                const list = batchStudents.split('\n').map(s=>s.trim()).filter(s=>s);
+                const currentSet = new Set(session.students || []);
+                list.forEach(name => currentSet.add(name));
+                await updateSession({ students: Array.from(currentSet) });
+                setBatchStudents('');
+                alert(`名單更新完成，目前共 ${currentSet.size} 人`);
+            };
+
+            const addSingleGroup = async () => {
+                if (!newGroupName.trim()) return;
+                const newGroup = { id: `g${Date.now()}`, name: newGroupName };
+                await updateSession({ groups: [...(session.groups||[]), newGroup] });
+                setNewGroupName('');
+            };
+
+            const addCriteria = async () => {
+                if(!newCriName) return;
+                const newC = { id: `c_${Date.now()}`, name: newCriName, max: parseInt(newCriMax) };
+                await updateSession({ criteria: [...(session.criteria||[]), newC] });
+                setNewCriName('');
+            };
+
+            const removeCriteria = async (id) => {
+                if(!confirm("確定刪除此評分項目？")) return;
+                await updateSession({ criteria: session.criteria.filter(c => c.id !== id) });
+            };
+
+            const deleteVote = async (voteId) => {
+                if(!confirm("確定要將此評分標記為不採計嗎？(不會物理刪除，Excel 仍可匯出)")) return;
+                await db.collection('sessions').doc(roomName).collection('votes').doc(voteId).update({ isDeleted: true });
+            };
+
+            const handleRemoveStudent = async (nameToRemove) => {
+                if(!confirm(`確定要刪除學生 "${nameToRemove}" 嗎？`)) return;
+                const newStudents = (session.students || []).filter(s => s !== nameToRemove);
+                await updateSession({ students: newStudents });
+            };
+
+            const handleClearStudents = async () => {
+                if(!confirm("警告：確定要清空所有學生名單嗎？這將導致所有學生需重新登入綁定。")) return;
+                // 同時清空綁定紀錄(studentMappings)與即時上線狀態(onlineStudents)
+                await updateSession({ students: [], studentMappings: {}, onlineStudents: {} });
+            };
+
+            const handleClearGroups = async () => {
+                if(!confirm("警告：確定要清空所有組別嗎？相關的評分紀錄可能會失去關聯。")) return;
+                await updateSession({ groups: [], currentGroupId: null });
+            };
+
+            const handleResetVotes = async () => {
+                if (!confirm("警告：這將清除所有學生的評分紀錄，且無法復原！確定要重置嗎？")) return;
+                
+                try {
+                    const votesRef = db.collection('sessions').doc(roomName).collection('votes');
+                    const snapshot = await votesRef.get();
+                    
+                    const batch = db.batch();
+                    snapshot.docs.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    
+                    await batch.commit();
+                    alert("所有評分紀錄已清除。");
+                } catch (e) {
+                    console.error(e);
+                    alert("重置失敗，請稍後再試。");
+                }
+            };
+
+            // 產生學生專屬邀請連結
+            const shareLink = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomName)}`;
+            const handleCopyLink = () => {
+                const el = document.createElement('textarea');
+                el.value = shareLink;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert('連結已複製！請將此連結提供給學生進入教室。');
+            };
+
+            // 老師監控介面：以「即時上線狀態 (onlineStudents)」來判斷綠燈亮起人數
+            const loggedInCount = Object.keys(session.onlineStudents || {}).length;
+            const currentGroupVotes = votes.filter(v => v.groupId === session.currentGroupId && !v.isDeleted);
+            
+            const allTotals = (session.students || []).map(studentName => {
+                if (!session.currentGroupId) return null;
+                const vote = votes.find(v => v.groupId === session.currentGroupId && v.userName === studentName && !v.isDeleted);
+                if (!vote) return null;
+                let sum = 0;
+                (session.criteria || []).forEach(c => sum += (vote.scores[c.id] || 0));
+                return sum;
+            }).filter(score => score !== null).sort((a, b) => b - a); 
+
+            const getScoreColor = (score) => {
+                if (allTotals.length === 0) return "text-gray-800";
+                const rank = allTotals.indexOf(score); 
+                if (rank < 3) return "text-red-600 font-bold";
+                const reverseRank = allTotals.lastIndexOf(score);
+                if (reverseRank >= allTotals.length - 3 && allTotals.length >= 3) return "text-green-600 font-bold";
+                return "text-gray-800";
+            };
+
+            // 排序全班狀態監控學生名單
+            let sortedStudentsForMonitor = [];
+            if (session && session.students) {
+                const studentStats = session.students.map(studentName => {
+                    const isOnline = Object.values(session.onlineStudents||{}).includes(studentName);
+                    const currentGroup = session.currentGroupId;
+                    const currentVote = currentGroup ? votes.find(v => v.groupId === currentGroup && v.userName === studentName && !v.isDeleted) : null;
+                    const totalVoted = votes.filter(v => v.userName === studentName && !v.isDeleted).length;
+                    let total = null;
+                    if (currentVote) {
+                        total = 0;
+                        (session.criteria||[]).forEach(c => total += (currentVote.scores[c.id]||0));
+                    }
+                    return { studentName, isOnline, currentVote, totalVoted, total };
+                });
+
+                const votedStudents = studentStats.filter(s => s.total !== null);
+                const unvotedStudents = studentStats.filter(s => s.total === null).sort((a, b) => a.studentName.localeCompare(b.studentName));
+
+                if (votedStudents.length > 0) {
+                    votedStudents.sort((a, b) => {
+                        if (b.total !== a.total) return b.total - a.total; // 分數由高到低
+                        return a.studentName.localeCompare(b.studentName); // 分數相同則依座號排序
+                    });
+
+                    const n = votedStudents.length;
+                    const topCount = Math.min(3, n);
+                    const top3 = votedStudents.slice(0, topCount);
+                    
+                    const bottomCount = Math.min(3, n - topCount);
+                    const bottom3 = bottomCount > 0 ? votedStudents.slice(n - bottomCount, n) : [];
+
+                    const restCount = n - topCount - bottomCount;
+                    const middle = restCount > 0 ? votedStudents.slice(topCount, n - bottomCount) : [];
+                    middle.sort((a, b) => a.studentName.localeCompare(b.studentName)); // 中間的有評分者依座號排序
+
+                    sortedStudentsForMonitor = [...top3, ...bottom3, ...middle];
+                }
+
+                sortedStudentsForMonitor = [...sortedStudentsForMonitor, ...unvotedStudents];
+            }
+
+            return (
+                <div className="space-y-6">
+                    <div className="flex bg-white rounded-lg p-1 shadow-sm overflow-x-auto">
+                        {[{id: 'control', label: '控制台'}, {id: 'setup', label: '名單設定'}, {id: 'criteria', label: '評分標準'}, {id: 'monitor', label: '監控與修正'}, {id: 'groupDetails', label: '各組明細'}, {id: 'results', label: '結果統計'}]
+                        .map(t => (
+                            <button key={t.id} onClick={()=>{setActiveTab(t.id); setMonitorGroupId(null);}} className={`flex-1 py-2 px-3 whitespace-nowrap text-sm font-bold rounded-md ${activeTab===t.id ? 'bg-gray-800 text-white shadow' : 'text-gray-500 hover:bg-gray-100'}`}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {activeTab === 'control' && (
+                        <div className="bg-white rounded-xl shadow p-6 space-y-6 animate-fade-in">
+                            
+                            {/* --- 新增：邀請學生專屬連結區塊 --- */}
+                            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-5 shadow-sm">
+                                <h3 className="font-bold text-lg text-indigo-800 mb-2 flex items-center gap-2">
+                                    <Icons.Link /> 邀請學生加入評分
+                                </h3>
+                                <p className="text-sm text-indigo-600 mb-3 font-medium">請複製下方專屬連結提供給學生。學生點擊後將會直接被引導至您的教室：</p>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <input type="text" readOnly value={shareLink} className="flex-1 p-3 rounded-lg border border-indigo-200 bg-white text-gray-700 outline-none text-sm font-mono shadow-inner" />
+                                    <button onClick={handleCopyLink} className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-indigo-700 transition shadow whitespace-nowrap active:scale-95">
+                                        複製連結
                                     </button>
                                 </div>
                             </div>
+                            
+                            <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                <div>
+                                    <p className="text-gray-500 text-xs font-bold uppercase">目前已上線學生</p>
+                                    <p className="text-2xl font-bold text-gray-800">{loggedInCount} <span className="text-sm text-gray-400">/ {(session.students||[]).length}</span></p>
+                                </div>
+                                {session.currentGroupId && (
+                                    <div>
+                                        <p className="text-green-600 text-xs font-bold uppercase text-right">當前評分進度</p>
+                                        <p className="text-2xl font-bold text-green-700 text-right">{currentGroupVotes.length} <span className="text-sm text-green-500">人已評</span></p>
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <h3 className="font-bold text-lg border-b pb-2 text-gray-800">報告流程控制</h3>
+                            <div className="space-y-3">
+                                {(groups||[]).length === 0 && <p className="text-gray-400 py-4 text-center border-2 border-dashed rounded-lg bg-gray-50">尚未設定組別，請前往「名單設定」新增。</p>}
+                                {(groups||[]).map(g => (
+                                    <div key={g.id} className={`flex justify-between items-center p-4 border rounded-xl transition-colors ${session.currentGroupId === g.id ? 'border-green-500 bg-green-50 shadow-md ring-2 ring-green-200' : 'hover:bg-gray-50 border-gray-200'}`}>
+                                        <span className={`font-bold text-lg ${session.currentGroupId === g.id ? 'text-green-800' : 'text-gray-700'}`}>{g.name}</span>
+                                        {session.currentGroupId === g.id ? (
+                                            <button onClick={()=>updateSession({currentGroupId: null})} className="px-5 py-2.5 bg-white border-2 border-red-200 text-red-600 rounded-lg font-bold hover:bg-red-50 transition-colors shadow-sm active:scale-95">停止評分</button>
+                                        ) : (
+                                            <button onClick={()=>updateSession({currentGroupId: g.id, showResults: false})} disabled={!!session.currentGroupId} className={`px-5 py-2.5 rounded-lg font-bold transition-colors shadow-sm active:scale-95 ${session.currentGroupId ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-800 text-white hover:bg-gray-900'}`}>開始評分</button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="pt-4 border-t">
+                                <button onClick={()=>updateSession({showResults: !session.showResults})} className={`w-full py-4 rounded-xl font-bold text-lg transition-colors shadow-md ${session.showResults ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+                                    {session.showResults ? '隱藏排行榜' : '公佈排行榜 (學生可見)'}
+                                </button>
+                            </div>
                         </div>
+                    )}
 
-                        <!-- 學生狀態表格與清空按鈕 -->
-                        <div class="flex justify-between items-end mb-2 px-1 mt-4">
-                            <span class="text-sm font-bold text-gray-700">名單與狀態列表</span>
-                            <button id="btn-delete-all-students" onclick="deleteAllStudents()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700 font-bold py-1.5 px-3 rounded-lg border border-red-100 transition-colors flex items-center">
-                                <i class="fa-solid fa-trash-can mr-1"></i> 清空全部名單
-                            </button>
+                    {activeTab === 'setup' && (
+                        <div className="grid md:grid-cols-2 gap-6 animate-fade-in">
+                            <div className="bg-white rounded-xl shadow p-6">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-800"><Icons.Users/> 學生名單管理</h3>
+                                <p className="text-xs text-gray-500 mb-2">請貼上全班姓名，一行一個名字</p>
+                                <textarea className="w-full h-40 border-2 border-gray-100 p-3 rounded-lg text-sm mb-2 focus:border-gray-400 focus:outline-none transition-colors bg-gray-50" placeholder="王小明&#10;李大華..." value={batchStudents} onChange={e=>setBatchStudents(e.target.value)}></textarea>
+                                <div className="flex gap-2">
+                                    <button onClick={handleBatchStudents} className="flex-1 py-2 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 transition active:scale-95">更新名單</button>
+                                    <button onClick={handleClearStudents} className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold hover:bg-red-100 transition"><Icons.Trash /></button>
+                                </div>
+                                <div className="bg-gray-50 p-3 rounded-lg h-48 overflow-y-auto flex flex-wrap gap-2 mt-4 border border-gray-100 shadow-inner">
+                                    {(session.students||[]).map(s => {
+                                        // 修改：在名單設定中也統一使用「onlineStudents」來判斷綠燈顯示
+                                        const isOnline = Object.values(session.onlineStudents||{}).includes(s);
+                                        return (
+                                            <span key={s} className={`text-xs px-2 py-1.5 rounded-lg border flex items-center gap-1 font-bold ${isOnline ? 'bg-green-100 text-green-700 border-green-200 shadow-sm' : 'bg-white text-gray-500 border-gray-200'}`}>
+                                                {s} <button onClick={()=>handleRemoveStudent(s)} className="text-gray-400 hover:text-red-500 ml-1"><Icons.X /></button>
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl shadow p-6">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-gray-800"><Icons.Award/> 分組名單管理</h3>
+                                <div className="mb-4 flex gap-2">
+                                    <input type="text" value={newGroupName} onChange={e=>setNewGroupName(e.target.value)} className="border-2 border-gray-100 p-2 rounded-lg flex-1 focus:border-gray-400 focus:outline-none bg-gray-50" placeholder="單筆新增組名" />
+                                    <button onClick={addSingleGroup} className="bg-gray-200 px-4 rounded-lg font-bold hover:bg-gray-300 transition text-gray-700 active:scale-95">新增</button>
+                                </div>
+                                <p className="text-xs text-gray-500 mb-2">或 批次貼上組別名稱，一行一個</p>
+                                <textarea className="w-full h-32 border-2 border-gray-100 p-3 rounded-lg text-sm mb-2 focus:border-gray-400 focus:outline-none transition-colors bg-gray-50" placeholder="第一組...&#10;第二組..." value={batchGroups} onChange={e=>setBatchGroups(e.target.value)}></textarea>
+                                <div className="flex gap-2">
+                                    <button onClick={handleBatchGroups} className="flex-1 py-2 bg-gray-800 text-white rounded-lg font-bold hover:bg-gray-900 transition active:scale-95">批次新增</button>
+                                    <button onClick={handleClearGroups} className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg font-bold hover:bg-red-100 transition"><Icons.Trash /></button>
+                                </div>
+                                <div className="bg-gray-50 p-3 rounded-lg h-48 overflow-y-auto space-y-2 mt-4 border border-gray-100 shadow-inner">
+                                    {(groups||[]).map((g,i) => (
+                                        <div key={g.id} className="text-sm bg-white p-3 rounded-lg border border-gray-200 flex justify-between items-center hover:border-gray-400 transition shadow-sm">
+                                            <span className="font-bold text-gray-700">{i+1}. {g.name}</span>
+                                            <button onClick={async()=>{ if(confirm("刪除?")) await updateSession({ groups: session.groups.filter(x=>x.id!==g.id) }); }} className="text-gray-400 hover:text-red-500 p-1"><Icons.Trash2 /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto rounded-xl border border-gray-200">
-                            <table class="w-full text-left border-collapse text-sm">
-                                <thead>
-                                    <tr class="bg-gray-100 text-gray-700">
-                                        <th class="p-3 w-16 text-center">狀態</th>
-                                        <th class="p-3">座號與姓名</th>
-                                        <th class="p-3 text-center">所屬組別</th>
-                                        <th class="p-3 text-center">已評組數</th>
-                                        <th class="p-3 text-center">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="teacher-students-table" class="divide-y divide-gray-200">
-                                    <!-- JS 動態生成 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    )}
 
-                    <!-- 各組成績總覽 -->
-                    <div class="bg-white p-6 rounded-3xl shadow-md border border-gray-100">
-                        <h3 class="text-xl font-bold mb-4"><i class="fa-solid fa-chart-column text-green-500 mr-2"></i>各組得票與成績總覽</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-gray-50 border-b">
-                                        <th class="p-3">報告組別</th>
-                                        <th class="p-3 text-center">收到評分份數</th>
-                                        <th class="p-3 text-center">目前平均總分</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="teacher-stats-table" class="divide-y divide-gray-100">
-                                    <!-- JS 動態生成 -->
-                                </tbody>
-                            </table>
+                    {activeTab === 'criteria' && (
+                        <div className="bg-white rounded-xl shadow p-6 animate-fade-in relative">
+                            {showClearCriteriaConfirm && (
+                                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]">
+                                    <div className="bg-white p-6 rounded-2xl w-full max-w-sm shadow-2xl animate-fade-in">
+                                        <h3 className="text-xl font-bold mb-3 text-red-600 flex items-center gap-2">
+                                            <Icons.Trash /> 刪除所有項目
+                                        </h3>
+                                        <p className="text-gray-600 mb-6 font-medium">確定要刪除所有評分項目嗎？刪除後無法復原。</p>
+                                        <div className="flex gap-3">
+                                            <button onClick={() => setShowClearCriteriaConfirm(false)} className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition active:scale-95">取消</button>
+                                            <button onClick={async () => {
+                                                await updateSession({ criteria: [] });
+                                                setShowClearCriteriaConfirm(false);
+                                            }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition active:scale-95">確定刪除</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-lg text-gray-800">評分標準設定</h3>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-4 mb-6 items-end bg-gray-50 border border-gray-200 p-4 rounded-xl">
+                                <div className="flex-1 w-full">
+                                    <label className="text-xs font-bold text-gray-600 mb-1 block">項目名稱</label>
+                                    <input type="text" value={newCriName} onChange={e=>setNewCriName(e.target.value)} className="w-full border-2 border-gray-200 p-2.5 rounded-lg focus:border-gray-400 outline-none transition" placeholder="例如：創新程度" />
+                                </div>
+                                <div className="w-full sm:w-24">
+                                    <label className="text-xs font-bold text-gray-600 mb-1 block">最高分</label>
+                                    <input type="number" value={newCriMax} onChange={e=>setNewCriMax(e.target.value)} className="w-full border-2 border-gray-200 p-2.5 rounded-lg focus:border-gray-400 outline-none transition" />
+                                </div>
+                                <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                                    <button onClick={addCriteria} className="flex-1 sm:flex-none bg-gray-800 text-white px-6 py-2.5 rounded-lg font-bold shadow-sm hover:bg-gray-900 transition active:scale-95 border-2 border-gray-800 whitespace-nowrap">新增</button>
+                                    <button onClick={() => setShowClearCriteriaConfirm(true)} className="flex-1 sm:flex-none bg-red-50 text-red-600 px-4 py-2.5 rounded-lg font-bold shadow-sm hover:bg-red-100 transition active:scale-95 border border-red-200 whitespace-nowrap">刪除所有評分項目</button>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                {(session.criteria||[]).map(c => (
+                                    <div key={c.id} className="flex justify-between items-center p-4 border-2 border-gray-100 rounded-xl bg-white shadow-sm hover:border-gray-300 transition">
+                                        <div className="flex items-center gap-4">
+                                            <span className="font-bold text-lg text-gray-800">{c.name}</span>
+                                            <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600 font-bold border border-gray-200">配分：0 ~ {c.max} 分</span>
+                                        </div>
+                                        <button onClick={()=>removeCriteria(c.id)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition"><Icons.Trash2/></button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
+                    {activeTab === 'monitor' && (
+                        <div className="space-y-6 animate-fade-in">
+                            <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-100">
+                                <div className="px-6 py-3 border-b bg-gray-50 flex justify-between items-center">
+                                    <h3 className="font-bold text-lg flex items-center gap-2 text-gray-800"><Icons.Users/> 全班狀態監控</h3>
+                                    <button onClick={handleResetVotes} className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-bold shadow-sm transition-colors flex items-center gap-2 active:scale-95">
+                                        <Icons.Trash /> 清空所有評分紀錄
+                                    </button>
+                                </div>
+                                <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '690px' }}>
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-white text-gray-500 uppercase sticky top-0 z-10 shadow-sm">
+                                            <tr>
+                                                <th className="px-4 py-2 font-bold">姓名</th>
+                                                <th className="px-4 py-2 font-bold">登入狀態</th>
+                                                <th className="px-4 py-2 font-bold">目前評分進度</th>
+                                                <th className="px-4 py-2 font-bold text-right">評分(總分)</th>
+                                                <th className="px-4 py-2 font-bold text-center">操作</th>
+                                                <th className="px-4 py-2 font-bold text-gray-400">累計已評</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {sortedStudentsForMonitor.map(studentObj => {
+                                                const { studentName, isOnline, currentVote, totalVoted, total } = studentObj;
+                                                const currentGroup = session.currentGroupId;
+                                                
+                                                let totalDisplay = "-";
+                                                let totalClass = "text-gray-400";
+                                                
+                                                if (currentVote) {
+                                                    totalDisplay = total;
+                                                    totalClass = getScoreColor(total); 
+                                                }
+
+                                                return (
+                                                    <tr key={studentName} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="px-4 py-2 font-bold text-gray-800">{studentName}</td>
+                                                        <td className="px-4 py-2">{isOnline ? <span className="text-green-700 bg-green-100 px-3 py-1 rounded-full text-xs font-bold border border-green-200">線上</span> : <span className="text-gray-400 text-xs border border-gray-200 px-3 py-1 rounded-full">未登入</span>}</td>
+                                                        <td className="px-4 py-2">
+                                                            {!currentGroup ? <span className="text-gray-400">-</span> : 
+                                                                currentVote ? <span className="text-green-600 font-bold flex items-center gap-1"><Icons.CheckCircle/>已完成</span> : <span className="text-red-500 font-bold animate-pulse">未評分</span>}
+                                                        </td>
+                                                        <td className={`px-4 py-2 text-right font-mono text-lg ${totalClass}`}>{totalDisplay}</td>
+                                                        <td className="px-4 py-2 text-center">
+                                                            {currentVote && (
+                                                                <button onClick={()=>deleteVote(currentVote.id)} className="text-gray-400 hover:text-red-600 p-2 bg-gray-50 rounded-lg hover:bg-red-50 transition" title="標記為不採計"><Icons.Trash2/></button>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-2 text-gray-400 font-mono font-medium">{totalVoted} 組</td>
+                                                    </tr>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'groupDetails' && (
+                        <div className="space-y-6 animate-fade-in">
+                            {!monitorGroupId ? (
+                                <div className="bg-white rounded-xl shadow p-6 border border-gray-100">
+                                    <h3 className="font-bold text-lg mb-4 text-gray-800">各組評分檢核 (點選查看明細)</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {(groups||[]).map(g => {
+                                            const count = votes.filter(v => v.groupId === g.id && !v.isDeleted).length;
+                                            return (
+                                                <button key={g.id} onClick={()=>setMonitorGroupId(g.id)} className="p-4 border-2 border-gray-100 rounded-xl hover:border-gray-800 hover:shadow-md transition text-left group bg-gray-50">
+                                                    <div className="font-bold text-gray-800 text-lg group-hover:text-gray-900">{g.name}</div>
+                                                    <div className="text-sm text-gray-500 mt-2 font-medium">有效評分: <span className="font-bold text-gray-800 bg-white px-2 py-1 rounded border shadow-sm ml-1">{count}</span></div>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-white rounded-xl shadow overflow-hidden animate-fade-in border border-gray-100">
+                                    <div className="px-6 py-3 border-b flex items-center gap-4 bg-gray-50">
+                                        <button onClick={() => setMonitorGroupId(null)} className="text-gray-600 bg-white hover:bg-gray-100 border border-gray-200 p-2 px-4 rounded-lg flex items-center gap-2 font-bold transition shadow-sm active:scale-95">
+                                            <Icons.ArrowLeft /> 返回清單
+                                        </button>
+                                        <h2 className="text-xl font-black text-gray-800">
+                                            {groups.find(g => g.id === monitorGroupId)?.name} - 評分明細
+                                        </h2>
+                                    </div>
+                                    
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left">
+                                            <thead className="bg-white text-gray-500 uppercase border-b border-gray-200">
+                                                <tr>
+                                                    <th className="px-4 py-2 font-bold">評分學生</th>
+                                                    <th className="px-4 py-2 text-right font-bold">總分</th>
+                                                    {(session.criteria||[]).map(c => (
+                                                        <th key={c.id} className="px-4 py-2 text-right hidden md:table-cell font-bold">{c.name}</th>
+                                                    ))}
+                                                    <th className="px-4 py-2 text-center font-bold">操作</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                                {votes
+                                                    .filter(v => v.groupId === monitorGroupId && !v.isDeleted)
+                                                    .map(v => {
+                                                        let total = 0;
+                                                        (session.criteria||[]).forEach(c => total += (v.scores[c.id] || 0));
+                                                        return { ...v, total };
+                                                    })
+                                                    .sort((a, b) => b.total - a.total)
+                                                    .map(v => (
+                                                        <tr key={v.id} className="hover:bg-gray-50 transition">
+                                                            <td className="px-4 py-2 font-bold text-gray-800">{v.userName}</td>
+                                                            <td className="px-4 py-2 text-right font-black text-indigo-600 text-xl">{v.total}</td>
+                                                            {(session.criteria||[]).map(c => (
+                                                                <td key={c.id} className="px-4 py-2 text-right text-gray-500 hidden md:table-cell font-mono font-medium">{v.scores[c.id]}</td>
+                                                            ))}
+                                                            <td className="px-4 py-2 text-center">
+                                                                <button onClick={() => deleteVote(v.id)} className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition" title="標記為不採計">
+                                                                    <Icons.Trash2 />
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                }
+                                                {votes.filter(v => v.groupId === monitorGroupId && !v.isDeleted).length === 0 && (
+                                                    <tr><td colSpan={(session.criteria||[]).length + 3} className="p-8 text-center text-gray-400 font-bold">尚無有效評分紀錄</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'results' && <ResultsBoard session={session} roomName={roomName} groups={groups} criteria={session.criteria || DEFAULT_CRITERIA} isAdmin={true} />}
                 </div>
-            </div>
-        </div>
-
-        <!-- 視圖 5：大螢幕展示 (結果端) -->
-        <div id="view-screen" class="view-section hidden fade-in max-w-5xl mx-auto">
-            <div class="bg-white p-8 md:p-12 rounded-3xl shadow-2xl border border-gray-100 text-center min-h-[60vh] flex flex-col justify-center relative">
-                
-                <!-- 大螢幕專用的返回按鈕 -->
-                <button onclick="switchRole('role-select')" class="absolute top-6 right-8 text-gray-400 hover:text-gray-700 transition-colors" title="返回身分選單">
-                    <i class="fa-solid fa-right-from-bracket text-2xl"></i>
-                </button>
-
-                <!-- 尚未公布：顯示進度 -->
-                <div id="screen-progress" class="space-y-6 mt-8">
-                    <div class="inline-block bg-blue-50 text-blue-600 p-6 rounded-full mb-4 shadow-inner">
-                        <i class="fa-solid fa-spinner fa-spin text-6xl"></i>
-                    </div>
-                    <h2 class="text-5xl font-extrabold text-gray-800">同學報告中</h2>
-                    <p class="text-2xl text-gray-500 mt-4">請台下同學開啟裝置進行評分</p>
-                    
-                    <div class="mt-16 bg-gray-50 py-8 rounded-3xl border border-gray-100">
-                        <p class="text-2xl font-bold text-gray-600 mb-4">目前系統已收到 <span id="total-votes-count" class="text-6xl mx-3 text-blue-600 font-black">0</span> 份評分</p>
-                        <div class="w-full bg-gray-200 rounded-full h-6 mt-6 max-w-2xl mx-auto overflow-hidden shadow-inner relative">
-                            <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 已經公布：顯示排行榜 -->
-                <div id="screen-leaderboard" class="hidden w-full mt-8">
-                    <h2 class="text-5xl font-extrabold text-gray-800 mb-12"><i class="fa-solid fa-crown text-yellow-500 mr-4"></i>各組評分排行榜</h2>
-                    
-                    <div id="leaderboard-bars" class="space-y-8 text-left max-w-4xl mx-auto">
-                        <!-- 排行榜長條圖由 JS 動態生成 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Modal: 查看學生的評分明細 -->
-    <div id="vote-details-modal" class="fixed inset-0 modal-bg hidden z-50 flex items-center justify-center fade-in p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg" id="modal-student-name">學生評分紀錄</h3>
-                <button onclick="closeVoteModal()" class="text-indigo-200 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-grow bg-gray-50" id="modal-votes-list">
-                <!-- 評分紀錄列表 -->
-            </div>
-            <div class="p-4 border-t text-center bg-white">
-                <button onclick="closeVoteModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-6 rounded-xl transition-colors">關閉</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        /**
-         * 系統核心狀態
-         */
-        const state = {
-            currentStudent: null, // { id, seat, name, group }
-            settings: {
-                allowSelfRating: false, 
-                totalGroups: 6,         
-                isPublished: false,
-                teacherPassword: '1234' 
-            },
-            criteria: [
-                { id: 'c1', name: '內容豐富度與深度', maxScore: 10 },
-                { id: 'c2', name: '表達流暢度與台風', maxScore: 10 },
-                { id: 'c3', name: '簡報設計與視覺效果', maxScore: 5 },
-                { id: 'c4', name: '時間掌控', maxScore: 5 },
-                { id: 'c5', name: '團隊合作與默契', maxScore: 5 }
-            ],
-            votes: [],
-            students: [] // 學生名單
-        };
-
-        // 初始化
-        window.onload = () => {
-            switchRole('login');
-            initFirebase(); 
-        };
-
-        // --- Firebase 雲端邏輯 ---
-        let db, auth, currentUser, votesRef, settingsRef, studentsRef, updateDocFn, deleteDocFn, docFn;
-        const appId = "school-peer-eval-pro"; // 更新 AppId 以免與舊資料衝突
-
-        async function initFirebase() {
-            try {
-                // 您的專屬資料庫鑰匙
-                const firebaseConfig = {
-                  apiKey: "AIzaSyB4LN9SoxfsXDQrpAaJAK5OTYAtFeldx28",
-                  authDomain: "school-peer-eval.firebaseapp.com",
-                  projectId: "school-peer-eval",
-                  storageBucket: "school-peer-eval.firebasestorage.app",
-                  messagingSenderId: "299692313087",
-                  appId: "1:299692313087:web:141994946b89bcd580ffca",
-                  measurementId: "G-1VZG37FJ54"
-                };
-
-                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js');
-                const { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js');
-                const { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, addDoc, deleteDoc } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
-
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                updateDocFn = updateDoc;
-                deleteDocFn = deleteDoc;
-                docFn = doc;
-                window.addDocFn = addDoc; 
-                window.signInWithPopup = signInWithPopup;
-                window.GoogleAuthProvider = GoogleAuthProvider;
-                window.signOut = signOut;
-
-                votesRef = collection(db, 'artifacts', appId, 'public', 'data', 'votes');
-                settingsRef = doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'main');
-                studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
-
-                onAuthStateChanged(auth, (user) => {
-                    currentUser = user;
-                    const globalStatus = document.getElementById('global-connection-status');
-                    
-                    if (user) {
-                        if (globalStatus) {
-                            globalStatus.className = "bg-green-500/20 text-green-100 text-xs font-bold px-3 py-1 rounded-full border border-green-200/30";
-                            globalStatus.innerHTML = '<i class="fa-solid fa-cloud-check mr-1"></i> 雲端已連線';
-                        }
-                        document.getElementById('welcome-user-name').innerText = `歡迎！ ${user.displayName || user.email}`;
-                        setupListeners({ onSnapshot, setDoc });
-                        
-                        // 若從登入畫面進來，自動跳轉身分選擇
-                        if(!document.getElementById('view-login').classList.contains('hidden')) {
-                            switchRole('role-select');
-                        }
-                    } else {
-                        if (globalStatus) {
-                            globalStatus.className = "bg-red-500/20 text-red-100 text-xs font-bold px-3 py-1 rounded-full border border-red-200/30";
-                            globalStatus.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i> 未登入雲端';
-                        }
-                        switchRole('login');
-                    }
-                });
-
-            } catch (e) {
-                console.error("雲端連線失敗:", e);
-                alert("連接 Firebase 失敗，請確認您的網路環境。");
-            }
+            );
         }
 
-        async function realGoogleLogin() {
-            if (!auth || !window.GoogleAuthProvider) {
-                alert("系統正在初始化，請稍後幾秒再點擊！");
-                return;
-            }
-            const provider = new window.GoogleAuthProvider();
-            provider.setCustomParameters({ prompt: 'select_account' }); 
+        // --- Student View ---
+        function StudentView({ session, user, roomName }) {
+            const [selectedName, setSelectedName] = React.useState('');
+            const [hasVoted, setHasVoted] = React.useState(false);
+            const [scores, setScores] = React.useState({});
+            const [submitting, setSubmitting] = React.useState(false);
 
-            try {
-                const result = await window.signInWithPopup(auth, provider);
-                // 網域防護 (請於正式上線時修改為學校網域)
-                const schoolDomain = "@gmail.com"; 
-                if (!result.user.email.endsWith(schoolDomain)) {
-                    alert(`⚠️ 權限錯誤！\n請使用學校配發的 Google 帳號 (${schoolDomain}) 登入。`);
-                    await window.signOut(auth); 
-                    return;
-                }
-            } catch (error) {
-                if(error.code !== 'auth/popup-closed-by-user') {
-                    alert("登入過程中發生錯誤，請重試！");
-                }
-            }
-        }
+            // 確保學生無法重新綁定，一直使用最初選擇的姓名
+            const registeredName = session?.studentMappings?.[user.uid];
 
-        function setupListeners({ onSnapshot, setDoc }) {
-            // 監聽設定
-            onSnapshot(settingsRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    state.settings = { ...state.settings, ...docSnap.data() };
-                    document.getElementById('setting-allow-self').checked = state.settings.allowSelfRating;
-                    document.getElementById('setting-password').value = state.settings.teacherPassword;
+            // 新增：處理上線狀態 (綠燈機制)
+            React.useEffect(() => {
+                if (registeredName && user && roomName) {
+                    const setOnline = async () => {
+                        try {
+                            await db.collection('sessions').doc(roomName).update({
+                                [`onlineStudents.${user.uid}`]: registeredName
+                            });
+                        } catch (e) { console.error("更新上線狀態失敗", e); }
+                    };
+                    setOnline();
+
+                    // 當學生關閉瀏覽器分頁或離開時，將其設為離線
+                    const handleOffline = () => {
+                        db.collection('sessions').doc(roomName).update({
+                            [`onlineStudents.${user.uid}`]: firebase.firestore.FieldValue.delete()
+                        }).catch(e => console.error(e));
+                    };
                     
-                    if(state.settings.isPublished) {
-                        document.getElementById('btn-show-results').classList.add('ring-4', 'ring-yellow-300');
-                        document.getElementById('btn-hide-results').classList.remove('ring-4', 'ring-gray-400');
-                    } else {
-                        document.getElementById('btn-hide-results').classList.add('ring-4', 'ring-gray-400');
-                        document.getElementById('btn-show-results').classList.remove('ring-4', 'ring-yellow-300');
-                    }
-                    if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
+                    window.addEventListener('beforeunload', handleOffline);
+
+                    return () => {
+                        window.removeEventListener('beforeunload', handleOffline);
+                        handleOffline(); // 元件卸載時也視為離線
+                    };
+                }
+            }, [registeredName, user, roomName]);
+
+            React.useEffect(() => {
+                if (registeredName && session?.currentGroupId) {
+                    const unsub = db.collection('sessions').doc(roomName).collection('votes')
+                        .where('groupId', '==', session.currentGroupId)
+                        .where('userId', '==', user.uid)
+                        .onSnapshot(snap => setHasVoted(!snap.empty));
+                    return () => unsub();
                 } else {
-                    setDoc(settingsRef, state.settings).catch(e => console.error(e)); 
+                    setHasVoted(false);
+                    setScores({});
                 }
-            }, (err) => console.error(err));
+            }, [session?.currentGroupId, user.uid, registeredName, roomName]);
 
-            // 監聽學生名單
-            onSnapshot(studentsRef, (snapshot) => {
-                state.students = [];
-                snapshot.forEach(doc => {
-                    state.students.push({ id: doc.id, ...doc.data() });
-                });
-                // 依照智慧萃取出的「座號」數字來排序
-                state.students.sort((a, b) => a.seat - b.seat);
-                
-                populateStudentDropdown();
-                if(!document.getElementById('view-teacher').classList.contains('hidden')) renderTeacherStudents();
-            }, (err) => {
-                console.error("學生名單監聽錯誤:", err);
-                if (err.code === 'permission-denied') {
-                    alert("⚠️ 雲端資料庫權限不足！\n請回 Firebase 後台開啟 Firestore Database，並設定為「測試模式」(Test Mode)。");
-                }
-            });
+            if (!session) return <div className="h-screen flex items-center justify-center text-gray-500 font-bold">連結教室中...</div>;
 
-            // 監聽評分
-            onSnapshot(votesRef, (snapshot) => {
-                state.votes = [];
-                snapshot.forEach(doc => {
-                    state.votes.push({ id: doc.id, ...doc.data() });
-                });
-                
-                if(!document.getElementById('view-teacher').classList.contains('hidden')) {
-                    updateTeacherStats();
-                    renderTeacherStudents(); // 重新渲染名單以更新「已評分數」
-                }
-                if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
-                if(!document.getElementById('view-student').classList.contains('hidden')) checkIfVoted();
-            }, (err) => console.error(err));
-        }
-
-        // ==========================================
-        // UI 切換與身分驗證邏輯
-        // ==========================================
-        function switchRole(roleId) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById(`view-${roleId}`).classList.remove('hidden');
-
-            if (roleId === 'teacher') {
-                renderTeacherCriteria();
-                updateTeacherStats();
-                renderTeacherStudents();
-            }
-            if (roleId === 'screen') renderScreenView();
-            if (roleId === 'role-select') populateStudentDropdown();
-        }
-
-        function populateStudentDropdown() {
-            const nameSelect = document.getElementById('student-name-select');
-            if(nameSelect) {
-                nameSelect.innerHTML = '<option value="" disabled selected>-- 點擊選擇姓名 --</option>';
-                if(state.students.length === 0) {
-                    nameSelect.innerHTML += '<option value="" disabled>目前無名單，請等待老師建立</option>';
-                } else {
-                    state.students.forEach(s => {
-                        nameSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-                    });
-                }
-            }
-
-            const groupSelect = document.getElementById('student-group-select');
-            if(groupSelect) {
-                groupSelect.innerHTML = '<option value="" disabled selected>-- 點擊選擇組別 --</option>';
-                for(let i=1; i<=state.settings.totalGroups; i++) {
-                    groupSelect.innerHTML += `<option value="${i}">第 ${i} 組</option>`;
-                }
-            }
-        }
-
-        // 👨‍🏫 老師登入驗證
-        function enterAsTeacher() {
-            const inputPw = document.getElementById('teacher-password-input').value;
-            if (inputPw === state.settings.teacherPassword) {
-                document.getElementById('teacher-password-input').value = '';
-                switchRole('teacher');
-            } else {
-                alert("❌ 密碼錯誤！請重新輸入。");
-            }
-        }
-
-        function teacherLogout() {
-            switchRole('role-select');
-        }
-
-        // 👩‍🎓 學生選擇姓名並進入
-        function enterAsStudent() {
-            const nameSelect = document.getElementById('student-name-select');
-            const groupSelect = document.getElementById('student-group-select');
-
-            if (!nameSelect.value) {
-                alert("請先選擇您的姓名！");
-                return;
-            }
-            if (!groupSelect.value) {
-                alert("請選擇您所屬的組別！");
-                return;
-            }
-            
-            const studentId = nameSelect.value;
-            const groupId = parseInt(groupSelect.value);
-            const student = state.students.find(s => s.id === studentId);
-
-            if(student) {
-                student.group = groupId; // 暫存於本地端
-                state.currentStudent = student;
-
-                // 更新 Firebase: 狀態改為上線，並綁定學生自己選擇的組別
-                if(updateDocFn && docFn) {
-                    updateDocFn(docFn(db, studentsRef.path, student.id), { 
-                        isOnline: true,
-                        group: groupId 
-                    }).catch(e=>console.error(e));
-                }
-                initStudentView();
-                switchRole('student');
-            }
-        }
-
-        function studentLogout() {
-            if(state.currentStudent && updateDocFn && docFn) {
-                // 更新雲端狀態為離線
-                updateDocFn(docFn(db, studentsRef.path, state.currentStudent.id), { isOnline: false }).catch(e=>console.error(e));
-            }
-            state.currentStudent = null;
-            switchRole('role-select');
-        }
-
-        // 當關閉網頁時嘗試標記離線 (Best effort)
-        window.addEventListener('beforeunload', () => {
-            if(state.currentStudent && updateDocFn && docFn) {
-                updateDocFn(docFn(db, studentsRef.path, state.currentStudent.id), { isOnline: false });
-            }
-        });
-
-
-        // ==========================================
-        // 學生評分介面邏輯
-        // ==========================================
-        function initStudentView() {
-            if(!state.currentStudent) return;
-            
-            document.getElementById('student-identity-badge').innerText = state.currentStudent.name;
-            document.getElementById('student-group-badge').innerText = `第 ${state.currentStudent.group} 組`;
-            
-            const targetSelect = document.getElementById('target-group-select');
-            targetSelect.innerHTML = '<option value="" disabled selected>-- 請選擇報告組別 --</option>';
-            
-            for (let i = 1; i <= state.settings.totalGroups; i++) {
-                let disabledStr = (!state.settings.allowSelfRating && i === parseInt(state.currentStudent.group)) ? 'disabled' : '';
-                let label = `第 ${i} 組`;
-                if (i === parseInt(state.currentStudent.group)) label += ' (您的組別)';
-                
-                targetSelect.innerHTML += `<option value="${i}" ${disabledStr}>${label}</option>`;
-            }
-
-            const criteriaContainer = document.getElementById('criteria-inputs');
-            criteriaContainer.innerHTML = '';
-            
-            state.criteria.forEach(c => {
-                criteriaContainer.innerHTML += `
-                    <div class="bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
-                        <div class="flex justify-between items-center mb-3">
-                            <label class="font-bold text-gray-800 text-lg">${c.name}</label>
-                            <span class="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-medium">最高 ${c.maxScore} 分</span>
-                        </div>
-                        <input type="number" id="score_${c.id}" name="${c.id}" min="0" max="${c.maxScore}" required
-                               class="w-full border-gray-300 rounded-lg shadow-sm p-3 border focus:ring-blue-500 focus:border-blue-500 text-xl text-center font-bold text-blue-700"
-                               placeholder="輸入 0~${c.maxScore} 分">
-                    </div>
-                `;
-            });
-
-            document.getElementById('rating-form-container').classList.add('hidden');
-            document.getElementById('already-voted-msg').classList.add('hidden');
-        }
-
-        function checkIfVoted() {
-            const targetSelect = document.getElementById('target-group-select');
-            if (!targetSelect.value || !state.currentStudent) return;
-            const targetId = parseInt(targetSelect.value);
-
-            // 防作弊：檢查這個 studentId 是否投過這組
-            const hasVoted = state.votes.some(v => v.studentId === state.currentStudent.id && v.targetGroup === targetId);
-
-            if (hasVoted) {
-                document.getElementById('rating-form-container').classList.add('hidden');
-                document.getElementById('already-voted-msg').classList.remove('hidden');
-            } else {
-                document.getElementById('rating-form-container').classList.remove('hidden');
-                document.getElementById('already-voted-msg').classList.add('hidden');
-                document.getElementById('rating-form').reset();
-            }
-        }
-
-        function submitVote(e) {
-            e.preventDefault(); 
-            if(!state.currentStudent) return;
-            
-            const targetId = parseInt(document.getElementById('target-group-select').value);
-            let total = 0;
-            let scores = {};
-            
-            state.criteria.forEach(c => {
-                const val = parseInt(document.getElementById(`score_${c.id}`).value);
-                scores[c.id] = val;
-                total += val;
-            });
-
-            const newVote = {
-                studentId: state.currentStudent.id,
-                raterSeat: state.currentStudent.seat, // 保留內部用作排序判斷
-                raterName: state.currentStudent.name,
-                raterGroup: state.currentStudent.group,
-                targetGroup: targetId,
-                scores: scores,
-                total: total,
-                timestamp: new Date().toISOString()
+            const handleRegister = async () => {
+                if (!selectedName) return;
+                const isTaken = Object.values(session.studentMappings || {}).includes(selectedName);
+                if (isTaken) { alert("此姓名已被其他裝置綁定！"); return; }
+                const update = {};
+                update[`studentMappings.${user.uid}`] = selectedName;
+                await db.collection('sessions').doc(roomName).update(update);
             };
 
-            if (window.addDocFn && votesRef) {
-                newVote.userId = currentUser ? currentUser.uid : 'anonymous';
-                window.addDocFn(votesRef, newVote).then(() => {
-                    alert(`🎉 成功送出評分！\n您給予第 ${targetId} 組總分：${total} 分`);
-                    checkIfVoted();
-                }).catch(e => {
-                    console.error("評分上傳失敗", e);
-                    alert("上傳失敗，請檢查網路連線！");
-                });
-            } else {
-                state.votes.push(newVote);
-                alert(`🎉 成功送出評分！(單機模式)`);
-                checkIfVoted();
-            }
-        }
-
-
-        // ==========================================
-        // 老師後台邏輯
-        // ==========================================
-        function updateTeacherPassword() {
-            const newPw = document.getElementById('setting-password').value;
-            if(!newPw) return;
-            if(updateDocFn && settingsRef) {
-                updateDocFn(settingsRef, { teacherPassword: newPw })
-                .then(()=> alert("密碼已更新！"))
-                .catch(e=>console.error(e));
-            }
-        }
-
-        // --- 批次學生名單管理 ---
-        async function batchAddStudents() {
-            const rawText = document.getElementById('batch-student-names').value.trim();
-            if(!rawText) {
-                alert("請在文字框內貼上名單內容！");
-                return;
-            }
-
-            if (!window.addDocFn || !studentsRef) {
-                alert("尚未連接雲端資料庫，無法匯入！");
-                return;
-            }
-
-            const lines = rawText.split('\n');
-            const btn = document.getElementById('btn-batch-import');
-            const originalBtnText = btn.innerHTML;
-            
-            // 變更按鈕狀態防止重複點擊
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 匯入中...';
-            btn.disabled = true;
-
-            let promises = [];
-            let validCount = 0;
-            
-            for (let line of lines) {
-                const name = line.trim();
-                if (!name) continue;
-
-                // 智慧萃取：自動從字串開頭找出數字作為「隱藏座號」用來排序，若無則為 999
-                const match = name.match(/^\s*(\d+)/);
-                const seat = match ? parseInt(match[1], 10) : 999;
-
-                // 建立資料，group 預設給 null，等學生登入自己選
-                const newStudent = { seat: seat, name: name, group: null, isOnline: false };
-                promises.push(window.addDocFn(studentsRef, newStudent));
-                validCount++;
-            }
-
-            try {
-                // 設定 8 秒的逾時機制，避免因為雲端未開通導致畫面永遠卡住
-                const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error("TIMEOUT")), 8000)
-                );
-                
-                await Promise.race([Promise.all(promises), timeoutPromise]);
-                
-                alert(`✅ 成功匯入 ${validCount} 位學生名單！`);
-                document.getElementById('batch-student-names').value = ''; // 清空文字框
-            } catch (e) {
-                console.error("匯入錯誤:", e);
-                if (e.message === "TIMEOUT") {
-                    alert("⚠️ 雲端連線逾時！\n名單雖已出現在下方，但「尚未同步到學生的裝置」。\n\n👉 發生原因：您尚未在 Firebase 建立資料庫，或測試模式已過期。\n請前往 Firebase 後台點擊「建立 Firestore Database」，並設定為「測試模式」。");
-                } else if (e.code === 'permission-denied') {
-                    alert("⚠️ 雲端權限不足！\n請確認您的 Firestore Database 規則已設定為「測試模式」(Test Mode)。");
-                } else {
-                    alert("匯入過程中發生錯誤，部分名單可能未成功寫入。");
-                }
-            } finally {
-                btn.innerHTML = originalBtnText;
-                btn.disabled = false;
-            }
-        }
-
-        // --- 單筆刪除學生 ---
-        function deleteStudent(id, name) {
-            if(confirm(`確定要刪除學生「${name}」嗎？`)) {
-                if(deleteDocFn && docFn) {
-                    deleteDocFn(docFn(db, studentsRef.path, id)).catch(e=>console.error(e));
-                }
-            }
-        }
-
-        // --- 全部刪除 (清空名單) ---
-        async function deleteAllStudents() {
-            if (state.students.length === 0) {
-                alert("目前沒有名單可以刪除喔！");
-                return;
-            }
-            if (confirm("⚠️ 警告：確定要清空「全部」學生名單嗎？\n此操作會將下方列表的學生全部刪除，且無法復原！")) {
-                const btn = document.getElementById('btn-delete-all-students');
-                if(btn) {
-                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> 刪除中...';
-                    btn.disabled = true;
-                }
-
-                if (deleteDocFn && docFn && db) {
-                    let promises = [];
-                    // 將所有的刪除動作加入等待清單
-                    state.students.forEach(s => {
-                        promises.push(deleteDocFn(docFn(db, studentsRef.path, s.id)));
+            const submitVote = async () => {
+                if (session.criteria.some(c => scores[c.id] === undefined)) { alert("請完成所有評分項目！"); return; }
+                setSubmitting(true);
+                try {
+                    await db.collection('sessions').doc(roomName).collection('votes').add({
+                        userId: user.uid, 
+                        userName: registeredName, 
+                        groupId: session.currentGroupId, 
+                        scores, 
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
+                        isDeleted: false
                     });
+                    setHasVoted(true);
+                } catch(e) { alert("送出失敗"); } finally { setSubmitting(false); }
+            };
 
-                    try {
-                        await Promise.all(promises);
-                        // 刪除成功後 UI 會因為監聽器自動刷新，不需要特別寫 alert
-                    } catch (e) {
-                        console.error("全部刪除失敗", e);
-                        alert("刪除過程中發生錯誤，請檢查網路連線。");
-                    }
-                } else {
-                    // 單機測試模式的刪除
-                    state.students = [];
-                    renderTeacherStudents();
-                    populateStudentDropdown();
-                }
-                
-                // 恢復按鈕狀態
-                if(btn) {
-                    btn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i> 清空全部名單';
-                    btn.disabled = false;
-                }
-            }
-        }
-
-        function renderTeacherStudents() {
-            const tbody = document.getElementById('teacher-students-table');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            
-            if(state.students.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-500">目前尚無名單，請在上方批次匯入</td></tr>';
-                return;
-            }
-
-            state.students.forEach(s => {
-                // 狀態燈號
-                const statusDot = s.isOnline 
-                    ? `<div class="w-3 h-3 bg-green-500 rounded-full mx-auto animate-pulse" title="在線上"></div>`
-                    : `<div class="w-3 h-3 bg-gray-300 rounded-full mx-auto" title="離線"></div>`;
-                
-                // 組別顯示：有則顯示，無則提示尚未選擇
-                const groupText = s.group ? `第 ${s.group} 組` : `<span class="text-gray-400 italic font-normal">尚未選擇</span>`;
-
-                // 計算此學生投了幾份票
-                const studentVotes = state.votes.filter(v => v.studentId === s.id);
-                const votesCount = studentVotes.length;
-                
-                let voteBtnHtml = '';
-                if(votesCount > 0) {
-                    voteBtnHtml = `<button onclick="showVoteDetails('${s.id}', '${s.name}')" class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200">查看明細</button>`;
-                }
-
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="p-3 border-b">${statusDot}</td>
-                        <td class="p-3 border-b font-medium text-gray-800">${s.name}</td>
-                        <td class="p-3 border-b text-center"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-bold">${groupText}</span></td>
-                        <td class="p-3 border-b text-center">
-                            <span class="${votesCount>0 ? 'text-green-600 font-bold' : 'text-gray-400'}">${votesCount} 份</span>
-                        </td>
-                        <td class="p-3 border-b text-center space-x-2">
-                            ${voteBtnHtml}
-                            <button onclick="deleteStudent('${s.id}', '${s.name}')" class="text-xs text-red-500 hover:bg-red-50 px-2 py-1 rounded"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-        }
-
-        // 查看明細 Modal
-        function showVoteDetails(studentId, studentName) {
-            document.getElementById('modal-student-name').innerText = `【${studentName}】 的評分紀錄`;
-            const listContainer = document.getElementById('modal-votes-list');
-            listContainer.innerHTML = '';
-
-            const studentVotes = state.votes.filter(v => v.studentId === studentId);
-            
-            if(studentVotes.length === 0) {
-                listContainer.innerHTML = '<p class="text-center text-gray-500 py-4">尚無評分紀錄</p>';
-            } else {
-                studentVotes.forEach(v => {
-                    let scoreDetails = '';
-                    state.criteria.forEach(c => {
-                        scoreDetails += `<span class="inline-block bg-white border border-gray-200 text-gray-600 text-xs px-2 py-1 rounded mr-1 mb-1">${c.name}: <span class="font-bold text-gray-800">${v.scores[c.id]}</span></span>`;
-                    });
-
-                    const timeStr = new Date(v.timestamp).toLocaleTimeString();
-                    
-                    listContainer.innerHTML += `
-                        <div class="bg-white p-4 rounded-xl border border-gray-200 mb-3 shadow-sm">
-                            <div class="flex justify-between items-center mb-2 border-b pb-2">
-                                <span class="font-bold text-lg text-indigo-700">給 第 ${v.targetGroup} 組</span>
-                                <span class="text-2xl font-black text-blue-600">${v.total} <span class="text-sm font-normal text-gray-500">分</span></span>
+            // 尚未選擇學生姓名
+            if (!registeredName) {
+                const availableStudents = (session.students || []).filter(name => !Object.values(session.studentMappings || {}).includes(name));
+                return (
+                    <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 text-center mt-10 animate-fade-in border-t-4 border-indigo-500">
+                        <div className="flex justify-center text-indigo-500 mb-4 scale-110"><Icons.User /></div>
+                        <h2 className="text-2xl font-bold mb-2 text-gray-800">歡迎進入教室</h2>
+                        <p className="text-gray-500 mb-6 text-sm font-medium">請從名單中選擇你的名字進行綁定</p>
+                        
+                        {(session.students||[]).length === 0 ? (
+                            <div className="text-center text-amber-600 bg-amber-50 p-4 rounded-lg font-bold border border-amber-200">
+                                老師尚未建立學生名單，請稍候...
                             </div>
-                            <div class="mb-2">
-                                ${scoreDetails}
+                        ) : (
+                            <div className="space-y-4">
+                                <select className="w-full p-4 border-2 border-gray-200 rounded-xl bg-gray-50 focus:border-indigo-500 focus:bg-white transition-colors outline-none font-bold text-gray-700 shadow-sm" value={selectedName} onChange={e=>setSelectedName(e.target.value)}>
+                                    <option value="">-- 請選擇你的姓名 --</option>
+                                    {availableStudents.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <button onClick={handleRegister} disabled={!selectedName} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-bold shadow-md hover:bg-indigo-700 disabled:bg-gray-300 disabled:shadow-none transition-all active:scale-95 text-lg">確認，我是這位學生</button>
                             </div>
-                            <div class="text-right text-xs text-gray-400">評分時間: ${timeStr}</div>
-                        </div>
-                    `;
-                });
-            }
-            document.getElementById('vote-details-modal').classList.remove('hidden');
-        }
-
-        function closeVoteModal() {
-            document.getElementById('vote-details-modal').classList.add('hidden');
-        }
-
-
-        // --- 原本的設定與總覽邏輯保留 ---
-        function toggleAllowSelf() {
-            state.settings.allowSelfRating = document.getElementById('setting-allow-self').checked;
-            if (updateDocFn && settingsRef) updateDocFn(settingsRef, { allowSelfRating: state.settings.allowSelfRating });
-        }
-
-        function togglePublish(status) {
-            state.settings.isPublished = status;
-            if (updateDocFn && settingsRef) updateDocFn(settingsRef, { isPublished: status });
-            if(!document.getElementById('view-screen').classList.contains('hidden')) renderScreenView();
-        }
-
-        function renderTeacherCriteria() {
-            const list = document.getElementById('teacher-criteria-list');
-            if(!list) return;
-            list.innerHTML = '';
-            state.criteria.forEach(c => {
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded border text-sm">
-                        <span class="font-medium text-gray-700">${c.name}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-gray-500">滿分</span>
-                            <input type="number" class="w-16 p-1 border rounded text-center focus:ring-blue-500" value="${c.maxScore}" 
-                                   onchange="updateCriteriaMax('${c.id}', this.value)">
-                        </div>
+                        )}
                     </div>
-                `;
-            });
-        }
-
-        function updateCriteriaMax(id, newMax) {
-            const target = state.criteria.find(c => c.id === id);
-            if(target) target.maxScore = parseInt(newMax);
-        }
-
-        function getGroupStats() {
-            let stats = {};
-            for(let i=1; i<=state.settings.totalGroups; i++) {
-                stats[i] = { count: 0, totalSum: 0, avg: 0 };
+                );
             }
-            state.votes.forEach(v => {
-                stats[v.targetGroup].count += 1;
-                stats[v.targetGroup].totalSum += v.total;
-            });
-            for(let i=1; i<=state.settings.totalGroups; i++) {
-                if(stats[i].count > 0) stats[i].avg = (stats[i].totalSum / stats[i].count).toFixed(1);
-            }
-            return stats;
-        }
 
-        function updateTeacherStats() {
-            const stats = getGroupStats();
-            const tbody = document.getElementById('teacher-stats-table');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            for(let i=1; i<=state.settings.totalGroups; i++) {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50 transition-colors">
-                        <td class="p-4 font-bold text-gray-700">第 ${i} 組</td>
-                        <td class="p-4 text-center">
-                            <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm font-semibold">${stats[i].count} 份</span>
-                        </td>
-                        <td class="p-4 text-center text-xl font-bold text-indigo-600">${stats[i].avg} <span class="text-sm font-normal text-gray-500">分</span></td>
-                    </tr>
-                `;
-            }
-        }
+            if (session.showResults) return <div className="animate-fade-in"><ResultsBoard session={session} roomName={roomName} groups={session.groups} criteria={session.criteria} isAdmin={false} /></div>;
 
-        function exportToCSV() {
-            if (state.votes.length === 0) { alert('⚠️ 目前還沒有資料喔！'); return; }
-            let csvContent = "\uFEFF";
-            let headers = ["評分時間", "評分者", "評分者組別", "被評組別", "總分"];
-            state.criteria.forEach(c => headers.push(c.name));
-            csvContent += headers.join(",") + "\n";
+            if (!session.currentGroupId) return (
+                <div className="max-w-lg mx-auto text-center py-20 bg-white rounded-2xl shadow-lg border border-gray-100 mt-10 animate-fade-in">
+                    <div className="inline-block bg-indigo-50 text-indigo-700 px-4 py-1 rounded-full font-bold mb-6 border border-indigo-100 shadow-sm">哈囉，{registeredName}</div>
+                    <div className="text-gray-200 flex justify-center mb-6 scale-150"><Icons.Lock /></div>
+                    <h2 className="font-black text-3xl text-gray-800 tracking-wide">等待老師開放評分...</h2>
+                    <p className="text-gray-500 mt-3 font-medium">請留意講台上的指示</p>
+                </div>
+            );
 
-            state.votes.forEach(v => {
-                const timeStr = v.timestamp ? new Date(v.timestamp).toLocaleString() : new Date().toLocaleString();
-                let row = [
-                    `"${timeStr}"`,
-                    `"${v.raterName || 'unknown'}"`,
-                    `"第 ${v.raterGroup} 組"`,
-                    `"第 ${v.targetGroup} 組"`,
-                    v.total
-                ];
-                state.criteria.forEach(c => row.push(v.scores[c.id] || 0));
-                csvContent += row.join(",") + "\n";
-            });
+            if (hasVoted) return (
+                <div className="max-w-lg mx-auto text-center py-20 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow border border-green-100 mt-10 animate-fade-in">
+                    <div className="text-green-500 flex justify-center mb-6 scale-150"><Icons.CheckCircle /></div>
+                    <h2 className="font-black text-3xl text-green-800 tracking-wide">評分已成功送出！</h2>
+                    <p className="text-green-600 mt-3 font-bold">請休息一下，等待下一組報告。</p>
+                </div>
+            );
 
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.setAttribute("href", url);
-            link.setAttribute("download", `共同評分成績明細_${new Date().toLocaleDateString().replace(/\//g, '')}.csv`);
-            link.click();
-        }
-
-        // ==========================================
-        // 大螢幕展示邏輯
-        // ==========================================
-        function renderScreenView() {
-            const progressView = document.getElementById('screen-progress');
-            const leaderboardView = document.getElementById('screen-leaderboard');
-            if(!progressView || !leaderboardView) return;
-            
-            if (!state.settings.isPublished) {
-                progressView.classList.remove('hidden');
-                leaderboardView.classList.add('hidden');
-                
-                document.getElementById('total-votes-count').innerText = state.votes.length;
-                
-                // 動態進度條計算：假設期望票數為 (全班人數 - 一組人數) * 組數，這裡簡單抓個預估
-                const expectedVotes = state.settings.totalGroups * 5; // 簡易預估值
-                let percent = (state.votes.length / expectedVotes) * 100;
-                if(percent > 100) percent = 100;
-                document.getElementById('progress-bar-fill').style.width = `${percent}%`;
-
-            } else {
-                progressView.classList.add('hidden');
-                leaderboardView.classList.remove('hidden');
-                
-                const stats = getGroupStats();
-                let rankArray = [];
-                for(let i=1; i<=state.settings.totalGroups; i++) {
-                    rankArray.push({ group: i, avg: parseFloat(stats[i].avg) || 0 });
-                }
-                rankArray.sort((a, b) => b.avg - a.avg);
-
-                const maxPossibleScore = state.criteria.reduce((sum, c) => sum + c.maxScore, 0);
-                const barsContainer = document.getElementById('leaderboard-bars');
-                barsContainer.innerHTML = '';
-
-                rankArray.forEach((item, index) => {
-                    const isFirst = index === 0 && item.avg > 0;
-                    const barColor = isFirst ? 'bg-gradient-to-r from-yellow-400 to-yellow-500' : 'bg-gradient-to-r from-blue-400 to-blue-600';
-                    const icon = isFirst ? '<i class="fa-solid fa-trophy text-yellow-500 mr-2 text-3xl"></i>' : `<span class="text-gray-400 mr-4 w-8 inline-block text-2xl">${index+1}.</span>`;
+            const currentGroup = session.groups.find(g => g.id === session.currentGroupId);
+            return (
+                <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-xl p-6 md:p-8 space-y-8 animate-fade-in border-t-4 border-indigo-500">
+                    <div className="border-b border-gray-100 pb-6 text-center">
+                        <div className="inline-block bg-gray-100 text-gray-600 px-5 py-2 rounded-full text-2xl font-bold mb-4 border border-gray-200 shadow-sm">評分者：{registeredName}</div>
+                        <h2 className="text-2xl md:text-3xl font-black text-gray-800">目前報告：<span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg ml-2 border border-indigo-100 shadow-sm">{currentGroup?.name}</span></h2>
+                    </div>
                     
-                    const widthPercent = (item.avg / maxPossibleScore) * 100;
+                    <div className="space-y-6">
+                        {session.criteria.map(c => (
+                            <div key={c.id} className="bg-gray-50 p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
+                                <div className="flex justify-between items-center mb-5">
+                                    <label className="font-black text-xl text-gray-800">{c.name}</label>
+                                    <span className="text-sm font-bold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-lg border border-indigo-200">最高：{c.max}</span>
+                                </div>
+                                <div className="flex items-center gap-5">
+                                    <input type="range" min="0" max={c.max} step="1" value={scores[c.id] || 0} onChange={e => setScores({...scores, [c.id]: parseInt(e.target.value)})} className="w-full h-4 bg-gray-200 rounded-full appearance-none cursor-pointer accent-indigo-600 shadow-inner" />
+                                    <div className="w-20 h-16 flex items-center justify-center bg-white text-indigo-700 font-black text-3xl rounded-xl border-2 border-indigo-200 shadow-sm">{scores[c.id] || 0}</div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <button onClick={submitVote} disabled={submitting} className="w-full py-5 bg-indigo-600 text-white rounded-xl font-black text-xl shadow-lg hover:bg-indigo-700 hover:shadow-xl transition-all active:scale-95 disabled:bg-gray-400 disabled:shadow-none disabled:transform-none border-b-4 border-indigo-800 active:border-b-0">
+                        {submitting ? '資料傳送中...' : '確認送出分數'}
+                    </button>
+                </div>
+            );
+        }
 
-                    barsContainer.innerHTML += `
-                        <div class="flex items-center gap-6 fade-in" style="animation-delay: ${index * 0.1}s">
-                            <div class="w-32 text-right font-bold text-2xl text-gray-700 flex items-center justify-end">
-                                ${icon} 第 ${item.group} 組
-                            </div>
-                            <div class="flex-grow bg-gray-100 rounded-full h-10 overflow-hidden relative shadow-inner border border-gray-200">
-                                <div class="${barColor} h-full rounded-full transition-all duration-1000 ease-out shadow-md" style="width: 0%" data-target-width="${widthPercent}%"></div>
-                            </div>
-                            <div class="w-24 text-right font-black text-4xl ${isFirst ? 'text-yellow-600' : 'text-blue-600'} drop-shadow-sm">
-                                ${item.avg.toFixed(1)}
-                            </div>
-                        </div>
-                    `;
+        // --- Results Board ---
+        function ResultsBoard({ session, roomName, groups, criteria, isAdmin }) {
+            const [results, setResults] = React.useState([]);
+            const [allVotes, setAllVotes] = React.useState([]);
+
+            React.useEffect(() => {
+                db.collection('sessions').doc(roomName).collection('votes').get().then(snap => {
+                    const votesData = [];
+                    snap.forEach(d => votesData.push(d.data()));
+                    setAllVotes(votesData);
+
+                    const groupStats = {};
+                    votesData.forEach(v => {
+                        if (v.isDeleted) return;
+
+                        if (!groupStats[v.groupId]) groupStats[v.groupId] = { total: 0, count: 0 };
+                        let vTotal = 0;
+                        (criteria||[]).forEach(c => vTotal += (v.scores[c.id] || 0));
+                        groupStats[v.groupId].total += vTotal;
+                        groupStats[v.groupId].count++;
+                    });
+                    const res = (groups||[]).map(g => ({
+                        ...g, avg: groupStats[g.id]?.count ? (groupStats[g.id].total / groupStats[g.id].count).toFixed(2) : "0.00"
+                    })).sort((a, b) => b.avg - a.avg);
+                    setResults(res);
+                });
+            }, [session, roomName, groups, criteria]);
+
+            const handleExportExcel = () => {
+                const wb = XLSX.utils.book_new();
+
+                const borderStyle = {
+                    top: { style: "thin", color: { rgb: "000000" } },
+                    bottom: { style: "thin", color: { rgb: "000000" } },
+                    left: { style: "thin", color: { rgb: "000000" } },
+                    right: { style: "thin", color: { rgb: "000000" } }
+                };
+
+                const rankingHeaders = ["名次", "組名稱", "平均總分"];
+                const rankingData = results.map((r, i) => [i + 1, r.name, r.avg]);
+                
+                const rankWsData = [
+                    [`最終排行榜 - ${roomName}老師的教室`, "", ""],
+                    rankingHeaders,
+                    ...rankingData
+                ];
+                
+                const rankWs = XLSX.utils.aoa_to_sheet(rankWsData);
+                rankWs['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 2 } }];
+                rankWs['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 15 }];
+                rankWs['!rows'] = [{ hpt: 30 }, { hpt: 18 }, ...rankingData.map(() => ({ hpt: 18 }))];
+
+                const rankRange = XLSX.utils.decode_range(rankWs['!ref']);
+                for (let R = rankRange.s.r; R <= rankRange.e.r; ++R) {
+                    for (let C = rankRange.s.c; C <= rankRange.e.c; ++C) {
+                        const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+                        if (!rankWs[cell_address]) continue;
+                        if (!rankWs[cell_address].s) rankWs[cell_address].s = {};
+                        rankWs[cell_address].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+                        rankWs[cell_address].s.border = borderStyle;
+                        if (R === 0) rankWs[cell_address].s.font = { bold: true, sz: 14 };
+                    }
+                }
+                XLSX.utils.book_append_sheet(wb, rankWs, "最終排行榜");
+
+                groups.forEach(group => {
+                    const groupVotes = allVotes.filter(v => v.groupId === group.id);
+                    const headers = ["評分學生", ...criteria.map(c => c.name), "總分", "備註"];
+                    
+                    const dataRows = groupVotes.map(v => {
+                        const row = [v.userName];
+                        let total = 0;
+                        criteria.forEach(c => {
+                            const score = v.scores[c.id] || 0;
+                            row.push(score);
+                            total += score;
+                        });
+                        row.push(total);
+                        row.push(v.isDeleted ? "不採計" : "");
+                        return row;
+                    });
+
+                    let validTotalSum = 0;
+                    let validCount = 0;
+                    
+                    dataRows.forEach((row, index) => {
+                        if (!groupVotes[index].isDeleted) {
+                            validTotalSum += row[row.length - 2]; 
+                            validCount++;
+                        }
+                    });
+                    
+                    const groupAvg = validCount > 0 ? (validTotalSum / validCount).toFixed(1) : "0.0";
+                    const summaryRow = new Array(headers.length).fill("");
+                    summaryRow[headers.length - 3] = "平均"; 
+                    summaryRow[headers.length - 2] = groupAvg;
+
+                    const allData = [headers, ...dataRows, summaryRow];
+                    const ws = XLSX.utils.aoa_to_sheet(allData);
+
+                    ws['!cols'] = headers.map(() => ({ wch: 12 }));
+                    ws['!rows'] = allData.map(() => ({ hpt: 18 }));
+
+                    const range = XLSX.utils.decode_range(ws['!ref']);
+                    
+                    for (let R = range.s.r; R <= range.e.r; ++R) {
+                        for (let C = range.s.c; C <= range.e.c; ++C) {
+                            const cell_address = XLSX.utils.encode_cell({ r: R, c: C });
+                            if (!ws[cell_address]) continue;
+                            if (!ws[cell_address].s) ws[cell_address].s = {};
+                            
+                            ws[cell_address].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+                            ws[cell_address].s.border = borderStyle;
+
+                            if (C === range.e.c && ws[cell_address].v === "不採計") {
+                                ws[cell_address].s.font = { color: { rgb: "FF0000" } };
+                            }
+                            if (R > 0 && R < range.e.r && C === range.e.c - 1) {
+                                ws[cell_address].s.font = { color: { rgb: "0000FF" } };
+                            }
+                            if (R === range.e.r) {
+                                if (C === range.e.c - 2) ws[cell_address].s.font = { color: { rgb: "FF0000" }, bold: true };
+                                if (C === range.e.c - 1) ws[cell_address].s.font = { color: { rgb: "FF0000" } };
+                            }
+                        }
+                    }
+
+                    let sheetName = group.name.replace(/[\\/?*\[\]]/g, ""); 
+                    if(sheetName.length > 30) sheetName = sheetName.substring(0,30);
+                    if(!sheetName) sheetName = `Group ${group.id}`;
+                    
+                    XLSX.utils.book_append_sheet(wb, ws, sheetName);
                 });
 
-                setTimeout(() => {
-                    const bars = barsContainer.querySelectorAll('[data-target-width]');
-                    bars.forEach(bar => { bar.style.width = bar.getAttribute('data-target-width'); });
-                }, 100);
-            }
+                XLSX.writeFile(wb, `評分結果_${roomName}老師.xlsx`);
+            };
+
+            return (
+                <div className="bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                        <h2 className="text-2xl font-black flex items-center gap-2 text-indigo-900"><Icons.BarChart3 /> 最終排行榜</h2>
+                        {isAdmin && (
+                            <button 
+                                onClick={handleExportExcel}
+                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold shadow-md transition-colors active:scale-95 border-b-4 border-green-800 active:border-b-0"
+                            >
+                                <Icons.Download /> 匯出 Excel 報表
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="space-y-4">
+                        {results.map((g, i) => (
+                            <div key={g.id} className={`flex justify-between items-center p-5 rounded-2xl transition-all shadow-sm ${i === 0 ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-2 border-yellow-300 transform scale-105 shadow-md' : 'border border-gray-100 bg-white hover:border-gray-300 hover:shadow-md'}`}>
+                                <div className="flex items-center gap-5">
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl text-white shadow ${i===0?'bg-yellow-400':i===1?'bg-gray-400':i===2?'bg-orange-400':'bg-gray-300 text-gray-600'}`}>{i+1}</div>
+                                    <span className={`text-xl ${i===0 ? 'font-black text-gray-900' : 'font-bold text-gray-800'}`}>{g.name}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className={`text-4xl font-black block ${i===0 ? 'text-yellow-600' : 'text-indigo-600'}`}>{g.avg}</span>
+                                    <span className="text-sm font-bold text-gray-400">平均總分</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    {!isAdmin && <div className="mt-8 text-center text-gray-500 text-sm font-bold bg-gray-50 border border-gray-200 py-3 rounded-lg shadow-inner">結果僅在老師公佈後顯示，若目前無資料代表尚未開放。</div>}
+                </div>
+            );
         }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
