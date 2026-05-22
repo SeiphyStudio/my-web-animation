@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中物理模擬實驗室：一維彈性碰撞系列</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #1e293b;
+            padding: 0 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 10;
+            position: relative; 
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .title {
+            color: #facc15;
+            font-size: 2.125rem; /* 桌機版 1.7 倍 */
+            font-weight: bold;
+            padding: 16px 0 14px 0;
+            margin: 0;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .title-badge {
+            background: #3b82f6;
+            color: white;
+            font-size: 1rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            vertical-align: middle;
+        }
+        .tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            flex-shrink: 1;
+            min-width: 0;
+            margin-left: 20px;
+        }
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .tab {
+            padding: 12px 20px;
+            background: #334155;
+            color: #94a3b8;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab:hover {
+            background: #475569;
+            color: #f8fafc;
+        }
+        .tab.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 -2px 10px rgba(59, 130, 246, 0.3);
+        }
+        .iframe-container {
+            flex: 1;
+            width: 100%;
+            background: #ffffff;
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+        
+        /* 手機版微調標題與選單大小 */
+        @media (max-width: 600px) {
+            .header { 
+                padding: 0 10px; 
+                flex-direction: column; 
+                align-items: stretch; 
+            }
+            .title { 
+                font-size: 1.07rem; /* 手機版縮小為 0.6 倍 */
+                padding: 10px 0 8px 0; 
+                gap: 8px;
+            }
+            .title-badge { 
+                font-size: 0.6rem; /* 徽章也等比縮小 */
+                padding: 2px 5px; 
+            }
+            .tabs { 
+                margin-left: 0; 
+                margin-bottom: 0;
+                gap: 4px;
+            }
+            .tab { 
+                padding: 6px 12px; 
+                font-size: 0.8rem; 
+                border-radius: 6px 6px 0 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">
+            <span>一維彈性碰撞模擬動畫</span>
+            <span class="title-badge">阿發老師設計</span>
+        </div>
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab(1)">
+                碰撞過程速度分析
+            </button>
+            <button class="tab" onclick="switchTab(2)">
+                母球撞擊靜止子球
+            </button>
+            <button class="tab" onclick="switchTab(3)">
+                牛頓擺模擬
+            </button>
+            <button class="tab" onclick="switchTab(4)">
+                多次碰撞實驗模擬
+            </button>
+        </div>
+    </div>
+    
+    <div class="iframe-container">
+        <iframe id="sim-frame" title="Physics Simulation"></iframe>
+    </div>
+
+    <!-- ==========================================
+         底下是四個原始檔案的原始碼，安全封裝於 script 標籤中
+         ========================================== -->
+
+    <!-- 第一個模擬：一維彈性碰撞過程模擬 -->
+    <script type="text/plain" id="src-1">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一維彈性碰撞過程分析</title>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        .canvas-container {
+            aspect-ratio: 5 / 1;
+            width: 100%;
+            background-color: #f8fafc;
+        }
+        
+        @media (max-width: 768px) {
+            .canvas-container { aspect-ratio: 5 / 1; }
+        }
+
+        @media (max-width: 932px) and (orientation: landscape) {
+            body { padding: 0.25rem !important; }
+            .main-spacing > * + * { margin-top: 0.35rem !important; } 
+            
+            .chart-box { padding: 0.5rem !important; }
+            .chart-title { font-size: 1.1rem !important; margin-bottom: 0.25rem !important; padding: 0 0.5rem !important; }
+            .chart-wrapper { height: 45vh !important; min-height: 120px; } 
+            
+            .sim-box { padding: 0.5rem !important; }
+            .controls-row { margin-bottom: 0.25rem !important; }
+            .btn-mobile { padding: 0.15rem 0.5rem !important; font-size: 0.75rem !important; width: auto !important; min-width: 4rem; }
+            
+            .sim-scroll-wrapper { overflow-x: hidden !important; }
+            .sim-canvas-inner { width: 100% !important; margin-top: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-[#0f172a] min-h-screen text-gray-800 font-sans p-2 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-4 md:space-y-6 main-spacing">
+
+        <!-- 兩欄式佈局：控制面板與圖表 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+            
+            <!-- 控制面板 -->
+            <div class="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-1 flex flex-col hidden md:flex h-full">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-6">系統參數</h2>
+
+                    <!-- 參數顯示 (固定值) -->
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-100 shadow-sm">
+                            <div class="text-sm text-green-700 font-bold mb-1">甲物體 (m₁)</div>
+                            <div class="text-2xl font-mono font-bold text-green-600">2.0 <span class="text-sm">kg</span></div>
+                            <div class="text-sm text-green-700 mt-2">初速: 10 m/s</div>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg border border-orange-100 shadow-sm">
+                            <div class="text-sm text-orange-700 font-bold mb-1">乙物體 (m₂)</div>
+                            <div class="text-2xl font-mono font-bold text-orange-500">3.0 <span class="text-sm">kg</span></div>
+                            <div class="text-sm text-orange-700 mt-2">初速: 5 m/s</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 桌面版按鍵 (移至底部) -->
+                <div class="mt-auto pt-6 flex space-x-3 w-full">
+                    <button id="btnPlayPause" class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg shadow-md transition-colors text-lg font-bold flex-1">
+                        開始播放
+                    </button>
+                    <button id="btnReset" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-3 rounded-lg shadow-md transition-colors text-lg font-bold flex-1">
+                        重置
+                    </button>
+                </div>
+            </div>
+
+            <!-- v-t 圖表區 -->
+            <div class="bg-white p-2 md:p-6 rounded-xl shadow-sm border border-gray-200 lg:col-span-2 chart-box">
+                <h2 class="text-lg md:text-xl font-bold text-gray-800 mb-2 md:mb-4 px-2 pt-2 md:p-0 chart-title">v-t 圖 (速度-時間)</h2>
+                <div class="w-full h-56 md:h-80 relative chart-wrapper">
+                    <canvas id="vtChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 動畫展示區 -->
+        <div class="bg-white p-3 md:p-6 rounded-xl shadow-sm border border-gray-200 relative flex flex-col sim-box">
+            
+            <!-- 手機版專屬控制列 (移除狀態區塊，只留按鈕並置左) -->
+            <div class="flex md:hidden items-center justify-start space-x-2 mb-2 w-full controls-row">
+                <button id="btnPlayPauseMobile" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded shadow-sm transition-colors text-sm font-bold text-center w-20 btn-mobile">
+                    開始播放
+                </button>
+                <button id="btnResetMobile" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded shadow-sm transition-colors text-sm font-bold text-center btn-mobile">
+                    重置
+                </button>
+            </div>
+
+            <!-- 統一狀態指示器 -->
+            <!-- 桌機 0.7倍高度 (py-2, text-24px)，手機 0.5倍高度/0.4倍字 (py-1, text-13px, 右上角) -->
+            <div id="phaseIndicatorBadge" class="absolute z-20 text-white font-bold flex items-center transition-colors duration-300 pointer-events-none shadow-md top-2 right-2 translate-x-0 px-3 py-1 text-[13px] rounded-lg md:top-4 md:right-auto md:left-1/2 md:-translate-x-1/2 md:px-6 md:py-2 md:text-[24px] md:rounded-xl bg-sky-500">
+                <span id="phaseIndicator" class="tracking-widest">碰撞前</span>
+            </div>
+
+            <!-- 橫向區塊：手機版取消放大，統一改為 w-full 確保完全可見 -->
+            <div class="w-full overflow-hidden rounded md:mt-0 sim-scroll-wrapper" style="-webkit-overflow-scrolling: touch;">
+                <div class="canvas-container relative w-full max-w-none origin-top-left rounded-lg overflow-hidden sim-canvas-inner" id="canvasWrapper">
+                    <canvas id="simCanvas" class="absolute top-0 left-0 w-full h-full"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ---------------------------------------------------------
+        // 物理常數與狀態 (單位: 公尺與秒)
+        // ---------------------------------------------------------
+        const PI = Math.PI;
+        const pxScale = 10; // 1 公尺 = 10 像素
+        
+        // 【完美 1/3 時間分配】
+        // 總模擬時間 10 秒，碰撞前、碰撞中、碰撞後各 3.333 秒
+        // m1 = 2, m2 = 3 => 約化質量 μ = (2*3)/(2+3) = 1.2 kg
+        // 碰撞時間 T_c = pi * sqrt(μ / k) = 3.3333...
+        // 故 k = (PI^2 * 1.2) / (3.3333^2)
+        const targetPhaseTime = 10 / 3;
+        
+        const PHYS = {
+            k: (PI * PI * 1.2) / (targetPhaseTime * targetPhaseTime), 
+            L0: 15, // 彈簧原長 15m (150px)
+            blockW: 6, // 物體寬度 6m (60px)
+            blockH: 6  // 物體高度 6m (60px)
+        };
+
+        let state = {
+            m1: 2.0, m2: 3.0,
+            x1: 4.0, v1: 10.0,
+            x2: 41.666, v2: 5.0,
+            time: 0,
+            running: false, 
+            phase: 'before' 
+        };
+
+        const initialSetup = () => {
+            // 在 3.333 秒時發生接觸 (相對速度 = 5m/s)
+            // 需縮短距離 = 5 * 3.3333 = 16.666 m
+            // 接觸時距離 = L0 + blockW = 15 + 6 = 21 m
+            // 故初始距離 x2 - x1 = 21 + 16.666 = 37.666 m
+            state.x1 = 4.0; 
+            state.x2 = 41.666;  
+            state.v1 = 10.0;
+            state.v2 = 5.0;
+            state.time = 0;
+            state.phase = 'before';
+            
+            chartData.datasets[0].data = [];
+            chartData.datasets[1].data = [];
+            chartData.datasets[2].data = [];
+            if(vtChart) vtChart.update();
+            updateDescriptions();
+
+            state.running = false;
+            updatePlayButtons();
+            lastTime = performance.now();
+        };
+
+        // ---------------------------------------------------------
+        // DOM 元素與事件綁定
+        // ---------------------------------------------------------
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvasWrapper');
+        
+        // 設定較小的內部邏輯寬度，確保手機螢幕 w-full 顯示時物件完整可見
+        const logicalWidth = 900;
+        const logicalHeight = 220; 
+
+        const ui = {
+            btnPlay: document.getElementById('btnPlayPause'),
+            btnReset: document.getElementById('btnReset'),
+            btnPlayMobile: document.getElementById('btnPlayPauseMobile'),
+            btnResetMobile: document.getElementById('btnResetMobile'),
+            badge: document.getElementById('phaseIndicatorBadge')
+        };
+
+        function updatePlayButtons() {
+            let x1_px = state.x1 * pxScale;
+            let blockW_px = PHYS.blockW * pxScale;
+            let isEnd = x1_px - blockW_px/2 > logicalWidth + 150;
+            
+            let text = "";
+            let baseClassDesk = "";
+            let baseClassMob = "";
+
+            if (isEnd) {
+                text = "重新播放";
+                baseClassDesk = "bg-green-600 hover:bg-green-700 text-white transition-colors";
+                baseClassMob = "bg-green-600 hover:bg-green-700 text-white transition-colors";
+            } else if (state.running) {
+                text = "暫停";
+                baseClassDesk = "bg-blue-600 hover:bg-blue-700 text-white transition-colors";
+                baseClassMob = "bg-blue-600 hover:bg-blue-700 text-white transition-colors";
+            } else {
+                text = state.time === 0 ? "開始播放" : "繼續播放";
+                baseClassDesk = "bg-green-600 hover:bg-green-700 text-white transition-colors";
+                baseClassMob = "bg-green-600 hover:bg-green-700 text-white transition-colors";
+            }
+
+            if(ui.btnPlay) {
+                ui.btnPlay.innerText = text;
+                ui.btnPlay.className = `${baseClassDesk} px-4 py-3 rounded-lg shadow-md text-lg font-bold flex-1`;
+            }
+            if(ui.btnPlayMobile) {
+                ui.btnPlayMobile.innerText = text;
+                ui.btnPlayMobile.className = `${baseClassMob} px-3 py-1.5 rounded shadow-sm text-sm font-bold text-center w-20 btn-mobile`;
+            }
+        }
+
+        const handlePlayClick = () => {
+            let x1_px = state.x1 * pxScale;
+            let blockW_px = PHYS.blockW * pxScale;
+            if (x1_px - blockW_px/2 > logicalWidth + 150) {
+                initialSetup();
+                state.running = true;
+                updatePlayButtons();
+                lastTime = performance.now();
+            } else {
+                state.running = !state.running;
+                updatePlayButtons();
+                if(state.running) lastTime = performance.now();
+            }
+        };
+
+        const handleResetClick = () => {
+            initialSetup();
+            if(!state.running) draw();
+        };
+
+        if(ui.btnPlay) ui.btnPlay.addEventListener('click', handlePlayClick);
+        if(ui.btnPlayMobile) ui.btnPlayMobile.addEventListener('click', handlePlayClick);
+        if(ui.btnReset) ui.btnReset.addEventListener('click', handleResetClick);
+        if(ui.btnResetMobile) ui.btnResetMobile.addEventListener('click', handleResetClick);
+
+        // ---------------------------------------------------------
+        // Chart.js 設定與客製化 Plugin (繪製箭頭與文字)
+        // ---------------------------------------------------------
+        const phasePlugin = {
+            id: 'phasePlugin',
+            beforeDraw: (chart) => {
+                const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
+                
+                // 取得 3.33 秒與 6.66 秒的 X 座標
+                const t1 = 10 / 3;
+                const t2 = 20 / 3;
+                const x1 = x.getPixelForValue(t1);
+                const x2 = x.getPixelForValue(t2);
+
+                ctx.save();
+                
+                // 1. 畫垂直虛線 (深藍色)
+                ctx.beginPath();
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#1e3a8a'; 
+                ctx.lineWidth = 2;
+                ctx.moveTo(x1, top);
+                ctx.lineTo(x1, bottom);
+                ctx.moveTo(x2, top);
+                ctx.lineTo(x2, bottom);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 判斷是否為手機版，縮小 0.5 倍
+                const isMobile = window.innerWidth <= 600;
+                const fontSize = isMobile ? 11 : 22; 
+
+                // 2. 畫說明文字 (斜體、楷體、對齊 y=2.5 的位置)
+                const textY = y.getPixelForValue(2.5);
+                ctx.fillStyle = '#1e3a8a';
+                ctx.font = `italic bold ${fontSize}px "KaiTi", "標楷體", serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('碰撞前', (left + x1) / 2, textY);
+                ctx.fillText('碰撞中', (x1 + x2) / 2, textY);
+                ctx.fillText('碰撞後', (x2 + right) / 2, textY);
+
+                // 3. 畫雙箭頭直線 (對齊 y=1.0 的位置)
+                const arrowY = y.getPixelForValue(1.0);
+                const drawArrow = (startX, endX) => {
+                    ctx.beginPath();
+                    ctx.moveTo(startX, arrowY);
+                    ctx.lineTo(endX, arrowY);
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#1e3a8a';
+                    ctx.stroke();
+
+                    // 左箭頭
+                    ctx.beginPath();
+                    ctx.moveTo(startX, arrowY);
+                    ctx.lineTo(startX + 12, arrowY - 6);
+                    ctx.lineTo(startX + 12, arrowY + 6);
+                    ctx.fillStyle = '#1e3a8a';
+                    ctx.fill();
+
+                    // 右箭頭
+                    ctx.beginPath();
+                    ctx.moveTo(endX, arrowY);
+                    ctx.lineTo(endX - 12, arrowY - 6);
+                    ctx.lineTo(endX - 12, arrowY + 6);
+                    ctx.fill();
+                };
+                
+                drawArrow(left, x1);
+                drawArrow(x1, x2);
+                drawArrow(x2, right);
+
+                ctx.restore();
+            }
+        };
+
+        const chartCtx = document.getElementById('vtChart').getContext('2d');
+        const chartData = {
+            datasets: [
+                {
+                    label: '甲物體 (v₁)',
+                    borderColor: '#16a34a', 
+                    backgroundColor: 'transparent',
+                    data: [],
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    tension: 0.2
+                },
+                {
+                    label: '乙物體 (v₂)',
+                    borderColor: '#f97316', 
+                    backgroundColor: 'transparent',
+                    data: [],
+                    borderWidth: 2.5,
+                    pointRadius: 0,
+                    tension: 0.2
+                },
+                {
+                    label: '質心速度 (vᴄ)', // 使用小型大寫字母 c 達成優雅下標效果
+                    borderColor: '#FF0000',
+                    backgroundColor: 'transparent',
+                    data: [],
+                    borderWidth: 2,
+                    borderDash: [6, 6],
+                    pointRadius: 0,
+                    tension: 0
+                }
+            ]
+        };
+
+        const vtChart = new Chart(chartCtx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                layout: {
+                    padding: { left: 0, right: 0, top: 0, bottom: 0 }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        type: 'linear', 
+                        min: 0,
+                        max: 10, // 強制將橫軸鎖定在 10 秒
+                        title: { 
+                            display: true, 
+                            text: '時間', 
+                            padding: { top: 2, bottom: 0 } 
+                        },
+                        ticks: { 
+                            stepSize: 1,
+                            callback: () => '', // 隱藏具體時間數值，但保留格線
+                            maxTicksLimit: 11
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: '速度 (m/s)' },
+                        min: 0,
+                        max: 12, 
+                        ticks: { stepSize: 2 }
+                    }
+                },
+                plugins: {
+                    legend: { 
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 20,
+                            generateLabels: function(chart) {
+                                const originalLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                originalLabels.forEach(label => {
+                                    label.pointStyle = 'line';
+                                    if (label.text.includes('質心速度')) {
+                                        label.fontColor = '#FF0000';
+                                    }
+                                });
+                                return originalLabels;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [phasePlugin] // 載入客製化箭頭與文字插件
+        });
+
+        // ---------------------------------------------------------
+        // 核心物理引擎 (精確步長)
+        // ---------------------------------------------------------
+        function updatePhysics(dt) {
+            const subSteps = 100; 
+            const subDt = dt / subSteps;
+
+            for (let i = 0; i < subSteps; i++) {
+                let p1 = state.x1 + PHYS.blockW / 2;
+                let p2 = state.x2 - PHYS.blockW / 2;
+                let distance = p2 - p1;
+                
+                let force = 0;
+                
+                // 距離小於原長開始碰撞壓縮
+                if (distance < PHYS.L0) {
+                    let compression = PHYS.L0 - distance;
+                    force = PHYS.k * compression; 
+                    
+                    if (state.phase === 'before') {
+                        state.phase = 'during';
+                        updateDescriptions();
+                    }
+                } else {
+                    if (state.phase === 'during') {
+                        state.phase = 'after';
+                        updateDescriptions();
+                    }
+                }
+
+                state.v1 += (-force / state.m1) * subDt;
+                state.v2 += (force / state.m2) * subDt;
+                state.x1 += state.v1 * subDt;
+                state.x2 += state.v2 * subDt;
+                
+                state.time += subDt;
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 動畫繪製邏輯
+        // ---------------------------------------------------------
+        function drawSpring(ctx, startX, endX, y) {
+            ctx.beginPath();
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            
+            let width = endX - startX;
+            let numCoils = 12; 
+            let amplitude = 12; 
+            let flatEnd = 20; 
+            
+            if (width < 2) return;
+            
+            ctx.moveTo(startX, y);
+            ctx.lineTo(startX + flatEnd, y);
+            
+            let springWidth = Math.max(0, width - flatEnd * 2);
+            let segments = 200; 
+            
+            for (let i = 0; i <= segments; i++) {
+                let t = i / segments;
+                let cx = startX + flatEnd + t * springWidth;
+                let cy = y - amplitude * Math.sin(t * numCoils * Math.PI * 2);
+                ctx.lineTo(cx, cy);
+            }
+            
+            ctx.lineTo(endX, y);
+            ctx.stroke();
+        }
+
+        function drawArrow(ctx, fromx, fromy, tox, toy, color) {
+            var headlen = 12; 
+            var dx = tox - fromx;
+            var dy = toy - fromy;
+            var angle = Math.atan2(dy, dx);
+            
+            if (Math.abs(dx) < 2) return;
+
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 4;
+            ctx.moveTo(fromx, fromy);
+            ctx.lineTo(tox, toy);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(tox - headlen * Math.cos(angle + Math.PI / 6), toy - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.lineTo(tox, toy);
+            ctx.lineTo(tox - headlen * Math.cos(angle - Math.PI / 6), toy - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.fill();
+        }
+
+        function drawBlock(ctx, x, y, label, w, h) {
+            ctx.fillStyle = '#d4a373';
+            ctx.fillRect(x - w/2, y - h/2, w, h);
+            
+            ctx.strokeStyle = '#b5835a';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x - w/2, y - h/2, w, h);
+
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 26px "Noto Serif TC", serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(label, x, y);
+        }
+
+        function draw() {
+            const displayWidth = wrapper.clientWidth;
+            const displayHeight = wrapper.clientHeight;
+            
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            
+            const scaleX = canvas.width / logicalWidth;
+            const scaleY = canvas.height / logicalHeight;
+            const scale = Math.min(scaleX, scaleY); 
+            
+            const offsetX = (canvas.width - logicalWidth * scale) / 2;
+            const offsetY = (canvas.height - logicalHeight * scale) / 2;
+            
+            ctx.translate(offsetX, offsetY);
+            ctx.scale(scale, scale);
+
+            let blockW_px = PHYS.blockW * pxScale;
+            let blockH_px = PHYS.blockH * pxScale;
+            
+            // 新增基準 Y 軸，向下移動半個物體高度
+            const baseY = logicalHeight / 2 + blockH_px / 2;
+            const groundY = baseY + blockH_px / 2 + 2;
+
+            ctx.fillStyle = '#cbd5e1'; 
+            ctx.fillRect(-500, groundY, logicalWidth + 1000, 15);
+            
+            ctx.fillStyle = '#64748b';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= logicalWidth + 300; i += 100) {
+                ctx.beginPath();
+                ctx.moveTo(i, groundY);
+                ctx.lineTo(i, groundY + 15);
+                ctx.strokeStyle = '#f8fafc';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // 將公尺轉換為像素供繪圖使用
+            let x1_px = state.x1 * pxScale;
+            let x2_px = state.x2 * pxScale;
+            let L0_px = PHYS.L0 * pxScale;
+
+            let rightOfM1 = x1_px + blockW_px/2;
+            let leftOfM2 = x2_px - blockW_px/2;
+            let actualSpringEndX = leftOfM2;
+            let actualSpringStartX = (rightOfM1 > leftOfM2 - L0_px) ? rightOfM1 : leftOfM2 - L0_px;
+            
+            drawSpring(ctx, actualSpringStartX, actualSpringEndX, baseY);
+
+            drawBlock(ctx, x1_px, baseY, '甲', blockW_px, blockH_px);
+            drawBlock(ctx, x2_px, baseY, '乙', blockW_px, blockH_px);
+
+            const arrowY = baseY - blockH_px/2 - 25;
+            
+            // 速度箭頭長度以公尺數值直接當作像素比例，vScale=1.5
+            const vScale = 1.5; 
+            drawArrow(ctx, x1_px, arrowY, x1_px + state.v1 * pxScale * vScale, arrowY, '#16a34a');
+            ctx.fillStyle = '#16a34a';
+            ctx.font = 'italic bold 22px "Times New Roman", serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(state.phase === 'after' ? "v₁'" : "v₁", x1_px + (state.v1 * pxScale * vScale)/2, arrowY - 15);
+
+            drawArrow(ctx, x2_px, arrowY, x2_px + state.v2 * pxScale * vScale, arrowY, '#f97316');
+            ctx.fillStyle = '#f97316';
+            ctx.fillText(state.phase === 'after' ? "v₂'" : "v₂", x2_px + (state.v2 * pxScale * vScale)/2, arrowY - 15);
+            
+            ctx.restore();
+        }
+
+        // ---------------------------------------------------------
+        // 狀態文字更新
+        // ---------------------------------------------------------
+        function updateDescriptions() {
+            let badge = ui.badge;
+            if(!badge) return;
+            
+            // 手機版 (top-2 right-2, 0.5x height py-1, 0.4x text 13px)
+            // 桌機版 (md:top-4 md:left-1/2 md:0.7x height py-2, text 24px)
+            const baseClass = 'absolute z-20 text-white font-bold flex items-center transition-colors duration-300 pointer-events-none shadow-md ' + 
+                              'md:top-4 md:right-auto md:left-1/2 md:-translate-x-1/2 md:px-6 md:py-2 md:text-[24px] md:rounded-xl ' + 
+                              'top-2 right-2 translate-x-0 px-3 py-1 text-[13px] rounded-lg ';
+            
+            switch(state.phase) {
+                case 'before':
+                    badge.innerHTML = '<span class="tracking-widest">碰撞前</span>';
+                    badge.className = baseClass + 'bg-sky-500';
+                    break;
+                case 'during':
+                    badge.innerHTML = '<span class="tracking-widest">碰撞中</span>';
+                    badge.className = baseClass + 'bg-amber-500';
+                    break;
+                case 'after':
+                    badge.innerHTML = '<span class="tracking-widest">碰撞後</span>';
+                    badge.className = baseClass + 'bg-indigo-500';
+                    break;
+            }
+        }
+
+        // ---------------------------------------------------------
+        // 主迴圈
+        // ---------------------------------------------------------
+        let lastTime = performance.now();
+        let chartUpdateTimer = 0;
+
+        function loop(currentTime) {
+            let dt = (currentTime - lastTime) / 1000;
+            lastTime = currentTime;
+
+            if (dt > 0.1) dt = 0.1;
+
+            if (state.running) {
+                let simDt = dt; 
+                
+                if (simDt > 0) {
+                    updatePhysics(simDt);
+
+                    chartUpdateTimer += simDt;
+                    
+                    // 圖表繪製限制：只畫滿前 10 秒（剛好填滿固定長度的 x 軸）
+                    if (chartUpdateTimer >= 0.05 && state.time <= 10.05) {
+                        chartUpdateTimer = 0;
+                        
+                        let vc = (state.m1 * state.v1 + state.m2 * state.v2) / (state.m1 + state.m2);
+                        
+                        chartData.datasets[0].data.push({ x: state.time, y: state.v1 });
+                        chartData.datasets[1].data.push({ x: state.time, y: state.v2 });
+                        chartData.datasets[2].data.push({ x: state.time, y: vc });
+                        
+                        vtChart.update();
+                        
+                        if(state.phase === 'during') updateDescriptions();
+                    }
+                    
+                    let x1_px = state.x1 * pxScale;
+                    let blockW_px = PHYS.blockW * pxScale;
+                    
+                    // 物體繼續移動：直到完全離開畫面右側 150 像素才判定結束
+                    if (x1_px - blockW_px/2 > logicalWidth + 150) {
+                        state.running = false;
+                        updatePlayButtons();
+                    }
+                }
+            }
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        initialSetup();
+        requestAnimationFrame(loop);
+        
+        window.addEventListener('resize', () => {
+            let wasRunning = state.running;
+            initialSetup();
+            if (wasRunning) {
+                state.running = true;
+                updatePlayButtons();
+            }
+            draw();
+        });
+
+    <\/script>
+</body>
+</html>
+    </script>
+
+    <!-- 第二個模擬：一維碰撞模擬實驗 (母球撞擊) -->
+    <script type="text/plain" id="src-2">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中物理模擬實驗室：直線彈性碰撞</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --text-color: #f8fafc;
+            --accent-color: #10b981;
+            --danger-color: #ef4444;
+            --slider-color: #f59e0b; 
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .nav-header {
+            width: 100%;
+            background-color: rgba(30, 41, 59, 0.95);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            padding: 1rem 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            margin-bottom: 20px;
+        }
+
+        h1 { margin: 0; font-size: 2.25rem; letter-spacing: 1px; }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 10px 20px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            background: radial-gradient(circle at center, #475569 0%, #1e293b 100%);
+            margin-bottom: 15px; 
+            border: 1px solid #475569;
+            width: 100%;
+            max-width: 100%;
+        }
+
+        canvas { display: block; width: 100%; height: auto; }
+
+        .controls {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            display: grid;
+            gap: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            box-sizing: border-box;
+        }
+
+        .grid-2 { grid-template-columns: 1fr 1fr; }
+        
+        .slider-group {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        input[type=range] { 
+            width: 100%; 
+            cursor: pointer; 
+            margin-top: 5px;
+            accent-color: var(--slider-color);
+        }
+
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-color);
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .toggle-switch input { width: 20px; height: 20px; }
+
+        .actions-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .btn-action {
+            pointer-events: auto;
+            padding: 10px 30px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            backdrop-filter: blur(4px);
+            transition: transform 0.1s;
+        }
+        .btn-action:hover { transform: translateY(-2px); filter: brightness(110%); }
+        .btn-action:active { transform: translateY(0); }
+        .btn-action:disabled { opacity: 0.6; cursor: not-allowed; transform: none; background-color: #64748b; }
+
+        .btn-start { background-color: rgba(16, 185, 129, 0.9); color: white; }
+        .btn-reset { background-color: rgba(239, 68, 68, 0.9); color: white; }
+
+        .data-display {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.9);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.875rem;
+            font-weight: bold;
+            pointer-events: none;
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.2;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .data-display-right {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255,255,255,0.9);
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 1.875rem;
+            font-weight: bold;
+            text-align: left;
+            pointer-events: none;
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.2;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        }
+
+        .center-message {
+            position: absolute;
+            top: 30px; 
+            left: 50%;
+            transform: translateX(-50%);
+            color: #facc15; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 2.8rem; 
+            font-weight: bold;
+            pointer-events: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            white-space: nowrap;
+            z-index: 5;
+        }
+
+        @media (max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            h1 { font-size: 1.4rem; text-align: center; line-height: 1.3; }
+            .nav-header { padding: 15px 10px; margin-bottom: 10px;}
+            .container { padding: 5px 10px; }
+
+            .canvas-wrapper {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: auto auto auto auto; 
+                padding-top: 10px; 
+            }
+
+            .data-display {
+                position: static; 
+                grid-column: 1 / 2;
+                grid-row: 1;
+                font-size: 1rem;
+                padding: 5px 10px;
+                background: transparent;
+                text-shadow: none;
+                text-align: left;
+            }
+
+            .data-display-right {
+                position: static; 
+                grid-column: 2 / 3;
+                grid-row: 1;
+                font-size: 1rem;
+                padding: 5px 10px;
+                background: transparent;
+                text-shadow: none;
+                text-align: right;
+            }
+
+            .center-message {
+                position: static; 
+                grid-column: 1 / 3;
+                grid-row: 2;
+                transform: none; 
+                font-size: 1.2rem;
+                padding: 10px 10px 0px;
+                white-space: normal;
+                text-align: center;
+                margin: 0 auto;
+            }
+
+            canvas {
+                grid-column: 1 / 3;
+                grid-row: 3;
+                margin: 10px 0;
+            }
+
+            .actions-overlay {
+                position: static; 
+                grid-column: 1 / 3;
+                grid-row: 4;
+                padding: 15px;
+                background: rgba(0, 0, 0, 0.3);
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .btn-action {
+                padding: 10px 20px;
+                font-size: 0.95rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="nav-header" style="display: none;">
+    <h1>一維碰撞模擬實驗<span style="color: #facc15;">(阿發老師設計)</span></h1>
+</div>
+
+<div class="container">
+    <div class="canvas-wrapper">
+        <canvas id="linearCanvas" width="800" height="250"></canvas>
+        
+        <div class="data-display" id="linearData">
+            v1: 0.0 m/s<br>v2: 0.0 m/s
+        </div>
+
+        <div class="center-message">鋼球2的初速預設為 0</div>
+        
+        <div class="data-display-right" id="linearMass">
+            m1: 2.0 kg<br>m2: 2.0 kg
+        </div>
+
+        <div class="actions-overlay">
+            <button class="btn-action btn-start" id="btnLinearStart" onclick="linearSim.start()">
+                <span>▶ 發射 (Fire)</span>
+            </button>
+            <button class="btn-action btn-reset" id="btnLinearReset" onclick="linearSim.reset()" disabled>
+                <span>↺ 重置 (Reset)</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="controls grid-2">
+        <div class="slider-group">
+            <div class="slider-header">
+                <span>鋼球 1 質量 (m1)</span>
+                <span id="valM1">2.0 kg</span>
+            </div>
+            <input type="range" id="rangeM1" min="1" max="10" step="0.5" value="2" oninput="linearSim.updateParams()">
+            
+            <label class="toggle-switch">
+                <input type="checkbox" id="checkInfiniteM1" onchange="linearSim.updateParams('m1')">
+                <span>m1 質量無限大</span>
+            </label>
+
+            <div class="slider-header" style="margin-top:10px;">
+                <span>鋼球 1 初速 (v1)</span>
+                <span id="valV1">5.0 m/s</span>
+            </div>
+            <input type="range" id="rangeV1" min="1" max="10" step="0.5" value="5" oninput="linearSim.updateParams()">
+        </div>
+
+        <div class="slider-group">
+            <div class="slider-header">
+                <span>鋼球 2 質量 (m2)</span>
+                <span id="valM2">2.0 kg</span>
+            </div>
+            <input type="range" id="rangeM2" min="1" max="10" step="0.5" value="2" oninput="linearSim.updateParams()">
+            
+            <label class="toggle-switch">
+                <input type="checkbox" id="checkInfiniteM2" onchange="linearSim.updateParams('m2')">
+                <span>m2 質量無限大</span>
+            </label>
+            <div style="font-size:0.8rem; color:#94a3b8; margin-top:5px;">
+                * 預設 m2 初速為 0 (靜止)
+            </div>
+        </div>
+
+        <div class="slider-group" style="grid-column: 1 / -1;">
+            <div class="slider-header">
+                <span>恢復係數 (Coefficient of Restitution, e)</span>
+                <span id="linearRestitutionVal">1.00</span>
+            </div>
+            <input type="range" id="linearRestitutionRange" min="0" max="1" step="0.01" value="1.0" oninput="linearSim.updateParams()">
+            <div style="font-size: 0.85rem; color: #64748b; margin-top: 5px;">0 = 完全非彈性 | 1 = 完全彈性</div>
+        </div>
+    </div>
+</div>
+
+<script>
+const linearSim = (function() {
+    const canvas = document.getElementById('linearCanvas');
+    const ctx = canvas.getContext('2d');
+    let animationId;
+    let isRunning = false;
+    
+    let params = {
+        m1: 2, v1: 5, m2: 2, v2: 0,
+        isM1Infinite: false, isM2Infinite: false,
+        restitution: 1.0
+    };
+
+    let b1 = { x: 100, v: 0, m: 0, r: 25, color: '#3b82f6' };
+    let b2 = { x: 500, v: 0, m: 0, r: 25, color: '#ef4444' };
+
+    const FIXED_RADIUS = 30;
+    const FLOOR_Y = 180; 
+
+    function init() {
+        updateParams();
+        reset();
+        loop();
+    }
+
+    function updateParams(source) {
+        const checkM1 = document.getElementById('checkInfiniteM1');
+        const checkM2 = document.getElementById('checkInfiniteM2');
+
+        if (source === 'm1' && checkM1.checked) {
+            checkM2.checked = false;
+        } else if (source === 'm2' && checkM2.checked) {
+            checkM1.checked = false;
+        }
+
+        const rangeM1 = document.getElementById('rangeM1');
+        const rangeM2 = document.getElementById('rangeM2');
+        
+        params.isM1Infinite = checkM1.checked;
+        params.isM2Infinite = checkM2.checked;
+
+        if (params.isM1Infinite) {
+            rangeM1.disabled = true;
+            document.getElementById('valM1').textContent = "∞";
+            params.m1 = Infinity;
+        } else {
+            rangeM1.disabled = false;
+            params.m1 = parseFloat(rangeM1.value);
+            document.getElementById('valM1').textContent = params.m1.toFixed(1) + " kg";
+        }
+
+        if (params.isM2Infinite) {
+            rangeM2.disabled = true;
+            document.getElementById('valM2').textContent = "∞";
+            params.m2 = Infinity;
+        } else {
+            rangeM2.disabled = false;
+            params.m2 = parseFloat(rangeM2.value);
+            document.getElementById('valM2').textContent = params.m2.toFixed(1) + " kg";
+        }
+
+        params.v1 = parseFloat(document.getElementById('rangeV1').value);
+        document.getElementById('valV1').textContent = params.v1.toFixed(1) + " m/s";
+
+        const rangeE = document.getElementById('linearRestitutionRange');
+        params.restitution = parseFloat(rangeE.value);
+        document.getElementById('linearRestitutionVal').textContent = params.restitution.toFixed(2);
+
+        if (!isRunning) {
+            b1.m = params.m1; b2.m = params.m2;
+            b1.r = FIXED_RADIUS; b2.r = FIXED_RADIUS;
+            updateDisplay(); 
+        }
+    }
+
+    function reset() {
+        isRunning = false;
+        b1.x = 100; b1.v = 0; b1.m = params.m1; b1.r = FIXED_RADIUS;
+        b2.x = 500; b2.v = 0; b2.m = params.m2; b2.r = FIXED_RADIUS;
+
+        document.getElementById('btnLinearStart').disabled = false;
+        document.getElementById('btnLinearReset').disabled = true;
+        
+        const rangeM1 = document.getElementById('rangeM1');
+        const rangeM2 = document.getElementById('rangeM2');
+        rangeM1.disabled = params.isM1Infinite;
+        rangeM2.disabled = params.isM2Infinite;
+        
+        document.getElementById('rangeV1').disabled = false;
+        document.getElementById('checkInfiniteM1').disabled = false;
+        document.getElementById('checkInfiniteM2').disabled = false;
+        document.getElementById('linearRestitutionRange').disabled = false;
+
+        draw();
+        updateDisplay();
+    }
+
+    function start() {
+        if (isRunning) return;
+        isRunning = true;
+        b1.v = params.v1; 
+        
+        document.getElementById('btnLinearStart').disabled = true;
+        document.getElementById('btnLinearReset').disabled = false;
+        document.getElementById('rangeM1').disabled = true;
+        document.getElementById('rangeM2').disabled = true;
+        document.getElementById('rangeV1').disabled = true;
+        document.getElementById('checkInfiniteM1').disabled = true;
+        document.getElementById('checkInfiniteM2').disabled = true;
+        document.getElementById('linearRestitutionRange').disabled = true;
+    }
+
+    function update() {
+        if (!isRunning) return;
+
+        const timeScale = 2; 
+        b1.x += b1.v * timeScale;
+        b2.x += b2.v * timeScale;
+
+        // 碰撞偵測
+        if (b1.x + b1.r + b2.r >= b2.x) {
+            let overlap = (b1.x + b1.r + b2.r) - b2.x;
+            if (params.isM1Infinite && !params.isM2Infinite) {
+                b2.x += overlap;
+            } else if (!params.isM1Infinite && params.isM2Infinite) {
+                b1.x -= overlap;
+            } else {
+                b1.x -= overlap / 2; b2.x += overlap / 2;
+            }
+
+            let v1 = b1.v, v2 = b2.v;
+            let m1 = params.m1, m2 = params.m2;
+            let e = params.restitution;
+            let v1_new, v2_new;
+
+            if (m1 === Infinity && m2 === Infinity) {
+                v1_new = -e * v1; v2_new = -e * v2; 
+            } else if (m1 === Infinity) {
+                v1_new = v1; v2_new = v1 + e * (v1 - v2);
+            } else if (m2 === Infinity) {
+                v2_new = v2; v1_new = v2 - e * (v1 - v2);
+            } else {
+                v1_new = (m1 * v1 + m2 * v2 - m2 * e * (v1 - v2)) / (m1 + m2);
+                v2_new = (m1 * v1 + m2 * v2 + m1 * e * (v1 - v2)) / (m1 + m2);
+            }
+
+            b1.v = v1_new; b2.v = v2_new;
+        }
+        
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const textV = `v1: ${b1.v.toFixed(2)} m/s<br>v2: ${b2.v.toFixed(2)} m/s`;
+        document.getElementById('linearData').innerHTML = textV;
+
+        let m1Text = params.isM1Infinite ? "∞" : params.m1.toFixed(1) + " kg";
+        let m2Text = params.isM2Infinite ? "∞" : params.m2.toFixed(1) + " kg";
+        const textM = `m1: ${m1Text}<br>m2: ${m2Text}`;
+        document.getElementById('linearMass').innerHTML = textM;
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 地板
+        ctx.beginPath();
+        ctx.moveTo(0, FLOOR_Y);
+        ctx.lineTo(800, FLOOR_Y);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        let label1 = params.isM1Infinite ? "∞" : "m1";
+        let label2 = params.isM2Infinite ? "∞" : "m2";
+        drawBall(b1.x, FLOOR_Y - b1.r, b1.r, b1.color, label1);
+        drawBall(b2.x, FLOOR_Y - b2.r, b2.r, b2.color, label2);
+    }
+
+    function drawBall(x, y, r, color, label) {
+        ctx.beginPath();
+        ctx.ellipse(x, FLOOR_Y + 5, r, r * 0.2, 0, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        let grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+        grad.addColorStop(0, "#fff");
+        grad.addColorStop(0.3, color);
+        grad.addColorStop(1, "#0f172a");
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(label, x, y + 6);
+    }
+
+    function loop() {
+        update();
+        draw();
+        animationId = requestAnimationFrame(loop);
+    }
+
+    return { init, updateParams, start, reset };
+})();
+
+window.onload = function() { linearSim.init(); };
+<\/script>
+
+</body>
+</html>
+    </script>
+
+    <!-- 第三個模擬：牛頓擺 (新加入) -->
+    <script type="text/plain" id="src-3">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高中物理實驗室：牛頓擺 (Newton's Cradle)</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #1e293b;
+            --panel-bg: #334155;
+            --text-color: #f8fafc;
+            --accent-color: #10b981;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            justify-content: center; 
+        }
+
+        header {
+            width: 100%;
+            padding: 1rem 0;
+            background-color: rgba(30, 41, 59, 0.95);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            flex-shrink: 0; 
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 5px;
+        }
+
+        /* 主容器 */
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 1000px;
+            padding: 15px 20px; /* 減少上下內距 */
+            flex-grow: 1;
+            justify-content: center;
+        }
+
+        /* Canvas 區域 */
+        .canvas-wrapper {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            background: radial-gradient(circle at center, #475569 0%, #1e293b 100%);
+            margin-bottom: 15px; /* 減少間距 */
+            border: 1px solid #475569;
+            max-width: 100%;
+        }
+
+        canvas {
+            display: block;
+            cursor: pointer;
+            width: 100%;
+            height: auto;
+        }
+
+        /* 控制面板 */
+        .controls {
+            background-color: var(--panel-bg);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0,0,0,0.1);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            color: #cbd5e1;
+            font-weight: bold;
+        }
+
+        /* 按鈕群組 */
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            background: #1e293b;
+            padding: 5px;
+            border-radius: 8px;
+        }
+
+        .btn-select {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .btn-select:hover {
+            color: white;
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .btn-select.active {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* 參數滑桿區域 */
+        .slider-group {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0; /* 移除外距 */
+            background: rgba(0,0,0,0.2);
+            padding: 15px; /* 稍微減少內距 */
+            border-radius: 8px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            color: #cbd5e1;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type=range] {
+            width: 100%;
+            max-width: 500px;
+            cursor: pointer;
+            height: 6px;
+        }
+
+        /* 動作按鈕區域 (移到 Canvas 內) */
+        .actions-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 20;
+            pointer-events: none; /* 讓點擊穿透背景，只在按鈕上生效 */
+        }
+
+        .btn-action {
+            pointer-events: auto; /* 恢復按鈕點擊 */
+            padding: 10px 30px;
+            border: none;
+            border-radius: 30px; /* 圓角更明顯，像膠囊 */
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); /* 增加陰影讓它在 Canvas 上更浮凸 */
+            backdrop-filter: blur(4px); /* 毛玻璃效果 */
+        }
+
+        .btn-start {
+            background-color: rgba(16, 185, 129, 0.9); /* 稍微透明 */
+            color: #fff;
+        }
+
+        .btn-reset {
+            background-color: rgba(239, 68, 68, 0.9);
+            color: white;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            filter: brightness(110%);
+        }
+
+        .btn-action:active {
+            transform: translateY(0);
+        }
+
+        .btn-action:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            background-color: rgba(100, 116, 139, 0.8);
+        }
+
+        /* 物理參數說明 */
+        .info-panel {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            text-align: center;
+            line-height: 1.5;
+            max-width: 800px;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+
+        /* ---------- 針對手機版面的優化 (依據阿發老師需求調整) ---------- */
+        @media (max-width: 600px) {
+            /* 1. 壓縮控制面板整體高度 (約0.8倍) */
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 10px; /* 原本 20px */
+                padding: 12px; /* 原本 20px */
+            }
+            .control-group {
+                padding: 6px; /* 原本 10px */
+            }
+            .control-label {
+                margin-bottom: 4px; /* 原本 8px */
+                font-size: 0.85rem;
+            }
+            .btn-group {
+                padding: 3px; /* 原本 5px */
+            }
+            .btn-select {
+                padding: 4px 12px; /* 縮減上下 padding，壓縮高度 */
+                font-size: 1rem;
+            }
+            .slider-group {
+                padding: 10px; /* 原本 15px */
+            }
+            
+            /* 2. 將動作按鈕往下拉，並微調按鈕高度以完全避開鋼球 */
+            .actions-overlay {
+                bottom: 2px; /* 原本 15px，現在往下貼近 Canvas 邊緣 */
+                gap: 10px;
+            }
+            .btn-action {
+                padding: 6px 20px; /* 縮減按鈕上下 padding，讓它更修長，不擋住球 */
+                font-size: 0.85rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>牛頓擺模擬(阿發老師設計)</h1>
+</header>
+
+<div class="container">
+    <div class="canvas-wrapper">
+        <canvas id="simCanvas" width="800" height="500"></canvas>
+        
+        <!-- 動作按鈕現在懸浮在 Canvas 底部 -->
+        <div class="actions-overlay">
+            <button class="btn-action btn-start" id="startBtn" onclick="startSimulation()">
+                <span>▶ 開始實驗</span>
+            </button>
+            <button class="btn-action btn-reset" id="resetBtn" onclick="resetSimulation()" disabled>
+                <span>↺ 重置實驗</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <!-- 左側控制 -->
+        <div class="control-group">
+            <div class="control-label">左側拉起數量</div>
+            <div class="btn-group" id="leftBtns">
+                <button class="btn-select active" onclick="setLeft(0)">0</button>
+                <button class="btn-select" onclick="setLeft(1)">1</button>
+                <button class="btn-select" onclick="setLeft(2)">2</button>
+                <button class="btn-select" onclick="setLeft(3)">3</button>
+                <button class="btn-select" onclick="setLeft(4)">4</button>
+            </div>
+        </div>
+
+        <!-- 右側控制 -->
+        <div class="control-group">
+            <div class="control-label">右側拉起數量</div>
+            <div class="btn-group" id="rightBtns">
+                <button class="btn-select active" onclick="setRight(0)">0</button>
+                <button class="btn-select" onclick="setRight(1)">1</button>
+                <button class="btn-select" onclick="setRight(2)">2</button>
+                <button class="btn-select" onclick="setRight(3)">3</button>
+                <button class="btn-select" onclick="setRight(4)">4</button>
+            </div>
+        </div>
+        
+        <!-- 恢復係數控制 -->
+        <div class="slider-group">
+            <div class="slider-label">
+                <span>恢復係數 (e)</span>
+                <span id="restitutionVal">1.00</span>
+            </div>
+            <input type="range" id="restitutionRange" min="0" max="1" step="0.01" value="1.0" oninput="updateRestitutionLabel(this.value)">
+            <div style="font-size: 0.85rem; color: #64748b; margin-top: 5px;">
+                0 = 完全非彈性 &nbsp;|&nbsp; 1 = 完全彈性
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <strong>物理筆記：</strong>
+        若 e=1，表示系統無動能損耗 (理想狀態)，擺動將無限持續。
+        當兩側拉起數量不同時，碰撞後會交換速度與數量，這是動量守恆最迷人的展示。
+    </div>
+</div>
+
+<script>
+    // --- 物理常數 ---
+    const CONFIG = {
+        gravity: 0.4,       // 重力加速度
+        damping: 0.999,     // 非理想狀態下的空氣阻力
+        ballRadius: 25,     // 球半徑
+        stringLen: 280,     // 擺長
+        spacing: 0,         // 球之間的額外間隙
+        topY: 100,          // 支架頂點Y座標
+        centerX: 400,       // 畫布中心X
+        pullAngle: Math.PI / 4 // 拉起時的角度 (45度)
+    };
+
+    // --- 變數 ---
+    let canvas, ctx;
+    let balls = [];
+    let isSimulating = false;
+    let requestID = null;
+
+    // 狀態設定
+    let leftCount = 0;
+    let rightCount = 0;
+    let restitution = 1.0;
+
+    // --- 球體類別 ---
+    class Ball {
+        constructor(id, xOrigin, yOrigin) {
+            this.id = id;
+            this.origin = { x: xOrigin, y: yOrigin }; // 懸掛點
+            this.length = CONFIG.stringLen;
+            this.radius = CONFIG.ballRadius;
+            this.angle = 0;      // 擺角 (弧度，0為垂直向下)
+            this.aVelocity = 0;  // 角速度
+            this.aAcceleration = 0; // 角加速度
+            
+            // 當前位置 (由 angle 計算)
+            this.x = 0;
+            this.y = 0;
+            this.updatePosition();
+        }
+
+        updatePosition() {
+            this.x = this.origin.x + Math.sin(this.angle) * this.length;
+            this.y = this.origin.y + Math.cos(this.angle) * this.length;
+        }
+
+        // 物理更新 (單擺運動)
+        update(dt) {
+            if (!isSimulating) return;
+
+            // 角加速度公式: alpha = -(g / L) * sin(theta)
+            this.aAcceleration = (-1 * CONFIG.gravity / this.length) * Math.sin(this.angle);
+            
+            // 速度更新
+            this.aVelocity += this.aAcceleration * dt;
+            
+            // 智慧空氣阻力：當 e=1 時，假設為理想真空 (阻力=0)，否則套用設定值
+            let currentDamping = (restitution >= 1.0) ? 1.0 : CONFIG.damping;
+            this.aVelocity *= currentDamping;
+
+            this.angle += this.aVelocity * dt;
+
+            this.updatePosition();
+        }
+
+        // 繪製球體
+        draw(ctx) {
+            // 畫線
+            ctx.beginPath();
+            ctx.moveTo(this.origin.x, this.origin.y);
+            ctx.lineTo(this.x, this.y);
+            ctx.strokeStyle = "rgba(200, 200, 200, 0.5)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // 畫陰影
+            let groundY = CONFIG.topY + CONFIG.stringLen + CONFIG.ballRadius + 20;
+            let shadowScale = 1 - (groundY - this.y) / 200;
+            if (shadowScale < 0) shadowScale = 0;
+            
+            ctx.beginPath();
+            ctx.ellipse(this.x, groundY, this.radius * shadowScale, this.radius * 0.3 * shadowScale, 0, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(0, 0, 0, ${0.2 * shadowScale})`;
+            ctx.fill();
+
+            // 畫球 (金屬質感)
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            
+            let grad = ctx.createRadialGradient(
+                this.x - this.radius * 0.3, 
+                this.y - this.radius * 0.3, 
+                this.radius * 0.1, 
+                this.x, 
+                this.y, 
+                this.radius
+            );
+            grad.addColorStop(0, "#f1f5f9");
+            grad.addColorStop(0.3, "#cbd5e1");
+            grad.addColorStop(1, "#334155");
+
+            ctx.fillStyle = grad;
+            ctx.fill();
+            
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }
+
+    // --- 初始化與主邏輯 ---
+
+    function init() {
+        canvas = document.getElementById('simCanvas');
+        ctx = canvas.getContext('2d');
+        
+        let totalWidth = 5 * (CONFIG.ballRadius * 2 + CONFIG.spacing);
+        let startX = CONFIG.centerX - totalWidth / 2 + CONFIG.ballRadius;
+
+        for (let i = 0; i < 5; i++) {
+            let xPos = startX + i * (CONFIG.ballRadius * 2 + CONFIG.spacing);
+            balls.push(new Ball(i, xPos, CONFIG.topY));
+        }
+
+        draw();
+        updateUI();
+    }
+
+    // 設定初始角度
+    function applySetup() {
+        isSimulating = false;
+        
+        balls.forEach(b => {
+            b.angle = 0;
+            b.aVelocity = 0;
+            b.aAcceleration = 0;
+            b.updatePosition();
+        });
+
+        // 左側拉起
+        if (leftCount > 0) {
+            for (let i = 0; i < leftCount; i++) {
+                let ballIndex = i;
+                balls[ballIndex].angle = -CONFIG.pullAngle; 
+                balls[ballIndex].updatePosition();
+            }
+        }
+
+        // 右側拉起
+        if (rightCount > 0) {
+            let totalBalls = balls.length;
+            for (let i = 0; i < rightCount; i++) {
+                let ballIndex = totalBalls - 1 - i;
+                balls[ballIndex].angle = CONFIG.pullAngle; 
+                balls[ballIndex].updatePosition();
+            }
+        }
+        
+        draw();
+    }
+
+    // --- 碰撞處理 ---
+    function checkCollisions() {
+        let e = restitution;
+
+        for (let i = 0; i < balls.length - 1; i++) {
+            let b1 = balls[i];
+            let b2 = balls[i+1];
+
+            let dx = b2.x - b1.x;
+            let dy = b2.y - b1.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            let minDist = b1.radius + b2.radius; 
+
+            if (distance < minDist) {
+                // === 碰撞發生 ===
+                let v1 = b1.aVelocity;
+                let v2 = b2.aVelocity;
+
+                let v1_new = (v1 * (1 - e) + v2 * (1 + e)) / 2;
+                let v2_new = (v1 * (1 + e) + v2 * (1 - e)) / 2;
+
+                b1.aVelocity = v1_new;
+                b2.aVelocity = v2_new;
+
+                // 位置修正 (推開防黏)
+                let overlap = minDist - distance;
+                let pushAmt = (overlap / CONFIG.stringLen) * 0.5;
+                
+                if (b1.angle > b2.angle) {
+                     let temp = b1.angle; b1.angle = b2.angle; b2.angle = temp;
+                } else {
+                     b1.angle -= pushAmt;
+                     b2.angle += pushAmt;
+                }
+            }
+        }
+    }
+
+    // --- 動畫迴圈 ---
+    function animate() {
+        if (!isSimulating) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 繪製標題文字
+        ctx.font = "bold 36px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#cbd5e1";
+        ctx.textAlign = "center";
+        ctx.fillText("牛頓擺", CONFIG.centerX, CONFIG.topY - 40);
+
+        // 支架
+        ctx.beginPath();
+        ctx.moveTo(balls[0].origin.x - 20, CONFIG.topY);
+        ctx.lineTo(balls[4].origin.x + 20, CONFIG.topY);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        // 物理更新
+        const steps = 4; 
+        const dt = 1.0 / steps; 
+
+        for(let s=0; s<steps; s++) {
+            balls.forEach(b => b.update(dt)); 
+            checkCollisions();
+        }
+
+        balls.forEach(b => b.draw(ctx));
+
+        requestID = requestAnimationFrame(animate);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 繪製標題文字
+        ctx.font = "bold 36px 'Segoe UI', sans-serif";
+        ctx.fillStyle = "#cbd5e1";
+        ctx.textAlign = "center";
+        ctx.fillText("牛頓擺", CONFIG.centerX, CONFIG.topY - 40);
+
+        ctx.beginPath();
+        ctx.moveTo(balls[0].origin.x - 20, CONFIG.topY);
+        ctx.lineTo(balls[4].origin.x + 20, CONFIG.topY);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 6;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        balls.forEach(b => b.draw(ctx));
+    }
+
+    // --- UI 控制 ---
+
+    function updateRestitutionLabel(val) {
+        document.getElementById('restitutionVal').textContent = parseFloat(val).toFixed(2);
+        restitution = parseFloat(val);
+    }
+
+    function updateUI() {
+        document.querySelectorAll('#leftBtns button').forEach((btn, idx) => {
+            btn.className = idx === leftCount ? 'btn-select active' : 'btn-select';
+        });
+        document.querySelectorAll('#rightBtns button').forEach((btn, idx) => {
+            btn.className = idx === rightCount ? 'btn-select active' : 'btn-select';
+        });
+
+        document.getElementById('startBtn').disabled = isSimulating;
+        document.getElementById('resetBtn').disabled = !isSimulating;
+        
+        const disableSelect = isSimulating;
+        document.querySelectorAll('.btn-select').forEach(b => b.disabled = disableSelect);
+    }
+
+    function setLeft(n) {
+        if (isSimulating) return;
+        if (n + rightCount > 5) rightCount = 5 - n;
+        leftCount = n;
+        updateUI();
+        applySetup();
+    }
+
+    function setRight(n) {
+        if (isSimulating) return;
+        if (n + leftCount > 5) leftCount = 5 - n;
+        rightCount = n;
+        updateUI();
+        applySetup();
+    }
+
+    function startSimulation() {
+        if (isSimulating) return;
+        isSimulating = true;
+        updateUI();
+        animate();
+    }
+
+    function resetSimulation() {
+        isSimulating = false;
+        if (requestID) cancelAnimationFrame(requestID);
+        updateUI();
+        applySetup();
+    }
+
+    window.onload = init;
+
+<\/script>
+
+</body>
+</html>
+    </script>
+
+    <!-- 第四個模擬：一維多次彈性碰撞模擬 -->
+    <script type="text/plain" id="src-4">
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一維多次彈性碰撞模擬</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; 
+            --panel-bg: rgba(255, 255, 255, 0.95); 
+            --text-color: #333333; 
+            --accent-color: #d15a5a; 
+            --btn-play-bg: #00B050; 
+            --btn-reset-bg: #FFC000; 
+            --box-color: #c69c72; 
+            --ground-color: #b0b4b8; 
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+            align-items: flex-start;
+            max-width: 95vw;
+            flex-wrap: wrap; 
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            padding: 25px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        #controls-panel {
+            width: 320px;
+        }
+
+        #stats-panel {
+            width: 260px;
+        }
+
+        h1 {
+            display: none; 
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #555;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        .mass-val {
+            font-size: 1.5em;
+        }
+
+        .v-symbol {
+            font-size: 2em;
+            font-style: italic; 
+            font-family: 'Times New Roman', Times, serif;
+        }
+
+        .v-sub {
+            font-size: 0.5em;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 5px;
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type=range]:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            cursor: not-allowed;
+            background: #999;
+        }
+        input[type=range]:disabled::-webkit-slider-thumb:hover {
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #btn-play {
+            background-color: var(--btn-play-bg);
+        }
+
+        #btn-play:hover {
+            background-color: #009342;
+            transform: translateY(-2px);
+        }
+
+        #btn-reset {
+            background-color: var(--btn-reset-bg);
+            color: #333; 
+        }
+
+        #btn-reset:hover {
+            background-color: #e6ad00;
+            transform: translateY(-2px);
+        }
+
+        .stat-main {
+            font-size: 1.6rem;
+            color: #555;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .stat-main span {
+            font-size: 2.8rem;
+            color: var(--accent-color);
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .stat-details {
+            font-size: 1.3rem;
+            color: #777;
+            line-height: 1.8;
+            font-family: sans-serif;
+        }
+
+        @media (max-width: 600px) {
+            #ui-container {
+                position: absolute;
+                top: 5px;
+                left: 5px;
+                right: 5px;
+                gap: 5px;
+                pointer-events: none; 
+            }
+            .panel {
+                pointer-events: auto; 
+                padding: 8px 12px; 
+                border-radius: 6px;
+            }
+            #controls-panel, #stats-panel {
+                width: 100%;
+                box-sizing: border-box;
+            }
+            h1 {
+                font-size: 1.05rem;
+                margin: 0 0 6px 0;
+            }
+            .control-group {
+                margin-bottom: 6px;
+            }
+            .control-group label {
+                font-size: 0.8rem;
+                margin-bottom: 2px;
+            }
+            .mass-val {
+                font-size: 1.1em;
+            }
+            input[type=range] {
+                height: 4px;
+            }
+            input[type=range]::-webkit-slider-thumb {
+                width: 14px;
+                height: 14px; 
+            }
+            .button-group {
+                margin-top: 8px;
+                gap: 8px;
+            }
+            button {
+                padding: 6px; 
+                font-size: 0.9rem;
+            }
+            .stat-main {
+                font-size: 1.1rem;
+                margin-bottom: 6px;
+                padding-bottom: 6px;
+            }
+            .stat-main span {
+                font-size: 1.6rem; 
+            }
+            .stat-details {
+                font-size: 0.8rem;
+                line-height: 1.2;
+                display: flex;
+                justify-content: space-between; 
+            }
+            .stat-details > div {
+                white-space: nowrap; 
+            }
+            .v-symbol {
+                font-size: 1.2em;
+            }
+        }
+
+        @media (max-height: 450px) and (orientation: landscape) {
+            #ui-container {
+                flex-wrap: nowrap; 
+                gap: 10px;
+                top: 5px;
+                left: 5px;
+                right: 5px;
+            }
+            .panel {
+                padding: 6px 10px;
+            }
+            #controls-panel {
+                width: 55%; 
+            }
+            #stats-panel {
+                width: 45%; 
+            }
+            h1 { font-size: 0.95rem; margin: 0 0 4px 0; }
+            .control-group { margin-bottom: 4px; }
+            .button-group { margin-top: 4px; }
+            button { padding: 4px; font-size: 0.85rem; }
+            .stat-main { font-size: 1rem; margin-bottom: 4px; padding-bottom: 4px; }
+            .stat-main span { font-size: 1.4rem; }
+            .stat-details { flex-direction: column; gap: 2px; } 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div id="controls-panel" class="panel">
+            <div class="control-group">
+                <label><span>乙質量 (m):</span> <span id="val-m2" class="highlight mass-val">1.0 m</span></label>
+                <input type="range" id="slider-m2" min="0.5" max="2.0" step="0.1" value="1.0">
+            </div>
+            
+            <div class="control-group">
+                <label><span>丙質量 (m):</span> <span id="val-m3" class="highlight mass-val">2.0 m</span></label>
+                <input type="range" id="slider-m3" min="0.5" max="3.0" step="0.1" value="2.0">
+            </div>
+
+            <div class="control-group">
+                <label><span>畫面縮放:</span> <span id="val-zoom" class="highlight">1.00x</span></label>
+                <input type="range" id="slider-zoom" min="0.10" max="1.00" step="0.01" value="1.00">
+            </div>
+
+            <div class="button-group">
+                <button id="btn-play">開始發射</button>
+                <button id="btn-reset">重置</button>
+            </div>
+        </div>
+
+        <div id="stats-panel" class="panel">
+            <div class="stat-main">
+                總碰撞次數:<span id="stat-collisions">0</span>
+            </div>
+            <div class="stat-details">
+                <div>甲速度: <span id="v-jia">1.00</span> <span class="v-symbol">v</span><span class="v-sub">0</span></div>
+                <div>乙速度: <span id="v-yi">0.00</span> <span class="v-symbol">v</span><span class="v-sub">0</span></div>
+                <div>丙速度: <span id="v-bing">0.00</span> <span class="v-symbol">v</span><span class="v-sub">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="simCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const sliderM2 = document.getElementById('slider-m2');
+        const sliderM3 = document.getElementById('slider-m3');
+        const sliderZoom = document.getElementById('slider-zoom');
+        const valM2 = document.getElementById('val-m2');
+        const valM3 = document.getElementById('val-m3');
+        const valZoom = document.getElementById('val-zoom');
+        
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        
+        const statCollisions = document.getElementById('stat-collisions');
+        const vJia = document.getElementById('v-jia');
+        const vYi = document.getElementById('v-yi');
+        const vBing = document.getElementById('v-bing');
+
+        let isPlaying = false; 
+        let hasStarted = false; 
+        let animationId;
+        let collisionCount = 0;
+        
+        let globalZoom = 1.0;
+        let basePpx = 100; 
+        const PHYS_W = 1.25; 
+        
+        const GROUND_Y_OFFSET = 30; 
+        const INITIAL_V = 3; 
+
+        class Block {
+            constructor(name, m, initialX, initialV) {
+                this.name = name;
+                this.m = m;
+                this.x = initialX; 
+                this.v = initialV; 
+                this.color = '#c69c72'; 
+                this.flashTimer = 0;
+            }
+
+            draw(ctx, groundY, currentPpx) {
+                if (this.flashTimer > 0) this.flashTimer--;
+                let currentColor = this.flashTimer > 0 ? '#e6c8a8' : this.color;
+
+                const pixelSize = PHYS_W * currentPpx; 
+                const pixelX = this.x * currentPpx; 
+                const pixelY = groundY - pixelSize;
+                
+                ctx.save();
+                ctx.fillStyle = currentColor;
+                ctx.globalAlpha = 1.0;
+                ctx.fillRect(pixelX, pixelY, pixelSize, pixelSize);
+                
+                ctx.strokeStyle = '#a67d53';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pixelX, pixelY, pixelSize, pixelSize);
+                
+                ctx.fillStyle = '#333';
+                const fontSize = 48 * globalZoom; 
+                ctx.font = `${fontSize}px "PMingLiU", "MingLiU", serif`; 
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.name, pixelX + pixelSize / 2, pixelY + pixelSize / 2);
+                ctx.restore();
+
+                if (Math.abs(this.v) > 0.01) {
+                    this.drawArrow(ctx, pixelX + pixelSize/2, pixelY - 20 * globalZoom, this.v * 30 * globalZoom, '#f07931');
+                }
+            }
+
+            drawArrow(ctx, startX, startY, length, color) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(startX + length, startY);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3 * globalZoom;
+                ctx.stroke();
+
+                const angle = length > 0 ? 0 : Math.PI;
+                const headSize = 10 * globalZoom;
+                ctx.beginPath();
+                ctx.moveTo(startX + length, startY);
+                ctx.lineTo(startX + length - Math.cos(angle - Math.PI/6)*headSize, startY - Math.sin(angle - Math.PI/6)*headSize);
+                ctx.lineTo(startX + length - Math.cos(angle + Math.PI/6)*headSize, startY - Math.sin(angle + Math.PI/6)*headSize);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        let blocks = [];
+        let lastTime = 0;
+
+        function initSimulation() {
+            const m2 = parseFloat(sliderM2.value);
+            const m3 = parseFloat(sliderM3.value);
+            
+            collisionCount = 0;
+            statCollisions.innerText = collisionCount;
+
+            blocks = [
+                new Block('甲', 1.0, 1.0, INITIAL_V),
+                new Block('乙', m2, 4.0, 0),
+                new Block('丙', m3, 7.0, 0)
+            ];
+            
+            updateHUD();
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight; 
+            basePpx = Math.max(50, canvas.width / 15);
+        }
+
+        function collide(b1, b2) {
+            const v1 = b1.v;
+            const v2 = b2.v;
+            const m1 = b1.m;
+            const m2 = b2.m;
+
+            b1.v = ((m1 - m2) * v1 + 2 * m2 * v2) / (m1 + m2);
+            b2.v = ((m2 - m1) * v2 + 2 * m1 * v1) / (m1 + m2);
+            
+            collisionCount++;
+            statCollisions.innerText = collisionCount;
+            
+            b1.flashTimer = 10;
+            b2.flashTimer = 10;
+            
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function updatePhysics(dt) {
+            if (dt > 0.1) dt = 0.1;
+
+            blocks.forEach(b => b.x += b.v * dt);
+
+            let right0 = blocks[0].x + PHYS_W;
+            let left1 = blocks[1].x;
+            if (right0 >= left1 && blocks[0].v > blocks[1].v) {
+                blocks[0].x = left1 - PHYS_W; 
+                collide(blocks[0], blocks[1]);
+            }
+
+            let right1 = blocks[1].x + PHYS_W;
+            let left2 = blocks[2].x;
+            if (right1 >= left2 && blocks[1].v > blocks[2].v) {
+                blocks[1].x = left2 - PHYS_W;
+                collide(blocks[1], blocks[2]);
+            }
+            
+            right0 = blocks[0].x + PHYS_W;
+            left1 = blocks[1].x;
+             if (right0 >= left1 && blocks[0].v > blocks[1].v) {
+                 blocks[0].x = left1 - PHYS_W;
+                collide(blocks[0], blocks[1]);
+            }
+        }
+
+        function drawGrid(groundY, currentPpx, offsetX) {
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)'; 
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            const startPhysX = Math.floor(-offsetX / currentPpx);
+            const endPhysX = Math.ceil((canvas.width - offsetX) / currentPpx);
+            
+            for (let i = startPhysX; i <= endPhysX; i++) {
+                const px = i * currentPpx;
+                ctx.moveTo(px, 0);
+                ctx.lineTo(px, groundY);
+            }
+            ctx.stroke();
+        }
+
+        function updateHUD() {
+            vJia.innerText = (blocks[0].v / INITIAL_V).toFixed(2);
+            vYi.innerText = (blocks[1].v / INITIAL_V).toFixed(2);
+            vBing.innerText = (blocks[2].v / INITIAL_V).toFixed(2);
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            const groundY = canvas.height - GROUND_Y_OFFSET;
+            const currentPpx = basePpx * globalZoom; 
+            
+            const isMobile = window.innerWidth <= 600 || window.innerHeight <= 450;
+            let offsetX = 0;
+
+            if (isMobile) {
+                const anchorXMobile = ((1.0 + 4.0) / 2) + (PHYS_W / 2); 
+                offsetX = (canvas.width / 2) - (anchorXMobile * currentPpx);
+            } else {
+                const anchorXDesktop = 7.0 + (PHYS_W / 2);
+                offsetX = anchorXDesktop * (basePpx - currentPpx);
+            }
+
+            if (isPlaying) {
+                updatePhysics(dt);
+                updateHUD();
+            }
+
+            ctx.fillStyle = '#0f172a'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#b0b4b8';
+            ctx.fillRect(0, groundY, canvas.width, GROUND_Y_OFFSET);
+            ctx.strokeStyle = '#9da1a5';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, groundY);
+            ctx.lineTo(canvas.width, groundY);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(offsetX, 0); 
+
+            drawGrid(groundY, currentPpx, offsetX);
+            blocks.forEach(b => b.draw(ctx, groundY, currentPpx));
+
+            ctx.restore(); 
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        sliderM2.addEventListener('input', (e) => {
+            valM2.innerText = parseFloat(e.target.value).toFixed(1) + ' m';
+        });
+
+        sliderM3.addEventListener('input', (e) => {
+            valM3.innerText = parseFloat(e.target.value).toFixed(1) + ' m';
+        });
+
+        sliderZoom.addEventListener('input', (e) => {
+            globalZoom = parseFloat(e.target.value);
+            valZoom.innerText = globalZoom.toFixed(2) + 'x';
+        });
+
+        btnPlay.addEventListener('click', () => {
+            if (!hasStarted) {
+                hasStarted = true;
+                sliderM2.disabled = true;
+                sliderM3.disabled = true;
+                initSimulation(); 
+            }
+            
+            isPlaying = !isPlaying;
+            btnPlay.innerText = isPlaying ? "暫停" : "開始發射";
+            btnPlay.style.backgroundColor = isPlaying ? "#e6ad00" : "var(--btn-play-bg)"; 
+            lastTime = performance.now(); 
+        });
+
+        btnReset.addEventListener('click', () => {
+            hasStarted = false;
+            sliderM2.disabled = false;
+            sliderM3.disabled = false;
+            
+            initSimulation();
+            isPlaying = false; 
+            btnPlay.innerText = "開始發射";
+            btnPlay.style.backgroundColor = "var(--btn-play-bg)";
+            lastTime = performance.now();
+        });
+
+        resizeCanvas();
+        initSimulation();
+        requestAnimationFrame(gameLoop);
+
+    <\/script>
+</body>
+</html>
+    </script>
+
+    <script>
+        function switchTab(tabIndex) {
+            document.querySelectorAll('.tab').forEach((el, idx) => {
+                if (idx + 1 === tabIndex) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+            const rawText = document.getElementById('src-' + tabIndex).textContent;
+            const htmlContent = rawText.replace(/<\\\/script>/g, '<' + '/script>');
+
+            const iframe = document.getElementById('sim-frame');
+            
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            if (iframe.src && iframe.src.startsWith('blob:')) {
+                URL.revokeObjectURL(iframe.src);
+            }
+            
+            iframe.src = url;
+        }
+
+        window.onload = () => {
+            switchTab(1);
+        };
+    </script>
+</body>
+</html>
