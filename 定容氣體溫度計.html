@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>定容氣體溫度計虛擬實驗室(台中二中 阿發老師設計)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+        }
+        canvas {
+            display: block;
+        }
+        .slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--thumb-color, #ef4444);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 2px solid white;
+        }
+        .slider-thumb::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--thumb-color, #ef4444);
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        /* Custom scrollbar for data table */
+        .data-table-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .data-table-container::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 3px;
+        }
+        /* Make canvas unselectable during drag */
+        #simCanvas {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-[1400px] w-full mx-auto">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/><path d="M12 7v5"/></svg>
+                定容氣體溫度計虛擬實驗室<span class="text-xl text-[#0000FF] font-normal ml-2">(台中二中 阿發老師設計)</span>
+            </h1>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+            <!-- Left Column: Simulation Canvas & Controls -->
+            <div class="flex flex-col gap-6">
+                <!-- Device Canvas Card -->
+                <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col items-center justify-center relative border border-gray-100">
+                    
+                    <!-- Header inside card -->
+                    <div class="flex justify-between w-full items-center mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">實驗裝置</h2>
+                        <!-- Unit Toggle (Enlarged and Colored) -->
+                        <div class="flex bg-gray-100 p-1.5 rounded-lg border border-gray-200">
+                            <button id="unitCBtn" class="px-6 py-2 text-[28px] font-bold rounded-md bg-[#46B1E1] shadow-sm text-white transition-colors">攝氏 (℃)</button>
+                            <button id="unitKBtn" class="px-6 py-2 text-[28px] font-bold rounded-md bg-transparent text-gray-500 hover:bg-gray-200 transition-colors">絕對 (K)</button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Wrapper (Removed overflow-hidden to prevent slider clipping, using aspect-ratio container) -->
+                    <div class="relative w-full flex justify-center bg-gray-50 rounded-lg border border-gray-200 pt-6 pb-6">
+                        
+                        <div class="relative w-full max-w-[600px]" style="aspect-ratio: 600 / 550;">
+                            
+                            <canvas id="simCanvas" width="600" height="550" class="absolute inset-0 w-full h-full"></canvas>
+
+                            <!-- 90-degree Rotated Temperature Slider -->
+                            <!-- Explicitly set to 450px width (1.5x) and moved significantly UP -->
+                            <div class="absolute z-10" style="left: 8%; top: 41%;">
+                                <!-- Using style max-width:none to prevent Tailwind from squishing it -->
+                                <input type="range" id="tempSlider" min="-100" max="300" step="0.1" value="0" 
+                                       class="slider-thumb appearance-none bg-gradient-to-r from-blue-500 via-gray-100 to-red-500 rounded-lg shadow-inner"
+                                       style="position: absolute; left: -225px; top: -8px; width: 450px; max-width: none; height: 16px; transform: rotate(-90deg);">
+                            </div>
+                            
+                            <!-- Slider Label (Exactly below the lengthened slider) -->
+                            <div class="absolute z-20 whitespace-nowrap flex flex-col items-center"
+                                 style="left: 8%; top: 88%; transform: translateX(-50%);">
+                                <span class="text-gray-700 font-bold text-[20px]">溫度滑桿</span>
+                            </div>
+
+                            <!-- Floating Temperature Readout (Moved below the bulb) -->
+                            <!-- Bulb X is 170px -> 170/600 = 28.33% -->
+                            <div class="absolute z-20 whitespace-nowrap flex flex-col items-center bg-white px-4 py-2 rounded-xl shadow-lg border border-gray-100"
+                                 style="left: 28.33%; top: 86%; transform: translateX(-50%);">
+                                <span class="text-gray-700 font-bold text-[20px] mb-1">氣體溫度:</span>
+                                <span class="text-[29px] leading-none font-bold text-gray-900 tracking-tight">
+                                    <span id="tempValueHtml">0.0</span> <span id="tempUnitLabelHtml" class="text-[17px] ml-0.5">℃</span>
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                    
+                    <!-- Bottom Controls: Action Buttons -->
+                    <div class="flex justify-center gap-6 mt-6 w-full pb-2">
+                        <button id="recordBtn" class="px-8 py-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-md cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 text-xl transform hover:scale-[1.02]">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            記錄數據
+                        </button>
+                        <button id="clearBtn" class="px-8 py-3 rounded-lg font-bold text-gray-900 bg-[#FF99FF] hover:opacity-80 transition-opacity duration-200 flex items-center justify-center gap-2 text-xl shadow-sm border border-transparent">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                            清除數據
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info & Status Box -->
+                <div class="flex flex-col gap-3">
+                    <div id="statusAlert" class="px-5 py-4 rounded-xl w-full font-medium transition-colors duration-300 bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-sm text-lg flex items-center justify-center">
+                        請拖曳調整右管高度，使左管液面回到記號 S
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-5 text-blue-800 flex items-start gap-4 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mt-1 flex-shrink-0"><path d="M5 9c0-2.8 2.2-5 5-5s5 2.2 5 5v6c0 2.8-2.2 5-5 5s-5-2.2-5-5V9Z"/><path d="M10 4v6"/></svg>
+                        <div>
+                            <p class="font-bold text-lg mb-1">如何調整右管高度？</p>
+                            <p class="text-base text-blue-900 leading-relaxed">請將滑鼠移至上方畫布中的 <b>右側玻璃管</b>，按住並<b>直接上下拖曳</b>即可調整水銀面高度差。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Graph & Data -->
+            <div class="flex flex-col gap-6">
+                <!-- Graph Panel -->
+                <div class="bg-white rounded-xl shadow-lg p-5 flex flex-col border border-gray-100">
+                    <h2 class="text-2xl font-bold mb-4 border-b pb-3 text-gray-800">壓力 - 溫度 關係圖</h2>
+                    <div class="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 relative h-[460px]">
+                        <canvas id="graphCanvas" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Data Table Panel -->
+                <div class="bg-white rounded-xl shadow-lg p-5 flex-grow flex flex-col border border-gray-100">
+                    <div class="flex-grow min-h-[150px] border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                        <div class="bg-gray-100 grid grid-cols-3 text-center text-3xl font-bold text-gray-700 py-6 border-b">
+                            <div>次數</div>
+                            <div>溫度 (<span id="tableTempUnit">℃</span>)</div>
+                            <div>壓力 (cmHg)</div>
+                        </div>
+                        <div id="dataTable" class="data-table-container overflow-y-auto flex-grow bg-white max-h-[300px]">
+                            <!-- Data rows will be added here -->
+                            <div class="text-center text-gray-400 py-10 text-2xl italic" id="emptyDataMsg">尚未記錄任何數據</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Physics & State ---
+        const P0 = 76; 
+        const T0 = 273.15; 
+        const V0 = 1000; 
+        const A = 10; 
+        
+        const nR = (P0 * V0) / T0; 
+        
+        let state = {
+            tempC: 0,
+            hTube: 0, 
+            yL: 0,    
+            yM: 0,    
+            isKelvin: false,
+            data: [], 
+            isAligned: true
+        };
+
+        const ALIGN_TOLERANCE = 0.15; 
+
+        // Update physics variables based on inputs
+        function updatePhysics() {
+            let T = state.tempC + 273.15;
+            let H = state.hTube;
+            
+            let a = 20;
+            let b = -(2760 + 10 * H);
+            let c = 76000 + 1000 * H - nR * T;
+            
+            let discriminant = b * b - 4 * a * c;
+            if (discriminant < 0) discriminant = 0;
+            
+            state.yL = (-b - Math.sqrt(discriminant)) / (2 * a);
+            state.yM = H - state.yL;
+            
+            state.isAligned = Math.abs(state.yL) <= ALIGN_TOLERANCE;
+        }
+
+        // --- UI Interactions ---
+        const tempSlider = document.getElementById('tempSlider');
+        const tempValueHtml = document.getElementById('tempValueHtml');
+        const tempUnitLabelHtml = document.getElementById('tempUnitLabelHtml');
+        
+        const recordBtn = document.getElementById('recordBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const unitCBtn = document.getElementById('unitCBtn');
+        const unitKBtn = document.getElementById('unitKBtn');
+        const tableTempUnit = document.getElementById('tableTempUnit');
+        const statusAlert = document.getElementById('statusAlert');
+
+        function updateUI() {
+            let displayTemp = state.isKelvin ? (state.tempC + 273.15) : state.tempC;
+            tempValueHtml.textContent = displayTemp.toFixed(1);
+            
+            const tempRatio = Math.max(0, Math.min(1, (state.tempC + 100) / 400));
+            const r = Math.floor(tempRatio * 255);
+            const b = Math.floor((1 - tempRatio) * 255);
+            tempSlider.style.setProperty('--thumb-color', `rgb(${r}, 50, ${b})`);
+
+            if (state.isAligned) {
+                recordBtn.className = "px-8 py-3 rounded-lg font-bold text-white bg-green-600 hover:bg-green-700 shadow-md cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 text-xl transform hover:scale-[1.02]";
+                statusAlert.className = "px-5 py-4 rounded-xl w-full font-bold text-center transition-colors duration-300 bg-green-100 text-green-800 border border-green-300 shadow-sm text-lg";
+                statusAlert.textContent = "✅ 液面已對齊記號 S，體積固定，可以記錄理論數據！";
+            } else {
+                recordBtn.className = "px-8 py-3 rounded-lg font-bold text-gray-800 bg-[#96DCF8] hover:opacity-90 shadow-md cursor-pointer transition-all duration-200 flex items-center justify-center gap-2 text-xl transform hover:scale-[1.02]";
+                statusAlert.className = "px-5 py-4 rounded-xl w-full font-bold text-center transition-colors duration-300 bg-yellow-100 text-yellow-800 border border-yellow-300 shadow-sm text-lg";
+                
+                if (state.yL < 0) {
+                    statusAlert.innerHTML = "⚠️ 氣體膨脹，液面低於 S。請拖曳 <b>升高</b> 右側玻璃管以對齊。";
+                } else {
+                    statusAlert.innerHTML = "⚠️ 氣體收縮，液面高於 S。請拖曳 <b>降下</b> 右側玻璃管以對齊。";
+                }
+            }
+        }
+
+        tempSlider.addEventListener('input', (e) => {
+            state.tempC = parseFloat(e.target.value);
+            updatePhysics();
+            updateUI();
+        });
+
+        unitCBtn.addEventListener('click', () => {
+            state.isKelvin = false;
+            // Highlight C, Reset K
+            unitCBtn.className = "px-6 py-2 text-[28px] font-bold rounded-md bg-[#46B1E1] shadow-sm text-white transition-colors";
+            unitKBtn.className = "px-6 py-2 text-[28px] font-bold rounded-md bg-transparent text-gray-500 hover:bg-gray-200 transition-colors";
+            tempUnitLabelHtml.textContent = "℃";
+            tableTempUnit.textContent = "℃";
+            updateUI();
+            updateDataTable();
+            drawGraph();
+        });
+
+        unitKBtn.addEventListener('click', () => {
+            state.isKelvin = true;
+            // Highlight K, Reset C
+            unitKBtn.className = "px-6 py-2 text-[28px] font-bold rounded-md bg-[#FFC000] shadow-sm text-gray-900 transition-colors";
+            unitCBtn.className = "px-6 py-2 text-[28px] font-bold rounded-md bg-transparent text-gray-500 hover:bg-gray-200 transition-colors";
+            tempUnitLabelHtml.textContent = "K";
+            tableTempUnit.textContent = "K";
+            updateUI();
+            updateDataTable();
+            drawGraph();
+        });
+
+        recordBtn.addEventListener('click', () => {
+            // Remove the alignment check: allow recording at any state
+            let P = P0 + state.yM - state.yL;
+            state.data.push({
+                T: state.tempC,
+                P: P
+            });
+            
+            updateDataTable();
+            drawGraph();
+            
+            const originalText = recordBtn.innerHTML;
+            recordBtn.innerHTML = "✓ 已記錄";
+            setTimeout(() => {
+                recordBtn.innerHTML = originalText;
+            }, 1000);
+        });
+
+        clearBtn.addEventListener('click', () => {
+            state.data = [];
+            updateDataTable();
+            drawGraph();
+        });
+
+        function updateDataTable() {
+            const table = document.getElementById('dataTable');
+            
+            if (state.data.length === 0) {
+                table.innerHTML = '<div class="text-center text-gray-400 py-10 text-2xl italic" id="emptyDataMsg">尚未記錄任何數據</div>';
+                return;
+            }
+            
+            table.innerHTML = '';
+            state.data.forEach((d, index) => {
+                let displayTemp = state.isKelvin ? (d.T + 273.15) : d.T;
+                let row = document.createElement('div');
+                row.className = "grid grid-cols-3 text-center text-3xl py-5 border-b border-gray-100 hover:bg-blue-50 transition-colors items-center";
+                row.innerHTML = `
+                    <div class="text-gray-500">${index + 1}</div>
+                    <div class="font-medium text-[#0000FF]">${displayTemp.toFixed(1)}</div>
+                    <div class="font-bold text-[#0000FF]">${d.P.toFixed(2)}</div>
+                `;
+                table.appendChild(row);
+            });
+            table.scrollTop = table.scrollHeight;
+        }
+
+        // --- Mouse Drag Interaction for Canvas ---
+        const simCanvas = document.getElementById('simCanvas');
+        const ctx = simCanvas.getContext('2d');
+        let isDraggingTube = false;
+        let lastMouseY = 0;
+
+        simCanvas.addEventListener('mousedown', (e) => {
+            const rect = simCanvas.getBoundingClientRect();
+            const scaleX = simCanvas.width / rect.width;
+            const scaleY = simCanvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            if (mouseX > 440 && mouseX < 520 && mouseY > 40 && mouseY < 400) {
+                isDraggingTube = true;
+                lastMouseY = mouseY;
+                simCanvas.style.cursor = 'grabbing';
+            }
+        });
+
+        simCanvas.addEventListener('mousemove', (e) => {
+            const rect = simCanvas.getBoundingClientRect();
+            const scaleX = simCanvas.width / rect.width;
+            const scaleY = simCanvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+
+            if (!isDraggingTube) {
+                if (mouseX > 440 && mouseX < 520 && mouseY > 40 && mouseY < 400) {
+                    simCanvas.style.cursor = 'grab';
+                } else {
+                    simCanvas.style.cursor = 'default';
+                }
+            }
+
+            if (isDraggingTube) {
+                let dy = mouseY - lastMouseY;
+                state.hTube -= dy / 3; 
+                
+                if (state.hTube > 100) state.hTube = 100;
+                if (state.hTube < -30) state.hTube = -30;
+
+                lastMouseY = mouseY;
+                updatePhysics();
+                updateUI();
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDraggingTube = false;
+        });
+
+        window.addEventListener('mouseleave', () => {
+            isDraggingTube = false;
+        });
+
+        // --- Simulation Canvas Drawing ---
+        // Physical coordinates mapped to canvas coordinates
+        const simCx = (x) => x;
+        const simCy = (y) => 220 - y * 3;
+
+        // Random dots for gas particles inside the bulb and tubes
+        let gasParticles = [];
+        for(let i=0; i<150; i++) {
+            let region = Math.random();
+            if (region < 0.6) {
+                gasParticles.push({
+                    type: 'bulb',
+                    x: Math.random() * 2 - 1, 
+                    y: Math.random() * 2 - 1,
+                    vx: (Math.random() - 0.5) * 0.05,
+                    vy: (Math.random() - 0.5) * 0.05
+                });
+            } else if (region < 0.75) {
+                gasParticles.push({
+                    type: 'vert1',
+                    x: 166 + Math.random() * 8,
+                    y: 84 + Math.random() * 160,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 1.5
+                });
+            } else if (region < 0.9) {
+                gasParticles.push({
+                    type: 'horiz',
+                    x: 174 + Math.random() * 102,
+                    y: 76 + Math.random() * 8,
+                    vx: (Math.random() - 0.5) * 1.5,
+                    vy: (Math.random() - 0.5) * 0.5
+                });
+            } else {
+                gasParticles.push({
+                    type: 'vert2',
+                    x: 276 + Math.random() * 8,
+                    y: 84 + Math.random() * 100,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 1.5
+                });
+            }
+        }
+
+        function drawSim() {
+            ctx.clearRect(0, 0, simCanvas.width, simCanvas.height);
+            
+            const markSY = simCy(0); // This is exactly at Y=220 on Canvas
+            const leftTubeX = 280;
+            const rightTubeX = 480;
+            const uBottomYBase = 380;
+            const hTubePx = state.hTube * 3;
+            const rightTubeBottomY = uBottomYBase - hTubePx;
+
+            const bulbCx = 170;
+            const bulbCy = 360;
+            const bulbRadius = 75;
+
+            // 1. Calculate Gas Color
+            const tempRatio = Math.max(0, Math.min(1, (state.tempC + 100) / 400));
+            const rColor = Math.floor(tempRatio * 255);
+            const bColor = Math.floor((1 - tempRatio) * 255);
+            const gasAreaColor = `rgba(${rColor}, 50, ${bColor}, 0.25)`;
+            const particleColor = `rgb(${rColor}, 50, ${bColor})`;
+
+            // 2. Draw Rubber Connecting Tube (Back/Outer)
+            ctx.beginPath();
+            ctx.moveTo(leftTubeX, uBottomYBase - 10);
+            ctx.bezierCurveTo(leftTubeX, uBottomYBase + 130, rightTubeX, rightTubeBottomY + 130, rightTubeX, rightTubeBottomY - 10);
+            ctx.strokeStyle = '#CC6600'; 
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // 3. Draw Glass Tubes (Outer Backbone)
+            ctx.lineWidth = 16;
+            ctx.lineCap = 'butt';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#cbd5e1';
+
+            ctx.beginPath();
+            ctx.moveTo(bulbCx, 290); 
+            ctx.lineTo(bulbCx, 80);
+            ctx.lineTo(leftTubeX, 80);
+            ctx.lineTo(leftTubeX, uBottomYBase);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(rightTubeX, rightTubeBottomY - 260);
+            ctx.lineTo(rightTubeX, rightTubeBottomY);
+            ctx.stroke();
+
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(bulbCx, bulbCy, bulbRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // 4. Clear inner space for Glass Tubes
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = '#ffffff';
+            
+            ctx.beginPath();
+            ctx.moveTo(bulbCx, 290);
+            ctx.lineTo(bulbCx, 80);
+            ctx.lineTo(leftTubeX, 80);
+            ctx.lineTo(leftTubeX, uBottomYBase);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(rightTubeX, rightTubeBottomY - 260);
+            ctx.lineTo(rightTubeX, rightTubeBottomY);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(bulbCx, bulbCy, bulbRadius - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 5. Draw Gas Area (Color)
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = gasAreaColor;
+            ctx.beginPath();
+            ctx.moveTo(bulbCx, 290);
+            ctx.lineTo(bulbCx, 80);
+            ctx.lineTo(leftTubeX, 80);
+            ctx.lineTo(leftTubeX, simCy(state.yL));
+            ctx.stroke();
+
+            ctx.fillStyle = gasAreaColor;
+            ctx.beginPath();
+            ctx.arc(bulbCx, bulbCy, bulbRadius - 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 6. Draw Gas Particles
+            ctx.fillStyle = particleColor; 
+            let mercuryTop = simCy(state.yL);
+
+            gasParticles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                
+                if (p.type === 'bulb') {
+                    let mag = Math.sqrt(p.x*p.x + p.y*p.y);
+                    if (mag > 1) {
+                        p.x /= mag; 
+                        p.y /= mag;
+                        p.vx *= -1; 
+                        p.vy *= -1;
+                    }
+                    let px = bulbCx + p.x * 70; 
+                    let py = bulbCy + p.y * 70;
+                    ctx.beginPath(); ctx.arc(px, py, 1.5, 0, Math.PI*2); ctx.fill();
+                } else if (p.type === 'vert1') {
+                    if (p.x < bulbCx - 4) { p.x = bulbCx - 4; p.vx *= -1; }
+                    if (p.x > bulbCx + 4) { p.x = bulbCx + 4; p.vx *= -1; }
+                    if (p.y < 84) { p.y = 84; p.vy *= -1; }
+                    if (p.y > 290) { p.y = 290; p.vy *= -1; }
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
+                } else if (p.type === 'horiz') {
+                    if (p.x < bulbCx + 4) { p.x = bulbCx + 4; p.vx *= -1; }
+                    if (p.x > 276) { p.x = 276; p.vx *= -1; }
+                    if (p.y < 76) { p.y = 76; p.vy *= -1; }
+                    if (p.y > 84) { p.y = 84; p.vy *= -1; }
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
+                } else if (p.type === 'vert2') {
+                    if (p.x < 276) { p.x = 276; p.vx *= -1; }
+                    if (p.x > 284) { p.x = 284; p.vx *= -1; }
+                    if (p.y < 84) { p.y = 84; p.vy *= -1; }
+                    let limitY = mercuryTop - 2;
+                    if (limitY < 84) limitY = 84; 
+                    if (p.y > limitY) { p.y = limitY; p.vy *= -1; }
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
+                }
+            });
+
+            // 7. Draw Mercury in Glass Tubes
+            ctx.fillStyle = '#7F7F7F'; 
+            
+            if (mercuryTop < uBottomYBase) {
+                ctx.fillRect(leftTubeX - 5, mercuryTop, 10, uBottomYBase - mercuryTop);
+                ctx.beginPath();
+                ctx.ellipse(leftTubeX, mercuryTop, 5, 2, 0, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            let rightHgTop = simCy(state.yM);
+            if (rightHgTop < rightTubeBottomY) {
+                ctx.fillRect(rightTubeX - 5, rightHgTop, 10, rightTubeBottomY - rightHgTop);
+                ctx.beginPath();
+                ctx.ellipse(rightTubeX, rightHgTop, 5, 2, 0, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // 8. Draw Fixed Ruler
+            let rulerX = 350; 
+            let rulerW = 20;
+            let physMin = -35; 
+            let physMax = 80;  
+            let rulerTop = simCy(physMax);
+            let rulerBot = simCy(physMin);
+
+            ctx.fillStyle = '#fde68a'; 
+            ctx.strokeStyle = '#d97706';
+            ctx.lineWidth = 1;
+            ctx.fillRect(rulerX, rulerTop - 15, rulerW, (rulerBot - rulerTop) + 30);
+            ctx.strokeRect(rulerX, rulerTop - 15, rulerW, (rulerBot - rulerTop) + 30);
+
+            ctx.fillStyle = '#92400e';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.font = 'bold 22px Noto Sans TC'; 
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 2; 
+            for (let y = physMin; y <= physMax; y += 1) {
+                let ty = simCy(y);
+                let isMajor = (y % 10 === 0);
+                let isMedium = (y % 5 === 0 && !isMajor);
+                let tickLen = isMajor ? 14 : (isMedium ? 9 : 5);
+                
+                ctx.moveTo(rulerX + rulerW, ty);
+                ctx.lineTo(rulerX + rulerW - tickLen, ty);
+                
+                if (isMajor) {
+                    ctx.fillText(y.toString(), rulerX - 6, ty);
+                }
+            }
+            ctx.stroke();
+
+            // 9. Draw Mark S 
+            ctx.beginPath();
+            ctx.moveTo(leftTubeX - 40, markSY);
+            ctx.lineTo(leftTubeX + 40, markSY);
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 32px Noto Sans TC'; 
+            ctx.textAlign = 'right';
+            ctx.fillText("記號 S", leftTubeX - 50, markSY + 10);
+
+            if (state.isAligned) {
+                ctx.beginPath();
+                ctx.moveTo(leftTubeX - 20, markSY);
+                ctx.lineTo(leftTubeX + 20, markSY);
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // 10. Annotations & Arrows 
+            ctx.beginPath();
+            let p0Y = rightHgTop - 60; 
+            ctx.moveTo(rightTubeX, p0Y);
+            ctx.lineTo(rightTubeX, rightHgTop - 5);
+            ctx.strokeStyle = '#3b82f6';
+            ctx.lineWidth = 3; 
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(rightTubeX - 6, rightHgTop - 15);
+            ctx.lineTo(rightTubeX, rightHgTop - 2);
+            ctx.lineTo(rightTubeX + 6, rightHgTop - 15);
+            ctx.fillStyle = '#3b82f6';
+            ctx.fill();
+            
+            ctx.fillStyle = '#3b82f6';
+            ctx.font = 'italic 64px serif'; 
+            ctx.textAlign = 'left';
+            ctx.fillText("P", rightTubeX + 25, p0Y + 35);
+            ctx.font = '48px serif'; 
+            ctx.fillText("0", rightTubeX + 60, p0Y + 50);
+
+            ctx.fillStyle = 'rgba(71, 85, 105, 0.7)';
+            ctx.beginPath();
+            ctx.roundRect(rightTubeX + 15, rightTubeBottomY - 160, 36, 60, 6); 
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Noto Sans TC'; 
+            ctx.textAlign = 'center';
+            ctx.fillText("↕", rightTubeX + 33, rightTubeBottomY - 122);
+
+            // 'h' annotation and dashed lines crossing the fixed ruler
+            if (Math.abs(state.yM - state.yL) > 1) {
+                let hX = rightTubeX - 40; 
+
+                ctx.beginPath();
+                ctx.moveTo(rulerX + rulerW + 4, mercuryTop);
+                ctx.lineTo(rightTubeX - 15, mercuryTop);
+                ctx.moveTo(rulerX + rulerW + 4, rightHgTop);
+                ctx.lineTo(rightTubeX - 15, rightHgTop);
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 2; 
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                let headDir = rightHgTop > mercuryTop ? -1 : 1;
+                ctx.beginPath();
+                ctx.moveTo(hX, mercuryTop);
+                ctx.lineTo(hX, rightHgTop);
+                ctx.strokeStyle = '#475569';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(hX - 6, mercuryTop + 8*headDir);
+                ctx.lineTo(hX, mercuryTop);
+                ctx.lineTo(hX + 6, mercuryTop + 8*headDir);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(hX - 6, rightHgTop - 8*headDir);
+                ctx.lineTo(hX, rightHgTop);
+                ctx.lineTo(hX + 6, rightHgTop - 8*headDir);
+                ctx.stroke();
+
+                ctx.fillStyle = '#475569';
+                ctx.font = 'italic 51px serif'; 
+                ctx.textAlign = 'right';
+                ctx.fillText("h", hX - 12, (mercuryTop + rightHgTop)/2 + 16); 
+            }
+
+            requestAnimationFrame(drawSim);
+        }
+
+        // --- Graph Drawing ---
+        const graphCanvas = document.getElementById('graphCanvas');
+        const gCtx = graphCanvas.getContext('2d');
+
+        function drawGraph() {
+            graphCanvas.width = graphCanvas.clientWidth * 2;
+            graphCanvas.height = graphCanvas.clientHeight * 2;
+            gCtx.scale(2, 2);
+            
+            const w = graphCanvas.clientWidth;
+            const h = graphCanvas.clientHeight;
+            const margin = { top: 30, right: 30, bottom: 75, left: 75 }; 
+            const plotW = w - margin.left - margin.right;
+            const plotH = h - margin.top - margin.bottom;
+
+            gCtx.clearRect(0, 0, w, h);
+
+            let xMin = state.isKelvin ? -50 : -300; 
+            let xMax = state.isKelvin ? 650 : 350;
+            let yMin = 0;
+            let yMax = 200; 
+
+            const mapX = (xVal) => margin.left + ((xVal - xMin) / (xMax - xMin)) * plotW;
+            const mapY = (yVal) => margin.top + plotH - ((yVal - yMin) / (yMax - yMin)) * plotH;
+
+            // Draw Grid & Axes
+            gCtx.strokeStyle = '#e2e8f0';
+            gCtx.lineWidth = 1;
+            gCtx.beginPath();
+            
+            let xTicks = state.isKelvin ? [0, 100, 200, 273, 400, 500, 600] : [-273, -200, -100, 0, 100, 200, 300];
+            xTicks.forEach(tick => {
+                let x = mapX(tick);
+                if (x >= margin.left && x <= w - margin.right) {
+                    gCtx.moveTo(x, margin.top);
+                    gCtx.lineTo(x, margin.top + plotH);
+                }
+            });
+            
+            let yTicks = [0, 40, 76, 120, 160, 200]; 
+            yTicks.forEach(tick => {
+                let y = mapY(tick);
+                gCtx.moveTo(margin.left, y);
+                gCtx.lineTo(margin.left + plotW, y);
+            });
+            gCtx.stroke();
+
+            // Axes
+            gCtx.strokeStyle = '#334155';
+            gCtx.lineWidth = 3; 
+            gCtx.beginPath();
+            
+            let yAxisX = mapX(0);
+            if (yAxisX < margin.left) yAxisX = margin.left;
+            if (yAxisX > margin.left + plotW) yAxisX = margin.left + plotW;
+            
+            let xAxisY = mapY(0);
+            if (xAxisY > margin.top + plotH) xAxisY = margin.top + plotH;
+            
+            gCtx.moveTo(yAxisX, margin.top);
+            gCtx.lineTo(yAxisX, margin.top + plotH);
+            gCtx.moveTo(margin.left, xAxisY);
+            gCtx.lineTo(margin.left + plotW, xAxisY);
+            gCtx.stroke();
+
+            // Labels
+            gCtx.fillStyle = '#475569';
+            gCtx.font = '20px Noto Sans TC'; 
+            gCtx.textAlign = 'center';
+            gCtx.textBaseline = 'top';
+            xTicks.forEach(tick => {
+                let x = mapX(tick);
+                if (x >= margin.left && x <= w - margin.right) {
+                    let label = tick < 0 ? '−' + Math.abs(tick) : tick.toString();
+                    gCtx.fillText(label, x, xAxisY + 10);
+                    if (tick === (state.isKelvin ? 0 : -273)) {
+                         gCtx.fillStyle = '#ef4444';
+                         gCtx.fillText("絕對零度", x, xAxisY + 36);
+                         gCtx.fillStyle = '#475569';
+                    }
+                }
+            });
+
+            gCtx.textAlign = 'right';
+            gCtx.textBaseline = 'middle';
+            yTicks.forEach(tick => {
+                let y = mapY(tick);
+                gCtx.fillText(tick.toString(), yAxisX - 8, y);
+            });
+
+            // Axis Titles
+            gCtx.fillStyle = '#0f172a';
+            gCtx.font = 'bold 24px Noto Sans TC'; 
+            gCtx.textAlign = 'center';
+            gCtx.fillText(`溫度 (${state.isKelvin ? 'K' : '℃'})`, margin.left + plotW/2, h - 15);
+            
+            gCtx.save();
+            gCtx.translate(25, margin.top + plotH/2);
+            gCtx.rotate(-Math.PI/2);
+            gCtx.fillText("壓力 (cmHg)", 0, 0);
+            gCtx.restore();
+
+            // Plot Data Points
+            if (state.data.length > 0) {
+                gCtx.fillStyle = '#3b82f6';
+                state.data.forEach(d => {
+                    let xVal = state.isKelvin ? (d.T + 273.15) : d.T;
+                    let px = mapX(xVal);
+                    let py = mapY(d.P);
+                    
+                    gCtx.beginPath();
+                    gCtx.arc(px, py, 6, 0, Math.PI*2); 
+                    gCtx.fill();
+                    gCtx.strokeStyle = '#ffffff';
+                    gCtx.lineWidth = 1.5;
+                    gCtx.stroke();
+                });
+            }
+
+            // Linear Regression
+            if (state.data.length >= 2) {
+                let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+                let n = state.data.length;
+                state.data.forEach(d => {
+                    let xVal = state.isKelvin ? (d.T + 273.15) : d.T;
+                    sumX += xVal;
+                    sumY += d.P;
+                    sumXY += xVal * d.P;
+                    sumXX += xVal * xVal;
+                });
+                
+                let meanX = sumX / n;
+                let meanY = sumY / n;
+                let denominator = sumXX - n * meanX * meanX;
+                
+                if (denominator !== 0) {
+                    let m = (sumXY - n * meanX * meanY) / denominator;
+                    let b = meanY - m * meanX;
+                    
+                    let drawXMin = state.isKelvin ? 0 : -273.15;
+                    let drawXMax = xMax;
+                    let drawYMin = m * drawXMin + b;
+                    let drawYMax = m * drawXMax + b;
+                    
+                    gCtx.beginPath();
+                    gCtx.moveTo(mapX(drawXMin), mapY(drawYMin));
+                    gCtx.lineTo(mapX(drawXMax), mapY(drawYMax));
+                    gCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+                    gCtx.lineWidth = 3; 
+                    gCtx.setLineDash([8, 8]); 
+                    gCtx.stroke();
+                    gCtx.setLineDash([]);
+                }
+            }
+        }
+
+        // --- Initialization ---
+        updatePhysics();
+        updateUI();
+        drawSim();
+        drawGraph();
+        
+        window.addEventListener('resize', () => {
+            drawGraph();
+        });
+    </script>
+</body>
+</html>
