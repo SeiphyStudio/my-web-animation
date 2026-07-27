@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>課堂行為記錄(筆電座位模式)</title>
+    <title>課堂行為記錄(翻轉教室版)</title>
     <style>
         :root {
             --bg-color: #f0f2f5;
@@ -182,6 +182,7 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease; /* 加入旋轉過渡效果 */
         }
 
         #seating-grid.lab-mode {
@@ -201,7 +202,7 @@
             align-items: center;
             position: relative;
             background: #ffff99; 
-            transition: transform 0.1s, border-color 0.2s;
+            transition: transform 0.3s ease, border-color 0.2s; /* 旋轉過渡 */
             cursor: pointer;
             overflow: hidden;
         }
@@ -214,7 +215,8 @@
         }
 
         .seat:hover {
-            transform: translateY(-2px);
+            /* 在 hover 時保持旋轉狀態下放大 */
+            transform: scale(1.02);
             border-color: var(--primary-color);
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             z-index: 10;
@@ -294,7 +296,6 @@
             margin-bottom: 20px;
         }
 
-        /* 👨‍🏫 修改：按鈕的樣式配合新的淡彩設計 */
         .behavior-btn {
             padding: 8px 4px; 
             border: 2px solid transparent;
@@ -392,6 +393,7 @@
             width: 100%;
             text-align: center;
             margin-top: calc(15px * var(--zoom));
+            margin-bottom: calc(15px * var(--zoom)); /* 增加 margin-bottom，讓翻轉後距離頂部有間隔 */
             background: #00CC00; 
             padding: calc(8px * var(--zoom));
             border-radius: 4px;
@@ -422,7 +424,7 @@
 <header>
     <div class="header-row">
         <div class="title-group">
-            <h1 class="main-title">學生課堂行為記錄(筆電座位模式)--阿發老師設計</h1>
+            <h1 class="main-title">學生課堂行為記錄(翻轉教室版)--阿發老師設計</h1>
             
             <div class="mode-switch-group">
                 <button id="mode-classroom" class="mode-btn active" onclick="switchMode('classroom')">教室座位</button>
@@ -449,6 +451,13 @@
             <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
             <span class="config-label">🔍 縮放:</span>
             <input type="range" id="zoom-slider" min="0.6" max="1.5" step="0.05" value="1" oninput="document.documentElement.style.setProperty('--zoom', this.value)" style="width: 80px;" title="調整座位表大小">
+            
+            <!-- 新增的翻轉教室開關 -->
+            <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
+            <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <input type="checkbox" id="flip-checkbox" onchange="toggleFlip(this.checked)">
+                <span class="config-label">翻轉教室</span>
+            </label>
         </div>
 
         <div id="display-class-code" style="color: var(--primary-color); font-size: 1.8rem; font-weight: 900; flex: 1; text-align: center; letter-spacing: 2px;"></div>
@@ -466,7 +475,8 @@
 
 <main>
     <div id="classroom-container">
-        <div style="display: flex; flex-direction: column; align-items: center;">
+        <!-- 加入 ID main-content-wrapper 及 100% 寬度供翻轉排版使用 -->
+        <div id="main-content-wrapper" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
             <div id="seating-grid">
                 <!-- 座位將由 JS 插入 -->
             </div>
@@ -480,7 +490,6 @@
             <button id="sync-behavior-btn" class="btn-info" style="font-size: 1rem; padding: 4px 10px;" onclick="loadBehaviorsFromCloud()" title="從雲端試算表讀取最新的行為設定">🔄 同步雲端設定</button>
         </h3>
         <div class="behavior-selector" id="behavior-group">
-            <!-- 動態生成的按鈕將會插在這裡 -->
             <div id="behavior-btn-container" style="display: contents;"></div>
             
             <div class="behavior-input-wrapper">
@@ -489,7 +498,6 @@
         </div>
 
         <div class="log-header">
-            <!-- 👨‍🏫 修改名稱保持一致 -->
             <h3>2. 暫時記錄區</h3>
             <button class="btn-danger-outline" onclick="clearAllLogs()">刪除所有記錄</button>
         </div>
@@ -531,9 +539,9 @@
     let currentMode = 'classroom'; 
     let gasUrl = ''; 
     let colorMap = {}; 
+    let isFlipped = false; // 新增：記錄翻轉狀態
     const CUSTOM_COLOR = '#d63384';
 
-    // 👨‍🏫 預設對齊最新的藍紅設計
     let behaviorsList = [
         { name: '認真聽講', value: '認真聽講', color: '#0000FF' },
         { name: '積極搶答', value: '搶答', color: '#0000FF' },
@@ -558,7 +566,25 @@
         renderBehaviors();
     };
 
-    // --- 👨‍🏫 修改：自動排序與淡彩上色的渲染邏輯 ---
+    // --- 新增：翻轉教室邏輯 ---
+    function toggleFlip(checked) {
+        isFlipped = checked;
+        const wrapper = document.getElementById('main-content-wrapper');
+        const grid = document.getElementById('seating-grid');
+        const seats = document.querySelectorAll('.seat');
+
+        if (isFlipped) {
+            // Podium 上方，Grid 下方 (Column Reverse)
+            wrapper.style.flexDirection = 'column-reverse';
+            grid.style.transform = 'rotate(180deg)';
+            seats.forEach(s => s.style.transform = 'rotate(180deg)');
+        } else {
+            wrapper.style.flexDirection = 'column';
+            grid.style.transform = 'none';
+            seats.forEach(s => s.style.transform = 'none');
+        }
+    }
+
     function renderBehaviors() {
         const container = document.getElementById('behavior-btn-container');
         container.innerHTML = '';
@@ -985,11 +1011,15 @@
                 const seatDiv = document.createElement('div');
                 seatDiv.className = 'seat';
                 seatDiv.id = `seat-${seatId}`;
+                
+                // 應用翻轉教室邏輯
+                if (isFlipped) seatDiv.style.transform = 'rotate(180deg)';
+
                 seatDiv.onclick = (e) => handleSeatClick(seatId, e);
 
                 const input = document.createElement('input');
                 input.type = 'text';
-                input.placeholder = `${r}-${c}`;
+                input.placeholder = `${r}-${c}`; // 保留原始提示文字
                 input.value = savedNames[seatId] || '';
                 input.oninput = (e) => saveName(seatId, e.target.value);
                 input.onclick = (e) => e.stopPropagation(); 
@@ -1000,7 +1030,6 @@
                 if (savedCounts[seatId] && savedCounts[seatId] > 0) {
                     badge.innerText = savedCounts[seatId];
                     badge.style.opacity = 1;
-                    // 👨‍🏫 修改：計數標記也對應目前選擇的顏色
                     badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
                 }
 
@@ -1009,6 +1038,10 @@
                 grid.appendChild(seatDiv);
             }
         }
+        
+        // 應用翻轉教室容器邏輯
+        if (isFlipped) grid.style.transform = 'rotate(180deg)';
+        else grid.style.transform = 'none';
     }
 
     function processCSV(inputElement) {
@@ -1054,6 +1087,7 @@
                 }
                 alert(`已將 CSV 中的 ${flatNameList.length} 筆姓名依序填入實驗室座位表 (5x10)`);
             } else {
+                // 完全還原原本的座位分析邏輯 (包含保留空白格子)
                 let rawData = [];
                 lines.forEach(line => {
                     if (line.trim() === '') return;
@@ -1094,6 +1128,7 @@
                 maxCol = 0;
                 compactData.forEach(row => { if(row.length > maxCol) maxCol = row.length; });
                 
+                // 還原：正確根據表格位置給予名字，保留空格的空間感
                 compactData.forEach((row, rIndex) => {
                     row.forEach((cellText, cIndex) => {
                         let name = cellText; 
@@ -1146,7 +1181,7 @@
         const originalBg = seatDiv.style.backgroundColor;
         const behaviorColor = colorMap[currentBehavior] || CUSTOM_COLOR;
         
-        // 👨‍🏫 修改重點：新增「點兩下取消(Undo)」防呆機制
+        // 還原點兩下取消(Undo)防呆機制
         let existingLogIndex = -1;
         for(let i = logs.length - 1; i >= 0; i--) {
             if(logs[i].seatId === seatId && logs[i].behavior === currentBehavior) {
@@ -1156,19 +1191,16 @@
         }
 
         if (existingLogIndex !== -1) {
-            // 觸發取消機制
             logs.splice(existingLogIndex, 1);
             localStorage.setItem('class_logs', JSON.stringify(logs));
             updateSeatCount(seatId, -1);
             updateLogDisplay();
             
-            // 取消視覺特效：閃爍灰色
             seatDiv.style.backgroundColor = '#dcdcdc'; 
             setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
             return;
         }
 
-        // 新增記錄特效
         seatDiv.style.borderColor = behaviorColor;
         seatDiv.style.backgroundColor = behaviorColor + '33'; 
         seatDiv.classList.add('active-click');
@@ -1253,7 +1285,6 @@
         if (current > 0) {
             badge.innerText = current;
             badge.style.opacity = 1;
-            // 計數標記也對應目前選擇的顏色
             badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
         } else {
             badge.style.opacity = 0;
@@ -1300,6 +1331,7 @@
         }
     }
 
+    // 還原原本設計的匯出 Excel 排版格式
     function exportToExcel() {
         if (logs.length === 0) {
             alert("無記錄可匯出");
