@@ -9,10 +9,10 @@
             --bg-color: #f0f2f5;
             --panel-bg: #ffffff;
             --border-color: #dcdcdc;
-            --primary-color: #1a73e8; /* 物理藍 */
+            --primary-color: #1a73e8; 
             --text-color: #333;
-            --c-custom: #d63384; /* 自訂 - 桃紅 */
-            --zoom: 1; /* 新增：畫面縮放比例總開關 */
+            --c-custom: #d63384; 
+            --zoom: 1; 
         }
 
         body {
@@ -46,44 +46,12 @@
             flex-wrap: wrap;
         }
 
-        .title-group {
-            display: flex;
-            align-items: baseline;
-            gap: 20px;
-        }
-
         .main-title {
             margin: 0;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             color: var(--primary-color);
             font-weight: 900;
             letter-spacing: 1px;
-        }
-
-        .mode-switch-group {
-            display: flex;
-            background: #e9ecef;
-            padding: 4px;
-            border-radius: 8px;
-            gap: 5px;
-        }
-
-        .mode-btn {
-            padding: 5px 15px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 1rem;
-            color: #666;
-            background: transparent;
-            transition: all 0.2s;
-        }
-
-        .mode-btn.active {
-            background: white;
-            color: var(--primary-color);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .config-group {
@@ -102,19 +70,11 @@
             font-size: 0.9rem;
         }
 
-        input[type="number"], input[type="text"] {
+        input[type="text"] {
             padding: 5px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-        }
-
-        input[type="number"] { width: 50px; }
-        input[type="text"] { width: 80px; text-align: center; }
-        
-        input:disabled {
-            background-color: #e9ecef;
-            cursor: not-allowed;
-            color: #6c757d;
+            width: 80px; text-align: center;
         }
 
         button {
@@ -130,65 +90,37 @@
 
         .btn-primary { background-color: var(--primary-color); color: white; }
         .btn-primary:hover { background-color: #1557b0; }
-        
         .btn-success { background-color: #218838; color: white; }
         .btn-success:hover { background-color: #1e7e34; }
-        
         .btn-warning { background-color: #ffc107; color: #333; }
         .btn-warning:hover { background-color: #e0a800; }
-
         .btn-info { background-color: #17a2b8; color: white; }
         .btn-info:hover { background-color: #138496; }
-        
-        .btn-secondary { background-color: #6c757d; color: white; }
-        .btn-secondary:hover { background-color: #5a6268; }
-        
         .btn-danger-outline {
-            background-color: transparent;
-            border: 1px solid #dc3545;
-            color: #dc3545;
-            font-size: 0.8rem;
-            padding: 4px 8px;
+            background-color: transparent; border: 1px solid #dc3545; color: #dc3545; font-size: 0.8rem; padding: 4px 8px;
         }
-        .btn-danger-outline:hover {
-            background-color: #dc3545;
-            color: white;
-        }
-
+        .btn-danger-outline:hover { background-color: #dc3545; color: white; }
         .btn-outline { background-color: transparent; border: 1px solid var(--border-color); color: #666; }
         .btn-outline:hover { background-color: #f1f1f1; }
 
         /* 主工作區 */
         main {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
+            flex: 1; display: flex; overflow: hidden;
         }
 
         /* 左側座位表 */
         #classroom-container {
-            flex: 3;
-            padding: 20px;
-            overflow: auto;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            flex: 3; padding: 20px; overflow: auto;
+            display: flex; justify-content: center; align-items: flex-start;
         }
 
         #seating-grid {
             display: grid;
             gap: calc(15px * var(--zoom));
             padding: calc(20px * var(--zoom));
-            background: white;
-            border-radius: 8px;
+            background: white; border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease; /* 加入旋轉過渡效果 */
-        }
-
-        #seating-grid.lab-mode {
-            gap: 0px !important;
-            border: 1px solid #ccc;
-            padding: 0;
+            transition: transform 0.3s ease; 
         }
 
         .seat {
@@ -196,192 +128,87 @@
             height: calc(90px * var(--zoom));
             border: 2px solid #ccc;
             border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            position: relative;
-            background: #ffff99; 
-            transition: transform 0.3s ease, border-color 0.2s; /* 旋轉過渡 */
-            cursor: pointer;
-            overflow: hidden;
-        }
-        
-        .lab-mode .seat {
-            border-radius: 0;
-            border: 1px solid #ccc;
-            margin: 0;
-            box-sizing: border-box; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            position: relative; background: #ffff99; 
+            transition: transform 0.3s ease, border-color 0.2s;
+            cursor: pointer; overflow: hidden;
         }
 
         .seat:hover {
-            /* 在 hover 時保持旋轉狀態下放大 */
-            transform: scale(1.02);
-            border-color: var(--primary-color);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            z-index: 10;
+            transform: scale(1.02); border-color: var(--primary-color);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 10;
         }
+        
+        .seat.empty-seat { background: #e9ecef; cursor: not-allowed; border-color: #ddd;}
+        .seat.empty-seat:hover { transform: none; box-shadow: none; border-color: #ddd;}
 
-        .seat.active-click {
-            animation: pulse 0.3s ease-in-out;
-            z-index: 11;
-        }
+        .seat.active-click { animation: pulse 0.3s ease-in-out; z-index: 11; }
 
-        .seat input {
-            width: 100%;
-            height: 50%;
-            border: none;
-            border-bottom: 1px solid #bbb;
-            text-align: center;
+        .seat-name-display {
             font-size: calc(1.5rem * var(--zoom));
-            background: #e9ecef;
-            color: #333;
-            font-weight: bold;
-            box-sizing: border-box;
-        }
-
-        .seat input:focus {
-            outline: none;
-            background: #dbeafe;
-            border-bottom-color: var(--primary-color);
-        }
-
-        .seat::after {
-            content: "點擊記錄";
-            height: 50%;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: calc(1.125rem * var(--zoom));
-            color: #aaa;
-            pointer-events: none;
+            color: #333; font-weight: bold;
+            text-align: center; width: 100%; padding: 0 5px; box-sizing: border-box;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
 
         .seat-badge {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: #333;
-            color: white;
-            border-radius: 50%;
-            width: calc(36px * var(--zoom));
-            height: calc(36px * var(--zoom));
+            position: absolute; bottom: 5px; right: 5px;
+            background: #333; color: white; border-radius: 50%;
+            width: calc(36px * var(--zoom)); height: calc(36px * var(--zoom));
             font-size: calc(18px * var(--zoom));
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            z-index: 2;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;
         }
 
         /* 右側控制面板 */
         aside {
-            flex: 1;
-            min-width: 320px;
-            max-width: 360px;
-            background-color: var(--panel-bg);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
+            flex: 1; min-width: 320px; max-width: 360px;
+            background-color: var(--panel-bg); border-left: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 20px;
         }
 
         .behavior-selector {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;
         }
 
         .behavior-btn {
-            padding: 8px 4px; 
-            border: 2px solid transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem; 
-            font-weight: bold;
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 8px 4px; border: 2px solid transparent; border-radius: 8px;
+            cursor: pointer; font-size: 1rem; font-weight: bold; text-align: center;
+            position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        
-        .behavior-btn:active {
-            transform: scale(0.95);
-        }
+        .behavior-btn:active { transform: scale(0.95); }
 
-        .behavior-input-wrapper {
-            grid-column: span 3; 
-            display: flex;
-            gap: 5px;
-        }
+        .behavior-input-wrapper { grid-column: span 3; display: flex; gap: 5px; }
         
         #custom-input {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem; 
-            text-align: center;
-            transition: all 0.2s;
-            background: #fff;
+            width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 8px;
+            font-size: 1rem; text-align: center; transition: all 0.2s; background: #fff;
         }
-        
-        #custom-input:focus {
-            border-color: var(--c-custom);
-            outline: none;
-            background: #fff0f6;
-        }
-        
-        #custom-input.active {
-            border-color: var(--c-custom);
-            background: #fff0f6;
-            color: var(--c-custom);
-            font-weight: bold;
-        }
+        #custom-input:focus { border-color: var(--c-custom); outline: none; background: #fff0f6; }
+        #custom-input.active { border-color: var(--c-custom); background: #fff0f6; color: var(--c-custom); font-weight: bold; }
 
         .log-container {
-            flex: 1;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            margin-bottom: 15px;
-            background: #fafafa;
+            flex: 1; overflow-y: auto; border: 1px solid var(--border-color);
+            border-radius: 4px; margin-bottom: 15px; background: #fafafa;
         }
 
         .log-item {
-            padding: 8px 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 0.9rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 0.9rem;
+            display: flex; justify-content: space-between; align-items: center;
             animation: slideIn 0.3s ease-out;
         }
-
         .log-item:hover { background-color: #fff; }
         .log-time { color: #888; margin-right: 8px; font-size: 0.8rem; }
         .log-info { font-weight: 500; }
         .log-tag { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: white; margin-left: 5px; }
+        .log-score-display { font-size: 0.75rem; color: #555; margin-left: 4px; font-weight: bold; }
         .del-btn { color: #ccc; cursor: pointer; padding: 0 5px; }
         .del-btn:hover { color: #dc3545; }
         
-        .log-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .log-header h3 {
-            margin: 0;
-        }
+        .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .log-header h3 { margin: 0; }
 
         @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,0,0,0.2); }
@@ -390,108 +217,71 @@
         }
 
         .podium-marker {
-            width: 100%;
-            text-align: center;
-            margin-top: calc(15px * var(--zoom));
-            margin-bottom: calc(15px * var(--zoom)); /* 增加 margin-bottom，讓翻轉後距離頂部有間隔 */
-            background: #00CC00; 
-            padding: calc(8px * var(--zoom));
-            border-radius: 4px;
-            color: #000000; 
-            font-weight: bold;
-            letter-spacing: 2px;
-            border: 2px solid #ced4da;
-            font-size: calc(1rem * var(--zoom));
+            width: 100%; text-align: center;
+            margin-top: calc(15px * var(--zoom)); margin-bottom: calc(15px * var(--zoom)); 
+            background: #00CC00; padding: calc(8px * var(--zoom)); border-radius: 4px;
+            color: #000000; font-weight: bold; letter-spacing: 2px;
+            border: 2px solid #ced4da; font-size: calc(1rem * var(--zoom));
         }
         
         /* Modal 樣式 */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); display: none;
-            justify-content: center; align-items: center; z-index: 1000;
+            background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000;
         }
         .modal-content {
             background: white; padding: 20px; border-radius: 8px; width: 400px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        .modal-footer {
-            margin-top: 20px; text-align: right;
-        }
+        .modal-footer { margin-top: 20px; text-align: right; }
     </style>
 </head>
 <body>
 
 <header>
     <div class="header-row">
-        <div class="title-group">
-            <h1 class="main-title">學生課堂行為記錄(翻轉教室版)--阿發老師設計</h1>
-            
-            <div class="mode-switch-group">
-                <button id="mode-classroom" class="mode-btn active" onclick="switchMode('classroom')">教室座位</button>
-                <button id="mode-lab" class="mode-btn" onclick="switchMode('lab')">實驗室</button>
-            </div>
-        </div>
+        <h1 class="main-title">學生課堂行為記錄</h1>
         
         <div class="config-group">
-            <span class="config-label">班級代碼(3碼):</span>
-            <input type="text" id="class-code" placeholder="如: 101" maxlength="3" oninput="updateDisplayClassCode(this.value)">
-            <button class="btn-info" onclick="saveClassData()" title="儲存當前座位與名單">存檔</button>
-            <button class="btn-warning" onclick="loadClassData()" title="讀取該代碼的座位表">讀檔</button>
+            <span class="config-label">班級代碼:</span>
+            <input type="text" id="class-code" placeholder="如: 310" maxlength="3" oninput="updateDisplayClassCode(this.value)">
+            <button class="btn-warning" onclick="loadClassData()" title="從雲端讀取 [代碼]座位表 分頁">☁️ 同步雲端座位表</button>
         </div>
     </div>
 
     <div class="header-row">
         <div class="config-group">
-            <span class="config-label">橫(列):</span>
-            <input type="number" id="rows" value="5" min="1" max="15">
-            <span class="config-label">直(排):</span>
-            <input type="number" id="cols" value="6" min="1" max="15">
-            <button class="btn-primary" onclick="manualGenerate()" title="清空並生成新的座位表">生成空座位</button>
-            
-            <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
             <span class="config-label">🔍 縮放:</span>
-            <input type="range" id="zoom-slider" min="0.6" max="1.5" step="0.05" value="1" oninput="document.documentElement.style.setProperty('--zoom', this.value)" style="width: 80px;" title="調整座位表大小">
+            <input type="range" id="zoom-slider" min="0.6" max="1.5" step="0.05" value="1" oninput="document.documentElement.style.setProperty('--zoom', this.value)" style="width: 80px;">
             
-            <!-- 新增的翻轉教室開關 -->
             <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
             <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
                 <input type="checkbox" id="flip-checkbox" onchange="toggleFlip(this.checked)">
                 <span class="config-label">翻轉教室</span>
             </label>
         </div>
-
         <div id="display-class-code" style="color: var(--primary-color); font-size: 1.8rem; font-weight: 900; flex: 1; text-align: center; letter-spacing: 2px;"></div>
-
-        <div class="config-group">
-            <input type="file" id="csv-upload" accept=".csv" style="display:none" onchange="processCSV(this)">
-            <button class="btn-success" onclick="document.getElementById('csv-upload').click()">📂 匯入CSV</button>
-            
-            <button class="btn-secondary" onclick="saveSystemConfig()" title="下載目前所有設定為檔案">備份設定(下載)</button>
-            <input type="file" id="config-upload" accept=".json" style="display:none" onchange="loadSystemConfig(this)">
-            <button class="btn-secondary" onclick="document.getElementById('config-upload').click()" title="從檔案還原設定">還原設定(上傳)</button>
-        </div>
     </div>
 </header>
 
 <main>
     <div id="classroom-container">
-        <!-- 加入 ID main-content-wrapper 及 100% 寬度供翻轉排版使用 -->
         <div id="main-content-wrapper" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
             <div id="seating-grid">
                 <!-- 座位將由 JS 插入 -->
+                <div style="padding: 50px; color:#888; text-align:center;">請輸入班級代碼，並點擊右上角「同步雲端座位表」</div>
             </div>
-            <div class="podium-marker" id="podium">講台 (TEACHER)</div>
+            <div class="podium-marker" id="podium" style="display:none;">講台 (TEACHER)</div>
         </div>
     </div>
 
     <aside>
         <h3 style="display: flex; justify-content: space-between; align-items: center;">
             1. 選擇學生上課行為
-            <button id="sync-behavior-btn" class="btn-info" style="font-size: 1rem; padding: 4px 10px;" onclick="loadBehaviorsFromCloud()" title="從雲端試算表讀取最新的行為設定">🔄 同步雲端設定</button>
+            <button id="sync-behavior-btn" class="btn-info" style="font-size: 1rem; padding: 4px 10px;" onclick="loadBehaviorsFromCloud()" title="從雲端讀取最新的行為與分數">🔄 同步設定</button>
         </h3>
         <div class="behavior-selector" id="behavior-group">
             <div id="behavior-btn-container" style="display: contents;"></div>
-            
             <div class="behavior-input-wrapper">
                 <input type="text" id="custom-input" placeholder="新增(可以直接輸入)..." onfocus="handleCustomFocus(this)" oninput="handleCustomInput(this)">
             </div>
@@ -499,17 +289,15 @@
 
         <div class="log-header">
             <h3>2. 暫時記錄區</h3>
-            <button class="btn-danger-outline" onclick="clearAllLogs()">刪除所有記錄</button>
+            <button class="btn-danger-outline" onclick="clearAllLogs()">清空記錄</button>
         </div>
         
         <div class="log-container" id="log-list"></div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
-             <button class="btn-success" onclick="exportToExcel()">
-                匯出記錄 (.Excel / .xls)
-            </button>
+             <button class="btn-success" onclick="exportToExcel()">匯出記錄 (.xls)</button>
             <div style="display:flex; gap: 5px;">
-                 <button class="btn-outline" style="flex:1" onclick="openCloudConfig()">⚙️ Google Sheet 設定</button>
+                 <button class="btn-outline" style="flex:1" onclick="openCloudConfig()">⚙️ 設定網址</button>
                  <button class="btn-primary" style="flex:2" onclick="uploadToGoogleSheet()">☁️ 上傳到雲端</button>
             </div>
         </div>
@@ -520,13 +308,11 @@
 <div id="cloudModal" class="modal-overlay">
     <div class="modal-content">
         <h3>Google Apps Script 設定</h3>
-        <p style="font-size: 0.9rem; color: #666;">
-            請輸入您部署的 Google Apps Script 網頁應用程式網址 (以 https://script.google.com 開頭)：
-        </p>
+        <p style="font-size: 0.9rem; color: #666;">請輸入您部署的 Google Apps Script 網頁應用程式網址：</p>
         <textarea id="gas-url-input" rows="4" style="width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 5px;"></textarea>
         <div class="modal-footer">
             <button class="btn-outline" onclick="closeCloudConfig()">取消</button>
-            <button class="btn-primary" onclick="saveCloudConfig()">儲存設定</button>
+            <button class="btn-primary" onclick="saveCloudConfig()">儲存</button>
         </div>
     </div>
 </div>
@@ -534,39 +320,35 @@
 <script>
     // --- 全域變數 ---
     let currentBehavior = '';
+    let currentBehaviorScore = 0; 
     let isCustomMode = false;
     let logs = [];
-    let currentMode = 'classroom'; 
     let gasUrl = ''; 
     let colorMap = {}; 
-    let isFlipped = false; // 新增：記錄翻轉狀態
+    let isFlipped = false; 
+    let classSeatData = { rows: 0, cols: 0, names: {} }; // 儲存當前班級的座位結構
     const CUSTOM_COLOR = '#d63384';
 
     let behaviorsList = [
-        { name: '認真聽講', value: '認真聽講', color: '#0000FF' },
-        { name: '積極搶答', value: '搶答', color: '#0000FF' },
-        { name: '大聲問好', value: '大聲問好', color: '#0000FF' },
-        { name: '認真筆記', value: '認真筆記', color: '#0000FF' },
-        { name: '睡覺', value: '睡覺', color: '#FF0000' },
-        { name: '聊天', value: '聊天', color: '#FF0000' },
-        { name: '滑手機', value: '滑手機', color: '#FF0000' },
-        { name: '分心/發呆', value: '分心', color: '#FF0000' },
-        { name: '換座位', value: '換座位', color: '#FF0000' }
+        { name: '認真聽講', value: '認真聽講', color: '#0000FF', score: 1 },
+        { name: '積極搶答', value: '搶答', color: '#0000FF', score: 1 },
+        { name: '睡覺', value: '睡覺', color: '#FF0000', score: -2 },
+        { name: '聊天', value: '聊天', color: '#FF0000', score: -1 }
     ];
 
     window.onload = function() {
-        loadFromStorage();
         gasUrl = localStorage.getItem('gas_url') || '';
-        updateDisplayClassCode(document.getElementById('class-code').value);
+        const savedCode = localStorage.getItem('current_class_code') || '';
+        document.getElementById('class-code').value = savedCode;
+        updateDisplayClassCode(savedCode);
         
         const savedBehaviors = localStorage.getItem('custom_behaviors');
-        if (savedBehaviors) {
-            behaviorsList = JSON.parse(savedBehaviors);
-        }
+        if (savedBehaviors) behaviorsList = JSON.parse(savedBehaviors);
         renderBehaviors();
+
+        loadFromStorage();
     };
 
-    // --- 新增：翻轉教室邏輯 ---
     function toggleFlip(checked) {
         isFlipped = checked;
         const wrapper = document.getElementById('main-content-wrapper');
@@ -574,7 +356,6 @@
         const seats = document.querySelectorAll('.seat');
 
         if (isFlipped) {
-            // Podium 上方，Grid 下方 (Column Reverse)
             wrapper.style.flexDirection = 'column-reverse';
             grid.style.transform = 'rotate(180deg)';
             seats.forEach(s => s.style.transform = 'rotate(180deg)');
@@ -590,7 +371,6 @@
         container.innerHTML = '';
         colorMap = {}; 
         
-        // 藍前紅後排序
         const sortedBehaviors = [...behaviorsList].sort((a, b) => {
             const getWeight = (c) => {
                 const color = String(c).toUpperCase();
@@ -611,6 +391,7 @@
             btn.onclick = function() {
                 isCustomMode = false;
                 currentBehavior = b.value;
+                currentBehaviorScore = b.score || 0; 
                 document.getElementById('custom-input').classList.remove('active');
                 
                 document.querySelectorAll('.behavior-btn').forEach(el => {
@@ -626,26 +407,19 @@
                     }
                 });
             };
-            
             container.appendChild(btn);
         });
 
-        // 預設觸發點擊第一個
         const firstBtn = container.querySelector('.behavior-btn');
         if (firstBtn) firstBtn.click();
     }
 
     function loadBehaviorsFromCloud() {
-        if (!gasUrl) {
-            alert("請先在右下方設定 Google Sheet (GAS) 網址！");
-            openCloudConfig();
-            return;
-        }
+        if (!gasUrl) { alert("請先設定 GAS 網址！"); openCloudConfig(); return; }
         
         const btn = document.getElementById('sync-behavior-btn');
         const originalText = btn.innerText;
-        btn.innerText = "⏳ 載入中...";
-        btn.disabled = true;
+        btn.innerText = "⏳載入中"; btn.disabled = true;
 
         fetch(gasUrl, {
             method: 'POST',
@@ -655,22 +429,14 @@
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                behaviorsList = data.behaviors;
+                behaviorsList = data.behaviors; 
                 localStorage.setItem('custom_behaviors', JSON.stringify(behaviorsList));
                 renderBehaviors();
                 alert("✅ 成功從雲端同步行為設定！");
-            } else {
-                alert("同步失敗：" + (data.error || "未知錯誤"));
-            }
+            } else alert("同步失敗：" + (data.error || ""));
         })
-        .catch(err => {
-            console.error(err);
-            alert("連線錯誤，無法從雲端同步設定。");
-        })
-        .finally(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        });
+        .catch(err => alert("連線錯誤。"))
+        .finally(() => { btn.innerText = originalText; btn.disabled = false; });
     }
 
     function handleCustomFocus(input) {
@@ -682,63 +448,19 @@
             btn.style.borderColor = baseColor + '55';
         });
         input.classList.add('active');
-        if(input.value.trim()) {
-            currentBehavior = input.value.trim();
-        } else {
-            currentBehavior = "自訂記錄";
-        }
+        if(input.value.trim()) currentBehavior = input.value.trim();
+        else currentBehavior = "自訂記錄";
+        currentBehaviorScore = 0; 
     }
 
     function updateDisplayClassCode(val) {
         const display = document.getElementById('display-class-code');
         if (val && val.trim() !== '') {
             display.innerText = `班級：${val.trim()}`;
+            localStorage.setItem('current_class_code', val.trim());
         } else {
             display.innerText = '';
         }
-    }
-
-    function saveSystemConfig() {
-        const backupData = {
-            timestamp: new Date().toISOString(),
-            localStorage: JSON.stringify(localStorage)
-        };
-        const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `座位表系統備份_${new Date().toISOString().slice(0,10)}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    function loadSystemConfig(input) {
-        const file = input.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const data = JSON.parse(e.target.result);
-                if(data.localStorage) {
-                    if(confirm("確定要還原系統設定嗎？目前的資料將被覆蓋。")) {
-                        const storedData = JSON.parse(data.localStorage);
-                        localStorage.clear();
-                        for (let key in storedData) {
-                            localStorage.setItem(key, storedData[key]);
-                        }
-                        alert("還原成功！頁面將重新整理。");
-                        location.reload();
-                    }
-                } else {
-                    alert("無效的備份檔案格式。");
-                }
-            } catch(err) {
-                alert("讀取檔案失敗：" + err);
-            }
-            input.value = ''; 
-        };
-        reader.readAsText(file);
     }
 
     function openCloudConfig() {
@@ -746,9 +468,7 @@
         document.getElementById('gas-url-input').value = gasUrl;
     }
     
-    function closeCloudConfig() {
-        document.getElementById('cloudModal').style.display = 'none';
-    }
+    function closeCloudConfig() { document.getElementById('cloudModal').style.display = 'none'; }
     
     function saveCloudConfig() {
         const url = document.getElementById('gas-url-input').value.trim();
@@ -757,41 +477,20 @@
             localStorage.setItem('gas_url', gasUrl);
             alert("網址已儲存！");
             closeCloudConfig();
-        } else {
-            alert("請輸入網址");
-        }
+        } else alert("請輸入網址");
     }
 
     function uploadToGoogleSheet() {
-        if (!gasUrl) {
-            alert("請先設定 Google Sheet (GAS) 網址！");
-            openCloudConfig();
-            return;
-        }
-        
-        if (logs.length === 0) {
-            alert("目前沒有任何記錄可上傳。");
-            return;
-        }
+        if (!gasUrl) { alert("請先設定 GAS 網址！"); openCloudConfig(); return; }
+        if (logs.length === 0) { alert("目前沒有記錄可上傳。"); return; }
         
         let classCode = document.getElementById('class-code').value.trim();
-        if (!classCode) {
-            classCode = prompt("您尚未輸入班級代碼，請輸入代碼 (例如 101) 以便分類分頁：", "未分類班級");
-            if (!classCode) return;
-            document.getElementById('class-code').value = classCode;
-            updateDisplayClassCode(classCode); 
-        }
+        if (!classCode) { alert("請輸入班級代碼"); return; }
         
-        const payload = {
-            action: "log", 
-            classCode: classCode,
-            logs: logs
-        };
-
+        const payload = { action: "log", classCode: classCode, logs: logs };
         const btn = document.querySelector('button[onclick="uploadToGoogleSheet()"]');
         const originalText = btn.innerText;
-        btn.innerText = "上傳中...";
-        btn.disabled = true;
+        btn.innerText = "上傳中..."; btn.disabled = true;
 
         fetch(gasUrl, {
             method: 'POST',
@@ -801,387 +500,119 @@
         .then(response => response.json())
         .then(data => {
             if(data.result === 'success') {
-                alert(`上傳成功！共 ${data.count} 筆記錄已寫入 Google Sheet。\n\n系統已自動為您清除目前的觀測記錄。`);
+                alert(`上傳成功！共 ${data.count} 筆記錄寫入。\n記錄已自動清空。`);
                 clearAllLogs(true); 
-            } else {
-                alert("上傳失敗：" + data.error);
-            }
+            } else alert("上傳失敗：" + data.error);
         })
-        .catch(error => {
-            console.error('Error:', error);
-            alert("上傳發生錯誤，請檢查網址是否正確，或 Google Script 權限是否設為「所有人」。");
-        })
-        .finally(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        });
-    }
-
-    function saveClassData() {
-        const code = document.getElementById('class-code').value.trim();
-        if (!code || code.length !== 3 || isNaN(code)) {
-            alert('請輸入 3 位數字的班級代碼 (例如: 101, 205)');
-            return;
-        }
-
-        const dataToSave = {
-            rows: document.getElementById('rows').value,
-            cols: document.getElementById('cols').value,
-            names: JSON.parse(localStorage.getItem(getKey('student_names')) || '{}')
-        };
-
-        const key = `class_setup_${code}_${currentMode}`;
-        localStorage.setItem(key, JSON.stringify(dataToSave)); 
-        
-        if (!gasUrl) {
-            alert(`已儲存於本機！\n(提示：若要啟用雲端跨裝置存檔，請在右下方設定 Google Sheet 網址)`);
-            return;
-        }
-
-        const btn = document.querySelector('.btn-info'); 
-        const originalText = btn.innerText;
-        btn.innerText = "雲端存檔中...";
-        btn.disabled = true;
-
-        fetch(gasUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: "saveSeat", 
-                classCode: code,
-                mode: currentMode,
-                seatData: dataToSave
-            }),
-            headers: { "Content-Type": "text/plain;charset=utf-8" }
-        })
-        .then(res => res.json())
-        .then(data => {
-            if(data.result === 'success') alert(`✅ 班級 [${code}] 座位表已備份至雲端！`);
-            else alert("雲端存檔失敗：" + data.error);
-        })
-        .catch(err => {
-            console.error(err);
-            alert("連線錯誤，目前僅儲存在本機。");
-        })
-        .finally(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        });
+        .catch(error => alert("連線錯誤，無法上傳。"))
+        .finally(() => { btn.innerText = originalText; btn.disabled = false; });
     }
 
     function loadClassData() {
         const code = document.getElementById('class-code').value.trim();
         if (!code) { alert('請輸入班級代碼'); return; }
-
-        if (!gasUrl) {
-            const key = `class_setup_${code}_${currentMode}`;
-            const savedDataStr = localStorage.getItem(key);
-            if (!savedDataStr) {
-                alert(`本機找不到代碼 [${code}] 的存檔。`);
-                return;
-            }
-            applyLoadedData(code, JSON.parse(savedDataStr));
-            return;
-        }
+        if (!gasUrl) { alert('請先設定右下方「⚙️設定網址」'); return; }
 
         const btn = document.querySelector('.btn-warning'); 
         const originalText = btn.innerText;
-        btn.innerText = "雲端讀取中...";
-        btn.disabled = true;
+        btn.innerText = "雲端讀取中..."; btn.disabled = true;
 
         fetch(gasUrl, {
             method: 'POST',
-            body: JSON.stringify({
-                action: "loadSeat", 
-                classCode: code,
-                mode: currentMode
-            }),
+            body: JSON.stringify({ action: "loadSeat", classCode: code }),
             headers: { "Content-Type": "text/plain;charset=utf-8" }
         })
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                alert(`✅ 成功從雲端讀取座位表！`);
-                const key = `class_setup_${code}_${currentMode}`;
-                localStorage.setItem(key, JSON.stringify(data.seatData));
-                applyLoadedData(code, data.seatData);
+                alert(`✅ 成功讀取 [${code}座位表] 分頁！`);
+                classSeatData = data.seatData;
+                localStorage.setItem(`class_seatData_${code}`, JSON.stringify(classSeatData));
+                
+                if(confirm(`是否要清空目前的上課計數(歸零)？\n(建議：若為新的一節課請按確定)`)) {
+                    localStorage.setItem(`student_counts_${code}`, '{}');
+                    logs = []; updateLogDisplay(); saveLogsToStorage();
+                }
+                generateSeats();
             } else {
-                alert("讀檔失敗：" + (data.error || "找不到檔案"));
+                alert("讀檔失敗：" + (data.error || "找不到分頁"));
             }
         })
-        .catch(err => {
-            console.error(err);
-            alert("連線錯誤，無法從雲端讀取。");
-        })
-        .finally(() => {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        });
+        .catch(err => alert("網路連線錯誤！"))
+        .finally(() => { btn.innerText = originalText; btn.disabled = false; });
     }
 
-    function applyLoadedData(code, data) {
-        if(confirm(`確定要套用班級 [${code}] 的【${currentMode === 'classroom' ? '教室' : '實驗室'}】座位表嗎？`)) {
-            document.getElementById('rows').value = data.rows;
-            document.getElementById('cols').value = data.cols;
-            localStorage.setItem(getKey('student_names'), JSON.stringify(data.names));
-            localStorage.setItem(getKey('student_counts'), '{}');
-            logs = [];
-            updateLogDisplay();
-            generateSeats(data.rows, data.cols, true);
-        }
-    }
-
-    function switchMode(mode) {
-        if (currentMode === mode) return; 
-        currentMode = mode;
-        
-        document.getElementById('mode-classroom').classList.remove('active');
-        document.getElementById('mode-lab').classList.remove('active');
-        document.getElementById(`mode-${mode}`).classList.add('active');
-        
+    function generateSeats() {
         const grid = document.getElementById('seating-grid');
         const podium = document.getElementById('podium');
-
-        if (mode === 'lab') {
-            grid.classList.add('lab-mode');
-            podium.style.display = 'none'; 
-        } else {
-            grid.classList.remove('lab-mode');
-            podium.style.display = 'block'; 
+        
+        if (!classSeatData || classSeatData.rows === 0) {
+            grid.innerHTML = '<div style="padding: 50px; color:#888; text-align:center;">請輸入班級代碼，並點擊右上角「同步雲端座位表」</div>';
+            podium.style.display = 'none';
+            return;
         }
 
-        const rowInput = document.getElementById('rows');
-        const colInput = document.getElementById('cols');
-        
-        if (mode === 'lab') {
-            rowInput.value = 5;
-            colInput.value = 10;
-            rowInput.disabled = true;
-            colInput.disabled = true;
-        } else {
-            rowInput.disabled = false;
-            colInput.disabled = false;
-            const savedR = localStorage.getItem('pref_rows_classroom') || 5;
-            const savedC = localStorage.getItem('pref_cols_classroom') || 6;
-            rowInput.value = savedR;
-            colInput.value = savedC;
-        }
-        loadFromStorage();
-    }
-
-    function getKey(prefix) {
-        return `${prefix}_${currentMode}`;
-    }
-
-    function manualGenerate() {
-        if(!confirm(`確定要重新生成【${currentMode === 'classroom' ? '教室' : '實驗室'}】座位嗎？\n這將會「清空」目前模式座位上的所有名字與記錄！`)) return;
-        
-        if(currentMode === 'lab') {
-            document.getElementById('rows').value = 5;
-            document.getElementById('cols').value = 10;
-        }
-
-        const rows = document.getElementById('rows').value;
-        const cols = document.getElementById('cols').value;
-        
-        localStorage.setItem(getKey('student_names'), '{}');
-        localStorage.setItem(getKey('student_counts'), '{}');
-        logs = []; 
-        updateLogDisplay();
-        
-        generateSeats(rows, cols, false);
-    }
-
-    function generateSeats(rows, cols, keepData = true) {
-        const grid = document.getElementById('seating-grid');
-        
-        if (currentMode === 'classroom') {
-            localStorage.setItem(getKey('pref_rows'), rows);
-            localStorage.setItem(getKey('pref_cols'), cols);
-        }
+        const rows = classSeatData.rows;
+        const cols = classSeatData.cols;
+        const names = classSeatData.names;
+        const code = document.getElementById('class-code').value.trim();
+        const savedCounts = JSON.parse(localStorage.getItem(`student_counts_${code}`) || '{}');
 
         grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
         grid.innerHTML = '';
-
-        const savedNames = keepData ? JSON.parse(localStorage.getItem(getKey('student_names')) || '{}') : {};
-        const savedCounts = keepData ? JSON.parse(localStorage.getItem(getKey('student_counts')) || '{}') : {};
+        podium.style.display = 'block';
 
         for (let r = 1; r <= rows; r++) {
             for (let c = 1; c <= cols; c++) {
                 const seatId = `r${r}-c${c}`;
+                const name = names[seatId] || '';
+                
                 const seatDiv = document.createElement('div');
                 seatDiv.className = 'seat';
                 seatDiv.id = `seat-${seatId}`;
                 
-                // 應用翻轉教室邏輯
                 if (isFlipped) seatDiv.style.transform = 'rotate(180deg)';
 
-                seatDiv.onclick = (e) => handleSeatClick(seatId, e);
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.placeholder = `${r}-${c}`; // 保留原始提示文字
-                input.value = savedNames[seatId] || '';
-                input.oninput = (e) => saveName(seatId, e.target.value);
-                input.onclick = (e) => e.stopPropagation(); 
-
-                const badge = document.createElement('badge');
-                badge.className = 'seat-badge';
-                badge.id = `badge-${seatId}`;
-                if (savedCounts[seatId] && savedCounts[seatId] > 0) {
-                    badge.innerText = savedCounts[seatId];
-                    badge.style.opacity = 1;
-                    badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
+                if (name) {
+                    seatDiv.onclick = (e) => handleSeatClick(seatId, name, e);
+                    const nameSpan = document.createElement('div');
+                    nameSpan.className = 'seat-name-display';
+                    nameSpan.innerText = name;
+                    
+                    const badge = document.createElement('div');
+                    badge.className = 'seat-badge';
+                    badge.id = `badge-${seatId}`;
+                    if (savedCounts[seatId] && savedCounts[seatId] > 0) {
+                        badge.innerText = savedCounts[seatId];
+                        badge.style.opacity = 1;
+                        badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
+                    }
+                    seatDiv.appendChild(nameSpan);
+                    seatDiv.appendChild(badge);
+                } else {
+                    seatDiv.classList.add('empty-seat');
                 }
-
-                seatDiv.appendChild(input);
-                seatDiv.appendChild(badge);
                 grid.appendChild(seatDiv);
             }
         }
         
-        // 應用翻轉教室容器邏輯
         if (isFlipped) grid.style.transform = 'rotate(180deg)';
         else grid.style.transform = 'none';
-    }
-
-    function processCSV(inputElement) {
-        const file = inputElement.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const text = e.target.result;
-            const lines = text.split(/\r\n|\n/);
-            
-            let flatNameList = [];
-
-            lines.forEach(line => {
-                if(line.trim() === '') return;
-                const cells = line.split(',');
-                cells.forEach(cell => {
-                    let name = cell.trim().replace(/^"|"$/g, '');
-                    if (name && name !== '(X)' && name !== '講桌') {
-                        flatNameList.push(name);
-                    }
-                });
-            });
-
-            if (flatNameList.length === 0) { alert('檔案內容為空或無有效姓名'); return; }
-
-            let maxRow = 0;
-            let maxCol = 0;
-            let newNames = {};
-
-            if (currentMode === 'lab') {
-                maxRow = 5;
-                maxCol = 10;
-                let listIndex = 0;
-                for (let r = 1; r <= maxRow; r++) {
-                    for (let c = 1; c <= maxCol; c++) {
-                        if (listIndex < flatNameList.length) {
-                            const seatId = `r${r}-c${c}`;
-                            newNames[seatId] = flatNameList[listIndex];
-                            listIndex++;
-                        }
-                    }
-                }
-                alert(`已將 CSV 中的 ${flatNameList.length} 筆姓名依序填入實驗室座位表 (5x10)`);
-            } else {
-                // 完全還原原本的座位分析邏輯 (包含保留空白格子)
-                let rawData = [];
-                lines.forEach(line => {
-                    if (line.trim() === '') return;
-                    let cells = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-                    if (cells.every(c => c === '')) return;
-                    rawData.push(cells);
-                });
-
-                if (rawData.length === 0) { alert('無有效資料'); return; }
-
-                let rawMaxCol = 0;
-                rawData.forEach(row => { if(row.length > rawMaxCol) rawMaxCol = row.length; });
-                
-                let emptyColIndices = new Set();
-                for (let c = 0; c < rawMaxCol; c++) {
-                    let isColEmpty = true;
-                    for (let r = 0; r < rawData.length; r++) {
-                        if (rawData[r][c] && rawData[r][c] !== '') {
-                            isColEmpty = false;
-                            break;
-                        }
-                    }
-                    if (isColEmpty) emptyColIndices.add(c);
-                }
-
-                let compactData = [];
-                rawData.forEach(row => {
-                    let newRow = [];
-                    for (let c = 0; c < row.length; c++) {
-                        if (!emptyColIndices.has(c)) {
-                            newRow.push(row[c]);
-                        }
-                    }
-                    compactData.push(newRow);
-                });
-
-                maxRow = compactData.length;
-                maxCol = 0;
-                compactData.forEach(row => { if(row.length > maxCol) maxCol = row.length; });
-                
-                // 還原：正確根據表格位置給予名字，保留空格的空間感
-                compactData.forEach((row, rIndex) => {
-                    row.forEach((cellText, cIndex) => {
-                        let name = cellText; 
-                        if (name) {
-                            const seatId = `r${rIndex+1}-c${cIndex+1}`;
-                            newNames[seatId] = name;
-                        }
-                    });
-                });
-                
-                document.getElementById('rows').value = maxRow;
-                document.getElementById('cols').value = maxCol;
-                
-                const removedCount = emptyColIndices.size;
-                let msg = `已匯入教室座位表: ${maxRow} 列 x ${maxCol} 排`;
-                if (removedCount > 0) {
-                    msg += ` (已自動移除 ${removedCount} 個空白欄位)`;
-                }
-                alert(msg);
-            }
-
-            localStorage.setItem(getKey('student_names'), JSON.stringify(newNames));
-            if(confirm(`匯入成功！是否要同時清除【${currentMode === 'classroom' ? '教室' : '實驗室'}】模式的舊上課計數？(建議選確定)`)) {
-                localStorage.setItem(getKey('student_counts'), '{}');
-            }
-            generateSeats(maxRow, maxCol, true);
-            inputElement.value = '';
-        };
-        reader.readAsText(file, 'UTF-8');
     }
 
     function handleCustomInput(input) {
         if(isCustomMode) {
             const val = input.value.trim();
             currentBehavior = val ? val : "自訂記錄";
+            currentBehaviorScore = 0; 
         }
     }
 
-    function handleSeatClick(seatId, event) {
-        const input = document.querySelector(`#seat-${seatId} input`);
-        const name = input.value.trim();
-
-        if (!name) {
-            alert("該座位無人或未輸入姓名");
-            input.focus();
-            return;
-        }
-
+    function handleSeatClick(seatId, name, event) {
         const seatDiv = document.getElementById(`seat-${seatId}`);
         const originalBg = seatDiv.style.backgroundColor;
         const behaviorColor = colorMap[currentBehavior] || CUSTOM_COLOR;
         
-        // 還原點兩下取消(Undo)防呆機制
         let existingLogIndex = -1;
         for(let i = logs.length - 1; i >= 0; i--) {
             if(logs[i].seatId === seatId && logs[i].behavior === currentBehavior) {
@@ -1192,10 +623,9 @@
 
         if (existingLogIndex !== -1) {
             logs.splice(existingLogIndex, 1);
-            localStorage.setItem('class_logs', JSON.stringify(logs));
+            saveLogsToStorage();
             updateSeatCount(seatId, -1);
             updateLogDisplay();
-            
             seatDiv.style.backgroundColor = '#dcdcdc'; 
             setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
             return;
@@ -1212,17 +642,14 @@
 
         const timestamp = new Date();
         const timeString = timestamp.toLocaleTimeString('zh-TW', { hour12: false });
-        
-        const year = timestamp.getFullYear();
-        const month = String(timestamp.getMonth() + 1).padStart(2, '0'); 
-        const day = String(timestamp.getDate()).padStart(2, '0');
-        const localFullTime = `${year}-${month}-${day} ${timeString}`;
+        const localFullTime = `${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')} ${timeString}`;
         
         const logEntry = {
             id: Date.now(),
             seatId: seatId,
             name: name,
             behavior: currentBehavior,
+            score: currentBehaviorScore, 
             time: timeString,
             fullTime: localFullTime 
         };
@@ -1240,11 +667,18 @@
             const item = document.createElement('div');
             item.className = 'log-item';
             const color = colorMap[log.behavior] || CUSTOM_COLOR;
+            
+            let scoreText = '';
+            if (log.score !== undefined && log.score !== 0) {
+                scoreText = log.score > 0 ? `(+${log.score})` : `(${log.score})`;
+            }
+
             item.innerHTML = `
                 <div style="display:flex; align-items:center;">
                     <span class="log-time">[${log.time}]</span>
                     <span class="log-info">${log.name}</span>
                     <span class="log-tag" style="background-color: ${color}">${log.behavior}</span>
+                    <span class="log-score-display">${scoreText}</span>
                 </div>
                 <div class="del-btn" onclick="deleteLog(${log.id}, '${log.seatId}')" title="刪除">✕</div>
             `;
@@ -1260,11 +694,12 @@
     }
     
     function clearAllLogs(skipConfirm = false) {
-        if(!skipConfirm && !confirm("確定要刪除「所有」觀測記錄嗎？\n這將會把所有學生的行為計數歸零！")) return;
+        if(!skipConfirm && !confirm("確定要清空「所有」暫存的記錄嗎？\n這會將座位上的計數歸零！")) return;
         
+        const code = document.getElementById('class-code').value.trim();
         logs = [];
         updateLogDisplay();
-        localStorage.setItem(getKey('student_counts'), '{}');
+        localStorage.setItem(`student_counts_${code}`, '{}');
         const badges = document.querySelectorAll('.seat-badge');
         badges.forEach(badge => {
             badge.style.opacity = 0;
@@ -1274,27 +709,24 @@
     }
 
     function updateSeatCount(seatId, delta) {
-        let counts = JSON.parse(localStorage.getItem(getKey('student_counts')) || '{}');
+        const code = document.getElementById('class-code').value.trim();
+        let counts = JSON.parse(localStorage.getItem(`student_counts_${code}`) || '{}');
         let current = counts[seatId] || 0;
         current += delta;
         if (current < 0) current = 0;
         counts[seatId] = current;
-        localStorage.setItem(getKey('student_counts'), JSON.stringify(counts));
+        localStorage.setItem(`student_counts_${code}`, JSON.stringify(counts));
 
         const badge = document.getElementById(`badge-${seatId}`);
-        if (current > 0) {
-            badge.innerText = current;
-            badge.style.opacity = 1;
-            badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
-        } else {
-            badge.style.opacity = 0;
+        if(badge) {
+            if (current > 0) {
+                badge.innerText = current;
+                badge.style.opacity = 1;
+                badge.style.backgroundColor = colorMap[currentBehavior] || '#dc3545';
+            } else {
+                badge.style.opacity = 0;
+            }
         }
-    }
-
-    function saveName(seatId, name) {
-        let names = JSON.parse(localStorage.getItem(getKey('student_names')) || '{}');
-        names[seatId] = name;
-        localStorage.setItem(getKey('student_names'), JSON.stringify(names));
     }
 
     function saveLogsToStorage() {
@@ -1307,97 +739,43 @@
             logs = JSON.parse(savedLogs);
             updateLogDisplay();
         }
-        
-        if (currentMode === 'lab') {
-            document.getElementById('rows').value = 5;
-            document.getElementById('cols').value = 10;
-            document.getElementById('rows').disabled = true;
-            document.getElementById('cols').disabled = true;
-            const grid = document.getElementById('seating-grid');
-            grid.classList.add('lab-mode');
-            document.getElementById('podium').style.display = 'none';
-            generateSeats(5, 10, true);
-        } else {
-            const r = localStorage.getItem('pref_rows_classroom') || 5;
-            const c = localStorage.getItem('pref_cols_classroom') || 6;
-            document.getElementById('rows').value = r;
-            document.getElementById('cols').value = c;
-            document.getElementById('rows').disabled = false;
-            document.getElementById('cols').disabled = false;
-            const grid = document.getElementById('seating-grid');
-            grid.classList.remove('lab-mode');
-            document.getElementById('podium').style.display = 'block';
-            generateSeats(r, c, true);
+        const code = document.getElementById('class-code').value.trim();
+        if (code) {
+            const savedData = localStorage.getItem(`class_seatData_${code}`);
+            if (savedData) {
+                classSeatData = JSON.parse(savedData);
+                generateSeats();
+            }
         }
     }
 
-    // 還原原本設計的匯出 Excel 排版格式
     function exportToExcel() {
-        if (logs.length === 0) {
-            alert("無記錄可匯出");
-            return;
-        }
+        if (logs.length === 0) { alert("無記錄可匯出"); return; }
         
-        let classCode = document.getElementById('class-code').value.trim();
-        if(!classCode) classCode = "未命名班級";
+        let classCode = document.getElementById('class-code').value.trim() || "未命名班級";
 
         let tableHTML = `
-            <html xmlns:o="urn:schemas-microsoft-com:office:office" 
-                  xmlns:x="urn:schemas-microsoft-com:office:excel" 
-                  xmlns="http://www.w3.org/TR/REC-html40">
-            <head>
-                <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-                <style>
-                    table { border-collapse: collapse; }
-                    td, th { 
-                        border: 1px solid black; 
-                        font-size: 12pt; 
-                        text-align: center; 
-                        vertical-align: middle;
-                        height: 35px;
-                    }
-                </style>
-            </head>
-            <body>
-                <table>
-                    <col width="100">
-                    <col width="250">
-                    <col width="150">
-                    <col width="200">
-                    <tr>
-                        <th style="background-color: #f0f0f0;">序號</th>
-                        <th style="background-color: #f0f0f0;">發生時間</th>
-                        <th style="background-color: #f0f0f0;">姓名</th>
-                        <th style="background-color: #f0f0f0;">行為類別</th>
-                    </tr>
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style>table{border-collapse:collapse;} td,th{border:1px solid black;font-size:12pt;text-align:center;height:35px;}</style></head>
+            <body><table><col width="100"><col width="250"><col width="150"><col width="200"><col width="100">
+            <tr><th style="background-color:#f0f0f0;">序號</th><th style="background-color:#f0f0f0;">發生時間</th><th style="background-color:#f0f0f0;">姓名</th><th style="background-color:#f0f0f0;">行為類別</th><th style="background-color:#f0f0f0;">得分</th></tr>
         `;
 
         logs.forEach((log, index) => {
             const cleanName = log.name.replace(/,/g, ''); 
-            tableHTML += `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${log.fullTime}</td>
-                    <td>${cleanName}</td>
-                    <td>${log.behavior}</td>
-                </tr>
-            `;
+            const scoreText = (log.score !== undefined) ? log.score : '';
+            tableHTML += `<tr><td>${index + 1}</td><td>${log.fullTime}</td><td>${cleanName}</td><td>${log.behavior}</td><td>${scoreText}</td></tr>`;
         });
-
         tableHTML += `</table></body></html>`;
 
         const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        
         const now = new Date();
         const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        
         link.download = `${classCode}_${dateStr}_上課記錄.xls`; 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 </script>
 </body>
