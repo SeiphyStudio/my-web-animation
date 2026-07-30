@@ -60,13 +60,16 @@
 
         .seat-name {
             font-size: calc(1.8rem * var(--zoom)); font-weight: bold; color: #333;
-            width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;
-            transition: font-size 0.2s ease; /* 加入字體縮放的動畫效果 */
+            width: 100%; text-align: center; 
+            /* 移除 white-space: nowrap，讓它可以換行 */
+            overflow: hidden; padding: 0 4px;
+            transition: font-size 0.2s ease;
+            line-height: 1.1; /* 縮小行高，讓換行後的上下間距緊湊一點 */
         }
         
-        /* 切換為姓名模式時的縮小字體 */
+        /* 切換為姓名模式時的字體大小 (原本是 1.05rem，現在放大到 1.5rem 左右) */
         .seat-name.mode-name {
-            font-size: calc(1.05rem * var(--zoom)); 
+            font-size: calc(1.5rem * var(--zoom)); 
         }
 
         .seat-badge {
@@ -77,7 +80,6 @@
             opacity: 0; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        /* 改寫講台區塊為彈性佈局，容納開關按鈕 */
         .podium-marker {
             width: 80%; margin-top: calc(15px * var(--zoom));
             background: #00CC00; padding: calc(6px * var(--zoom)) calc(10px * var(--zoom)); border-radius: calc(4px * var(--zoom));
@@ -87,7 +89,6 @@
         
         .podium-text { flex: 1; text-align: center; }
         
-        /* 座號/姓名 切換按鈕樣式 */
         .display-toggle-btn {
             background: rgba(255,255,255,0.8); border: none; border-radius: 4px;
             padding: 4px 8px; font-size: calc(0.85rem * var(--zoom)); font-weight: bold; color: #000;
@@ -237,7 +238,7 @@
             gasUrl = localStorage.getItem('gas_url') || '';
             document.getElementById('gas-url').value = gasUrl;
             
-            showNameMode = localStorage.getItem('show_name_mode') === 'true'; // 讀取切換狀態
+            showNameMode = localStorage.getItem('show_name_mode') === 'true'; 
             
             const savedBehaviors = localStorage.getItem('custom_behaviors');
             if (savedBehaviors) behaviorsList = JSON.parse(savedBehaviors);
@@ -354,13 +355,19 @@
             }
         }
 
-        // 擷取顯示文字 (判斷要顯示座號還是姓名)
+        // 擷取顯示文字 (判斷要顯示座號還是姓名，並處理換行)
         function getDisplayText(fullName) {
             if (!fullName) return '';
             if (showNameMode) {
                 // 姓名模式：移除開頭的數字與空白
-                const nameOnly = fullName.replace(/^\d+\s*/, '');
-                return nameOnly || fullName; 
+                let nameOnly = fullName.replace(/^\d+\s*/, '');
+                if (!nameOnly) nameOnly = fullName; // 防呆：如果原本就沒名字，顯示原字串
+                
+                // 處理換行：如果是常見的 2~4 字中文名，在第一個字(姓氏)後插入 <br>
+                if (nameOnly.length >= 2 && nameOnly.length <= 4) {
+                    return nameOnly.charAt(0) + '<br>' + nameOnly.substring(1);
+                }
+                return nameOnly;
             } else {
                 // 座號模式：抓取開頭數字
                 const match = fullName.match(/^\d+/);
@@ -373,16 +380,16 @@
             showNameMode = !showNameMode;
             localStorage.setItem('show_name_mode', showNameMode);
             
-            // 更新畫面上所有座位的文字與字體大小
             if (classSeatData && classSeatData.names) {
                 for (let seatId in classSeatData.names) {
                     const nameSpan = document.querySelector(`#seat-${seatId} .seat-name`);
                     if (nameSpan) {
-                        nameSpan.innerText = getDisplayText(classSeatData.names[seatId]);
+                        // 使用 innerHTML 才能渲染 <br> 標籤
+                        nameSpan.innerHTML = getDisplayText(classSeatData.names[seatId]);
                         if (showNameMode) {
-                            nameSpan.classList.add('mode-name'); // 套用小字體
+                            nameSpan.classList.add('mode-name'); 
                         } else {
-                            nameSpan.classList.remove('mode-name'); // 恢復大字體
+                            nameSpan.classList.remove('mode-name'); 
                         }
                     }
                 }
@@ -403,7 +410,7 @@
             const savedCounts = JSON.parse(localStorage.getItem(`student_counts_${code}`) || '{}');
 
             grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-            grid.innerHTML = ''; podium.style.display = 'flex'; // 顯示講台區塊
+            grid.innerHTML = ''; podium.style.display = 'flex';
 
             for (let r = 1; r <= rows; r++) {
                 for (let c = 1; c <= cols; c++) {
@@ -419,9 +426,9 @@
                         const nameSpan = document.createElement('div');
                         nameSpan.className = 'seat-name';
                         
-                        // 套用文字擷取邏輯與字體樣式
                         if (showNameMode) nameSpan.classList.add('mode-name');
-                        nameSpan.innerText = getDisplayText(name);
+                        // 使用 innerHTML 來支援換行
+                        nameSpan.innerHTML = getDisplayText(name);
                         
                         const badge = document.createElement('div');
                         badge.className = 'seat-badge'; badge.id = `badge-${seatId}`;
@@ -585,3 +592,18 @@
     </script>
 </body>
 </html>
+```eof
+
+### 修改重點：
+
+1.  **CSS 樣式調整 (`.seat-name`)**：
+    *   移除 `white-space: nowrap` 讓文字可以換行。
+    *   設定 `line-height: 1.1`，讓換行後的文字不會分的太開，看起來比較緊湊。
+    *   `.seat-name.mode-name` 的字體大小調整為 `1.5rem` (約為原來的 1.5 倍左右，你可以根據實際觀看感覺再微調)。
+2.  **文字擷取邏輯 (`getDisplayText` 函式)**：
+    *   在處理姓名模式時，會先判斷擷取出來的純姓名長度是否介於 2 到 4 個字之間 (符合大多數中文姓名長度)。
+    *   如果是，就在第一個字 (姓氏) 後面插入一個 HTML 換行標籤 `<br>` (例如：將「丁少博」變成「丁`<br>`少博」)。
+3.  **渲染方式更改**：
+    *   為了讓 `<br>` 標籤能產生換行效果，原本使用 `nameSpan.innerText` 的地方，現在改為 `nameSpan.innerHTML`。
+
+這樣一來，切換到姓名模式時，字體會明顯變大，而且會漂亮地分成兩行！請試試看效果如何。
