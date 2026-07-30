@@ -61,6 +61,12 @@
         .seat-name {
             font-size: calc(1.8rem * var(--zoom)); font-weight: bold; color: #333;
             width: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;
+            transition: font-size 0.2s ease; /* 加入字體縮放的動畫效果 */
+        }
+        
+        /* 切換為姓名模式時的縮小字體 */
+        .seat-name.mode-name {
+            font-size: calc(1.05rem * var(--zoom)); 
         }
 
         .seat-badge {
@@ -71,11 +77,23 @@
             opacity: 0; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
+        /* 改寫講台區塊為彈性佈局，容納開關按鈕 */
         .podium-marker {
-            width: 80%; text-align: center; margin-top: calc(15px * var(--zoom));
-            background: #00CC00; padding: calc(8px * var(--zoom)); border-radius: calc(4px * var(--zoom));
+            width: 80%; margin-top: calc(15px * var(--zoom));
+            background: #00CC00; padding: calc(6px * var(--zoom)) calc(10px * var(--zoom)); border-radius: calc(4px * var(--zoom));
             color: #000; font-weight: bold; border: calc(2px * var(--zoom)) solid #ced4da; font-size: calc(1rem * var(--zoom));
+            display: flex; justify-content: space-between; align-items: center; 
         }
+        
+        .podium-text { flex: 1; text-align: center; }
+        
+        /* 座號/姓名 切換按鈕樣式 */
+        .display-toggle-btn {
+            background: rgba(255,255,255,0.8); border: none; border-radius: 4px;
+            padding: 4px 8px; font-size: calc(0.85rem * var(--zoom)); font-weight: bold; color: #000;
+            cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.2); white-space: nowrap;
+        }
+        .display-toggle-btn:active { background: #fff; transform: scale(0.95); }
 
         #behavior-area {
             flex: 0 0 45%; min-height: 220px; max-height: 55vh; overflow: auto; touch-action: pan-x pan-y;
@@ -142,7 +160,11 @@
                 <div id="seating-grid">
                     <div style="padding: 30px 10px; color:#888; text-align:center; font-size:0.9rem;">請至「設定」輸入班級並同步座位表</div>
                 </div>
-                <div class="podium-marker" id="podium" style="display:none;">講台 TEACHER</div>
+                <!-- 講台與切換按鈕區 -->
+                <div class="podium-marker" id="podium" style="display:none;">
+                    <div class="podium-text">講台</div>
+                    <button class="display-toggle-btn" onclick="toggleSeatDisplayMode()">🔄 座號/姓名</button>
+                </div>
             </div>
         </div>
         
@@ -202,6 +224,7 @@
         let gasUrl = ''; 
         let colorMap = {}; 
         let classSeatData = { rows: 0, cols: 0, names: {} };
+        let showNameMode = false; // false = 顯示座號, true = 顯示姓名
         
         let behaviorsList = [
             { name: '認真聽講', value: '認真聽講', color: '#0000FF', score: 1 },
@@ -213,6 +236,8 @@
         window.onload = function() {
             gasUrl = localStorage.getItem('gas_url') || '';
             document.getElementById('gas-url').value = gasUrl;
+            
+            showNameMode = localStorage.getItem('show_name_mode') === 'true'; // 讀取切換狀態
             
             const savedBehaviors = localStorage.getItem('custom_behaviors');
             if (savedBehaviors) behaviorsList = JSON.parse(savedBehaviors);
@@ -329,6 +354,41 @@
             }
         }
 
+        // 擷取顯示文字 (判斷要顯示座號還是姓名)
+        function getDisplayText(fullName) {
+            if (!fullName) return '';
+            if (showNameMode) {
+                // 姓名模式：移除開頭的數字與空白
+                const nameOnly = fullName.replace(/^\d+\s*/, '');
+                return nameOnly || fullName; 
+            } else {
+                // 座號模式：抓取開頭數字
+                const match = fullName.match(/^\d+/);
+                return match ? match[0] : fullName;
+            }
+        }
+
+        // 切換按鈕的執行函式
+        function toggleSeatDisplayMode() {
+            showNameMode = !showNameMode;
+            localStorage.setItem('show_name_mode', showNameMode);
+            
+            // 更新畫面上所有座位的文字與字體大小
+            if (classSeatData && classSeatData.names) {
+                for (let seatId in classSeatData.names) {
+                    const nameSpan = document.querySelector(`#seat-${seatId} .seat-name`);
+                    if (nameSpan) {
+                        nameSpan.innerText = getDisplayText(classSeatData.names[seatId]);
+                        if (showNameMode) {
+                            nameSpan.classList.add('mode-name'); // 套用小字體
+                        } else {
+                            nameSpan.classList.remove('mode-name'); // 恢復大字體
+                        }
+                    }
+                }
+            }
+        }
+
         function generateSeats() {
             const grid = document.getElementById('seating-grid');
             const podium = document.getElementById('podium');
@@ -343,7 +403,7 @@
             const savedCounts = JSON.parse(localStorage.getItem(`student_counts_${code}`) || '{}');
 
             grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-            grid.innerHTML = ''; podium.style.display = 'block';
+            grid.innerHTML = ''; podium.style.display = 'flex'; // 顯示講台區塊
 
             for (let r = 1; r <= rows; r++) {
                 for (let c = 1; c <= cols; c++) {
@@ -359,11 +419,9 @@
                         const nameSpan = document.createElement('div');
                         nameSpan.className = 'seat-name';
                         
-                        // 手機版：嘗試抓取開頭數字，若無則顯示全名
-                        let displayText = name; 
-                        const match = name.match(/^\d+/); 
-                        if(match) displayText = match[0];
-                        nameSpan.innerText = displayText;
+                        // 套用文字擷取邏輯與字體樣式
+                        if (showNameMode) nameSpan.classList.add('mode-name');
+                        nameSpan.innerText = getDisplayText(name);
                         
                         const badge = document.createElement('div');
                         badge.className = 'seat-badge'; badge.id = `badge-${seatId}`;
