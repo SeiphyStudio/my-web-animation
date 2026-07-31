@@ -1,3 +1,13 @@
+```eof
+
+### 第二步：更新筆電版前端 (HTML)
+
+**修改重點：**
+1.  外框加粗至 `4px`。
+2.  「翻轉教室」旁邊新增「門檻設定」輸入框，預設 10 分。
+3.  新增本地端分數追蹤 (`student_score_deltas`)，結合雲端歷史分數 (`classSeatData.scores`)，動態計算漸層藍色 (`rgba(0, 0, 255, alpha)`) 或漸層紅色 (`rgba(255, 0, 0, alpha)`) 的外框。
+
+```html:學生行為記錄(筆電座位).html
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -70,12 +80,13 @@
             font-size: 0.9rem;
         }
 
-        input[type="text"] {
+        input[type="text"], input[type="number"] {
             padding: 5px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
-            width: 80px; text-align: center;
+            text-align: center;
         }
+        input[type="text"] { width: 80px; }
 
         button {
             padding: 6px 12px;
@@ -126,7 +137,8 @@
         .seat {
             width: calc(150px * var(--zoom));
             height: calc(90px * var(--zoom));
-            border: 2px solid #ccc;
+            /* ✨ 外框預設加粗為 4px */
+            border: calc(4px * var(--zoom)) solid #ccc;
             border-radius: 8px;
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             position: relative; background: #ffff99; 
@@ -135,12 +147,13 @@
         }
 
         .seat:hover {
-            transform: scale(1.02); border-color: var(--primary-color);
+            transform: scale(1.02);
+            /* hover 時讓外框變亮或維持原本 */
             box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 10;
         }
         
-        .seat.empty-seat { background: #e9ecef; cursor: not-allowed; border-color: #ddd;}
-        .seat.empty-seat:hover { transform: none; box-shadow: none; border-color: #ddd;}
+        .seat.empty-seat { background: #e9ecef; cursor: not-allowed; border-color: #ddd !important;}
+        .seat.empty-seat:hover { transform: none; box-shadow: none; }
 
         .seat.active-click { animation: pulse 0.3s ease-in-out; z-index: 11; }
 
@@ -259,6 +272,11 @@
                 <input type="checkbox" id="flip-checkbox" onchange="toggleFlip(this.checked)">
                 <span class="config-label">翻轉教室</span>
             </label>
+
+            <!-- ✨ 新增：外框顏色門檻設定 -->
+            <div style="border-left: 1px solid #ccc; height: 20px; margin: 0 5px;"></div>
+            <span class="config-label" title="設定達到最深藍色/最深紅色的分數門檻">顏色門檻: ±</span>
+            <input type="number" id="color-threshold" value="10" min="1" max="100" style="width: 50px;" onchange="updateAllSeatColors()">
         </div>
         <div id="display-class-code" style="color: var(--primary-color); font-size: 1.8rem; font-weight: 900; flex: 1; text-align: center; letter-spacing: 2px;"></div>
     </div>
@@ -268,7 +286,6 @@
     <div id="classroom-container">
         <div id="main-content-wrapper" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
             <div id="seating-grid">
-                <!-- 座位將由 JS 插入 -->
                 <div style="padding: 50px; color:#888; text-align:center;">請輸入班級代碼，並點擊右上角「同步雲端座位表」</div>
             </div>
             <div class="podium-marker" id="podium" style="display:none;">講台 (TEACHER)</div>
@@ -277,7 +294,7 @@
 
     <aside>
         <h3 style="display: flex; justify-content: space-between; align-items: center;">
-            1. 選擇學生上課行為
+            1. 選擇行為
             <button id="sync-behavior-btn" class="btn-info" style="font-size: 1rem; padding: 4px 10px;" onclick="loadBehaviorsFromCloud()" title="從雲端讀取最新的行為與分數">🔄 同步設定</button>
         </h3>
         <div class="behavior-selector" id="behavior-group">
@@ -304,7 +321,6 @@
     </aside>
 </main>
 
-<!-- 雲端設定 Modal -->
 <div id="cloudModal" class="modal-overlay">
     <div class="modal-content">
         <h3>Google Apps Script 設定</h3>
@@ -318,7 +334,6 @@
 </div>
 
 <script>
-    // --- 全域變數 ---
     let currentBehavior = '';
     let currentBehaviorScore = 0; 
     let isCustomMode = false;
@@ -326,7 +341,7 @@
     let gasUrl = ''; 
     let colorMap = {}; 
     let isFlipped = false; 
-    let classSeatData = { rows: 0, cols: 0, names: {} }; // 儲存當前班級的座位結構
+    let classSeatData = { rows: 0, cols: 0, names: {}, scores: {} }; 
     const CUSTOM_COLOR = '#d63384';
 
     let behaviorsList = [
@@ -340,6 +355,11 @@
         gasUrl = localStorage.getItem('gas_url') || '';
         const savedCode = localStorage.getItem('current_class_code') || '';
         document.getElementById('class-code').value = savedCode;
+        
+        // 讀取儲存的門檻值
+        const savedThreshold = localStorage.getItem('color_threshold') || 10;
+        document.getElementById('color-threshold').value = savedThreshold;
+
         updateDisplayClassCode(savedCode);
         
         const savedBehaviors = localStorage.getItem('custom_behaviors');
@@ -501,17 +521,19 @@
         .then(data => {
             if(data.result === 'success') {
                 alert(`上傳成功！共 ${data.count} 筆記錄寫入。\n記錄已自動清空。`);
-                clearAllLogs(true); 
+                clearAllLogs(true, true); // 上傳成功後清空記錄，但不再次觸發載入
+                // 重新載入雲端最新總分以更新顏色
+                loadClassData(true); 
             } else alert("上傳失敗：" + data.error);
         })
         .catch(error => alert("連線錯誤，無法上傳。"))
         .finally(() => { btn.innerText = originalText; btn.disabled = false; });
     }
 
-    function loadClassData() {
+    function loadClassData(silent = false) {
         const code = document.getElementById('class-code').value.trim();
-        if (!code) { alert('請輸入班級代碼'); return; }
-        if (!gasUrl) { alert('請先設定右下方「⚙️設定網址」'); return; }
+        if (!code) { if(!silent) alert('請輸入班級代碼'); return; }
+        if (!gasUrl) { if(!silent) alert('請先設定右下方「⚙️設定網址」'); return; }
 
         const btn = document.querySelector('.btn-warning'); 
         const originalText = btn.innerText;
@@ -525,20 +547,21 @@
         .then(res => res.json())
         .then(data => {
             if(data.result === 'success') {
-                alert(`✅ 成功讀取 [${code}座位表] 分頁！`);
+                if(!silent) alert(`✅ 成功讀取 [${code}座位表] 及最新成績！`);
                 classSeatData = data.seatData;
                 localStorage.setItem(`class_seatData_${code}`, JSON.stringify(classSeatData));
                 
-                if(confirm(`是否要清空目前的上課計數(歸零)？\n(建議：若為新的一節課請按確定)`)) {
+                if(!silent && confirm(`是否要清空目前的「暫時上課計數」？\n(建議：若為新的一節課請按確定)`)) {
                     localStorage.setItem(`student_counts_${code}`, '{}');
+                    localStorage.setItem(`student_score_deltas_${code}`, '{}'); // ✨ 清空暫存分數
                     logs = []; updateLogDisplay(); saveLogsToStorage();
                 }
                 generateSeats();
             } else {
-                alert("讀檔失敗：" + (data.error || "找不到分頁"));
+                if(!silent) alert("讀檔失敗：" + (data.error || "找不到分頁"));
             }
         })
-        .catch(err => alert("網路連線錯誤！"))
+        .catch(err => { if(!silent) alert("網路連線錯誤！"); })
         .finally(() => { btn.innerText = originalText; btn.disabled = false; });
     }
 
@@ -598,13 +621,54 @@
         
         if (isFlipped) grid.style.transform = 'rotate(180deg)';
         else grid.style.transform = 'none';
+
+        updateAllSeatColors(); // ✨ 生成座位後，立即上色
     }
 
-    function handleCustomInput(input) {
-        if(isCustomMode) {
-            const val = input.value.trim();
-            currentBehavior = val ? val : "自訂記錄";
-            currentBehaviorScore = 0; 
+    // ✨ 計算單一座位的外框顏色
+    function updateSingleSeatColor(seatId) {
+        const code = document.getElementById('class-code').value.trim();
+        const thresholdInput = document.getElementById('color-threshold');
+        const threshold = parseFloat(thresholdInput.value) || 10;
+        localStorage.setItem('color_threshold', threshold);
+
+        const name = classSeatData.names[seatId] || '';
+        if (!name) return;
+
+        // 1. 取得雲端歷史成績
+        const baseScore = (classSeatData.scores && classSeatData.scores[name]) ? classSeatData.scores[name] : 0;
+        
+        // 2. 取得本次暫存增加/減少的成績
+        const deltas = JSON.parse(localStorage.getItem(`student_score_deltas_${code}`) || '{}');
+        const currentDelta = deltas[seatId] || 0;
+        
+        // 3. 總分 = 歷史 + 暫存
+        const totalScore = baseScore + currentDelta;
+        
+        const seatDiv = document.getElementById(`seat-${seatId}`);
+        if (!seatDiv || seatDiv.classList.contains('empty-seat')) return;
+
+        // 4. 計算透明度並上色
+        if (totalScore === 0) {
+            seatDiv.style.borderColor = '#ccc';
+        } else if (totalScore > 0) {
+            // 正分 (藍色)：透明度從 0.3 到 1.0 漸層
+            let ratio = Math.min(totalScore / threshold, 1);
+            let alpha = 0.3 + (0.7 * ratio);
+            seatDiv.style.borderColor = `rgba(0, 0, 255, ${alpha})`;
+        } else {
+            // 負分 (紅色)：透明度從 0.3 到 1.0 漸層
+            let ratio = Math.min(Math.abs(totalScore) / threshold, 1);
+            let alpha = 0.3 + (0.7 * ratio);
+            seatDiv.style.borderColor = `rgba(255, 0, 0, ${alpha})`;
+        }
+    }
+
+    // ✨ 更新所有座位的外框顏色
+    function updateAllSeatColors() {
+        if (!classSeatData || !classSeatData.names) return;
+        for (let seatId in classSeatData.names) {
+            updateSingleSeatColor(seatId);
         }
     }
 
@@ -621,23 +685,30 @@
             }
         }
 
+        // 取消動作 (Undo)
         if (existingLogIndex !== -1) {
-            logs.splice(existingLogIndex, 1);
+            const removedLog = logs.splice(existingLogIndex, 1)[0];
             saveLogsToStorage();
             updateSeatCount(seatId, -1);
+            updateSeatScoreDelta(seatId, -(removedLog.score || 0)); // ✨ 扣回暫存分數
+            
             updateLogDisplay();
             seatDiv.style.backgroundColor = '#dcdcdc'; 
-            setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
+            setTimeout(() => { 
+                seatDiv.style.backgroundColor = originalBg || '#ffff99'; 
+                updateSingleSeatColor(seatId); // ✨ 動畫結束後恢復正確的外框顏色
+            }, 200);
             return;
         }
 
-        seatDiv.style.borderColor = behaviorColor;
+        // 點擊新增紀錄
+        seatDiv.style.borderColor = behaviorColor; // 動畫時短暫變成該行為的顏色
         seatDiv.style.backgroundColor = behaviorColor + '33'; 
         seatDiv.classList.add('active-click');
         setTimeout(() => {
-            seatDiv.style.borderColor = '';
             seatDiv.style.backgroundColor = '#ffff99'; 
             seatDiv.classList.remove('active-click');
+            updateSingleSeatColor(seatId); // ✨ 動畫結束後恢復計算出的總分外框顏色
         }, 300);
 
         const timestamp = new Date();
@@ -657,7 +728,18 @@
         logs.push(logEntry);
         updateLogDisplay();
         updateSeatCount(seatId, 1);
+        updateSeatScoreDelta(seatId, currentBehaviorScore); // ✨ 增加暫存分數
         saveLogsToStorage();
+    }
+
+    // ✨ 獨立追蹤本機的「暫存分數」
+    function updateSeatScoreDelta(seatId, deltaScore) {
+        if (deltaScore === 0) return;
+        const code = document.getElementById('class-code').value.trim();
+        let deltas = JSON.parse(localStorage.getItem(`student_score_deltas_${code}`) || '{}');
+        deltas[seatId] = (deltas[seatId] || 0) + deltaScore;
+        localStorage.setItem(`student_score_deltas_${code}`, JSON.stringify(deltas));
+        updateSingleSeatColor(seatId);
     }
 
     function updateLogDisplay() {
@@ -687,25 +769,33 @@
     }
 
     function deleteLog(logId, seatId) {
+        const logToDelete = logs.find(l => l.id === logId);
+        if (logToDelete) {
+            updateSeatScoreDelta(seatId, -(logToDelete.score || 0)); // ✨ 扣回暫存分數
+            updateSeatCount(seatId, -1);
+        }
         logs = logs.filter(log => log.id !== logId);
-        updateSeatCount(seatId, -1);
         updateLogDisplay();
         saveLogsToStorage();
     }
     
-    function clearAllLogs(skipConfirm = false) {
-        if(!skipConfirm && !confirm("確定要清空「所有」暫存的記錄嗎？\n這會將座位上的計數歸零！")) return;
+    function clearAllLogs(skipConfirm = false, skipReload = false) {
+        if(!skipConfirm && !confirm("確定要清空「所有」暫存的記錄嗎？\n這會將座位上的計數與暫存總分歸零！")) return;
         
         const code = document.getElementById('class-code').value.trim();
         logs = [];
         updateLogDisplay();
         localStorage.setItem(`student_counts_${code}`, '{}');
+        localStorage.setItem(`student_score_deltas_${code}`, '{}'); // ✨ 清空暫存分數
+        
         const badges = document.querySelectorAll('.seat-badge');
         badges.forEach(badge => {
             badge.style.opacity = 0;
             badge.innerText = '';
         });
+        
         saveLogsToStorage();
+        if (!skipReload) updateAllSeatColors(); // 清空後重新上色 (只剩歷史分數)
     }
 
     function updateSeatCount(seatId, delta) {
