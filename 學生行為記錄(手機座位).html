@@ -49,28 +49,24 @@
 
         .seat {
             width: var(--seat-size); height: calc(var(--seat-size) * 0.75);
-            border: calc(2px * var(--zoom)) solid #ccc; border-radius: calc(6px * var(--zoom));
+            /* ✨ 外框加粗為 4px */
+            border: calc(4px * var(--zoom)) solid #ccc; 
+            border-radius: calc(6px * var(--zoom));
             background: #ffff99; display: flex; flex-direction: column; justify-content: center; align-items: center;
-            position: relative; transition: transform 0.1s, background-color 0.2s;
+            position: relative; transition: transform 0.1s, border-color 0.2s;
         }
         
-        .seat.empty-seat { background: #e9ecef; border-color: transparent; }
+        .seat.empty-seat { background: #e9ecef; border-color: transparent !important; }
 
         .seat:active:not(.empty-seat) { transform: scale(0.95); }
 
         .seat-name {
             font-size: calc(1.8rem * var(--zoom)); font-weight: bold; color: #333;
-            width: 100%; text-align: center; 
-            /* 移除 white-space: nowrap，讓它可以換行 */
-            overflow: hidden; padding: 0 4px;
-            transition: font-size 0.2s ease;
-            line-height: 1.1; /* 縮小行高，讓換行後的上下間距緊湊一點 */
+            width: 100%; text-align: center; overflow: hidden; padding: 0 4px;
+            transition: font-size 0.2s ease; line-height: 1.1; 
         }
         
-        /* 切換為姓名模式時的字體大小 (原本是 1.05rem，現在放大到 1.5rem 左右) */
-        .seat-name.mode-name {
-            font-size: calc(1.5rem * var(--zoom)); 
-        }
+        .seat-name.mode-name { font-size: calc(1.5rem * var(--zoom)); }
 
         .seat-badge {
             position: absolute; top: calc(-5px * var(--zoom)); right: calc(-5px * var(--zoom));
@@ -161,7 +157,6 @@
                 <div id="seating-grid">
                     <div style="padding: 30px 10px; color:#888; text-align:center; font-size:0.9rem;">請至「設定」輸入班級並同步座位表</div>
                 </div>
-                <!-- 講台與切換按鈕區 -->
                 <div class="podium-marker" id="podium" style="display:none;">
                     <div class="podium-text">講台</div>
                     <button class="display-toggle-btn" onclick="toggleSeatDisplayMode()">🔄 座號/姓名</button>
@@ -196,6 +191,11 @@
                     <label>班級代碼 (如: 310)</label>
                     <input type="text" id="class-code" class="form-control" onchange="updateClassCode()">
                 </div>
+                <!-- ✨ 新增：外框顏色門檻設定 -->
+                <div class="form-group">
+                    <label>顏色滿分門檻 (預設 10)</label>
+                    <input type="number" id="color-threshold" class="form-control" value="10" min="1" onchange="updateAllSeatColors()">
+                </div>
                 <button class="btn btn-warning" onclick="loadClassDataFromCloud()"><i class="fa-solid fa-cloud-arrow-down"></i> 下載/更新座位表</button>
             </div>
 
@@ -224,8 +224,8 @@
         let logs = [];
         let gasUrl = ''; 
         let colorMap = {}; 
-        let classSeatData = { rows: 0, cols: 0, names: {} };
-        let showNameMode = false; // false = 顯示座號, true = 顯示姓名
+        let classSeatData = { rows: 0, cols: 0, names: {}, scores: {} };
+        let showNameMode = false; 
         
         let behaviorsList = [
             { name: '認真聽講', value: '認真聽講', color: '#0000FF', score: 1 },
@@ -239,6 +239,8 @@
             document.getElementById('gas-url').value = gasUrl;
             
             showNameMode = localStorage.getItem('show_name_mode') === 'true'; 
+            const savedThreshold = localStorage.getItem('color_threshold') || 10;
+            document.getElementById('color-threshold').value = savedThreshold;
             
             const savedBehaviors = localStorage.getItem('custom_behaviors');
             if (savedBehaviors) behaviorsList = JSON.parse(savedBehaviors);
@@ -355,27 +357,21 @@
             }
         }
 
-        // 擷取顯示文字 (判斷要顯示座號還是姓名，並處理換行)
         function getDisplayText(fullName) {
             if (!fullName) return '';
             if (showNameMode) {
-                // 姓名模式：移除開頭的數字與空白
                 let nameOnly = fullName.replace(/^\d+\s*/, '');
-                if (!nameOnly) nameOnly = fullName; // 防呆：如果原本就沒名字，顯示原字串
-                
-                // 處理換行：如果是常見的 2~4 字中文名，在第一個字(姓氏)後插入 <br>
+                if (!nameOnly) nameOnly = fullName; 
                 if (nameOnly.length >= 2 && nameOnly.length <= 4) {
                     return nameOnly.charAt(0) + '<br>' + nameOnly.substring(1);
                 }
                 return nameOnly;
             } else {
-                // 座號模式：抓取開頭數字
                 const match = fullName.match(/^\d+/);
                 return match ? match[0] : fullName;
             }
         }
 
-        // 切換按鈕的執行函式
         function toggleSeatDisplayMode() {
             showNameMode = !showNameMode;
             localStorage.setItem('show_name_mode', showNameMode);
@@ -384,7 +380,6 @@
                 for (let seatId in classSeatData.names) {
                     const nameSpan = document.querySelector(`#seat-${seatId} .seat-name`);
                     if (nameSpan) {
-                        // 使用 innerHTML 才能渲染 <br> 標籤
                         nameSpan.innerHTML = getDisplayText(classSeatData.names[seatId]);
                         if (showNameMode) {
                             nameSpan.classList.add('mode-name'); 
@@ -393,6 +388,45 @@
                         }
                     }
                 }
+            }
+        }
+
+        // ✨ 計算單一座位的外框顏色
+        function updateSingleSeatColor(seatId) {
+            const code = document.getElementById('class-code').value.trim();
+            const thresholdInput = document.getElementById('color-threshold');
+            const threshold = parseFloat(thresholdInput.value) || 10;
+            localStorage.setItem('color_threshold', threshold);
+
+            const name = classSeatData.names[seatId] || '';
+            if (!name) return;
+
+            const baseScore = (classSeatData.scores && classSeatData.scores[name]) ? classSeatData.scores[name] : 0;
+            const deltas = JSON.parse(localStorage.getItem(`student_score_deltas_${code}`) || '{}');
+            const currentDelta = deltas[seatId] || 0;
+            const totalScore = baseScore + currentDelta;
+            
+            const seatDiv = document.getElementById(`seat-${seatId}`);
+            if (!seatDiv || seatDiv.classList.contains('empty-seat')) return;
+
+            if (totalScore === 0) {
+                seatDiv.style.borderColor = '#ccc';
+            } else if (totalScore > 0) {
+                let ratio = Math.min(totalScore / threshold, 1);
+                let alpha = 0.3 + (0.7 * ratio);
+                seatDiv.style.borderColor = `rgba(0, 0, 255, ${alpha})`;
+            } else {
+                let ratio = Math.min(Math.abs(totalScore) / threshold, 1);
+                let alpha = 0.3 + (0.7 * ratio);
+                seatDiv.style.borderColor = `rgba(255, 0, 0, ${alpha})`;
+            }
+        }
+
+        // ✨ 更新所有座位的外框顏色
+        function updateAllSeatColors() {
+            if (!classSeatData || !classSeatData.names) return;
+            for (let seatId in classSeatData.names) {
+                updateSingleSeatColor(seatId);
             }
         }
 
@@ -427,7 +461,6 @@
                         nameSpan.className = 'seat-name';
                         
                         if (showNameMode) nameSpan.classList.add('mode-name');
-                        // 使用 innerHTML 來支援換行
                         nameSpan.innerHTML = getDisplayText(name);
                         
                         const badge = document.createElement('div');
@@ -443,6 +476,7 @@
                     grid.appendChild(seatDiv);
                 }
             }
+            updateAllSeatColors(); // ✨ 生成座位後，立即上色
         }
 
         function handleSeatClick(seatId, name) {
@@ -455,14 +489,26 @@
             }
 
             if (existingLogIndex !== -1) {
-                logs.splice(existingLogIndex, 1);
+                const removedLog = logs.splice(existingLogIndex, 1)[0];
                 localStorage.setItem('class_logs', JSON.stringify(logs));
-                updateSeatCount(seatId, -1); updateLogDisplay();
-                seatDiv.style.backgroundColor = '#dcdcdc'; setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
+                updateSeatCount(seatId, -1);
+                updateSeatScoreDelta(seatId, -(removedLog.score || 0)); // ✨ 扣回暫存分數
+                updateLogDisplay();
+
+                seatDiv.style.backgroundColor = '#dcdcdc'; 
+                setTimeout(() => { 
+                    seatDiv.style.backgroundColor = originalBg || '#ffff99'; 
+                    updateSingleSeatColor(seatId); // ✨ 恢復正確的總分外框色
+                }, 200);
                 showToast(`已取消`); return; 
             }
 
-            seatDiv.style.backgroundColor = currentBehavior.color + '66'; setTimeout(() => { seatDiv.style.backgroundColor = originalBg || '#ffff99'; }, 200);
+            seatDiv.style.borderColor = currentBehavior.color; // 短暫變成行為顏色
+            seatDiv.style.backgroundColor = currentBehavior.color + '66'; 
+            setTimeout(() => { 
+                seatDiv.style.backgroundColor = originalBg || '#ffff99'; 
+                updateSingleSeatColor(seatId); // ✨ 恢復總分外框色
+            }, 200);
 
             const timestamp = new Date(); const timeString = timestamp.toLocaleTimeString('zh-TW', { hour12: false });
             const localFullTime = `${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')} ${timeString}`;
@@ -472,7 +518,20 @@
                 score: currentBehavior.score || 0, time: timeString, fullTime: localFullTime
             };
             logs.push(logEntry); localStorage.setItem('class_logs', JSON.stringify(logs));
-            updateSeatCount(seatId, 1); updateLogDisplay(); showToast(`${name} - ${currentBehavior.value}`);
+            
+            updateSeatCount(seatId, 1); 
+            updateSeatScoreDelta(seatId, logEntry.score); // ✨ 增加暫存分數
+            updateLogDisplay(); showToast(`${name} - ${currentBehavior.value}`);
+        }
+
+        // ✨ 獨立追蹤本機的「暫存分數」
+        function updateSeatScoreDelta(seatId, deltaScore) {
+            if (deltaScore === 0) return;
+            const code = document.getElementById('class-code').value.trim();
+            let deltas = JSON.parse(localStorage.getItem(`student_score_deltas_${code}`) || '{}');
+            deltas[seatId] = (deltas[seatId] || 0) + deltaScore;
+            localStorage.setItem(`student_score_deltas_${code}`, JSON.stringify(deltas));
+            updateSingleSeatColor(seatId);
         }
 
         function updateSeatCount(seatId, delta) {
@@ -511,9 +570,14 @@
         }
 
         function deleteLog(logId, seatId) {
+            const logToDelete = logs.find(l => l.id === logId);
+            if (logToDelete) {
+                updateSeatScoreDelta(seatId, -(logToDelete.score || 0));
+                updateSeatCount(seatId, -1);
+            }
             logs = logs.filter(log => log.id !== logId);
             localStorage.setItem('class_logs', JSON.stringify(logs));
-            updateSeatCount(seatId, -1); updateLogDisplay();
+            updateLogDisplay();
         }
 
         function clearAllLogs() {
@@ -521,14 +585,18 @@
             const code = document.getElementById('class-code').value.trim();
             logs = []; localStorage.setItem('class_logs', '[]');
             localStorage.setItem(`student_counts_${code}`, '{}');
-            loadFromStorage(); showToast("已清空");
+            localStorage.setItem(`student_score_deltas_${code}`, '{}'); // ✨ 清空暫存分數
+            
+            loadFromStorage(); 
+            updateAllSeatColors();
+            showToast("已清空");
         }
 
-        function loadClassDataFromCloud() {
+        function loadClassDataFromCloud(silent = false) {
             const code = document.getElementById('class-code').value.trim();
-            if (!code) { alert('請先輸入班級代碼'); return; }
-            if (!gasUrl) { alert('請先設定 GAS 網址'); return; }
-            showToast("⏳ 下載座位表中...");
+            if (!code) { if(!silent) alert('請先輸入班級代碼'); return; }
+            if (!gasUrl) { if(!silent) alert('請先設定 GAS 網址'); return; }
+            if (!silent) showToast("⏳ 下載座位表中...");
 
             fetch(gasUrl, {
                 method: 'POST', body: JSON.stringify({ action: "loadSeat", classCode: code }),
@@ -539,14 +607,21 @@
                 if(data.result === 'success') {
                     classSeatData = data.seatData;
                     localStorage.setItem(`class_seatData_${code}`, JSON.stringify(classSeatData));
-                    if(confirm("是否要清空目前的上課計數(歸零)？")) {
+                    if(!silent && confirm("是否要清空目前的「暫時上課計數」？")) {
                         localStorage.setItem(`student_counts_${code}`, '{}');
+                        localStorage.setItem(`student_score_deltas_${code}`, '{}');
                         logs = []; localStorage.setItem('class_logs', '[]');
                     }
-                    loadFromStorage(); alert(`✅ 成功下載 [${code}座位表]！`); switchTab('seating', document.querySelector('.nav-item:first-child'));
-                } else alert("找不到該班級的分頁：" + (data.error || ""));
+                    loadFromStorage(); 
+                    if(!silent) {
+                        alert(`✅ 成功下載 [${code}座位表] 及總成績！`); 
+                        switchTab('seating', document.querySelector('.nav-item:first-child'));
+                    }
+                } else {
+                    if(!silent) alert("找不到該班級的分頁：" + (data.error || ""));
+                }
             })
-            .catch(err => alert("網路連線錯誤！"));
+            .catch(err => { if(!silent) alert("網路連線錯誤！"); });
         }
 
         function loadBehaviorsFromCloud() {
@@ -584,7 +659,14 @@
             .then(data => {
                 if(data.result === 'success') {
                     alert(`✅ 上傳成功！共 ${data.count} 筆。\n手機端記錄將自動清空。`);
-                    clearAllLogs();
+                    
+                    logs = []; localStorage.setItem('class_logs', '[]');
+                    localStorage.setItem(`student_counts_${classCode}`, '{}');
+                    localStorage.setItem(`student_score_deltas_${classCode}`, '{}');
+                    updateLogDisplay();
+                    
+                    // ✨ 重新背景讀取雲端最新總分
+                    loadClassDataFromCloud(true);
                 } else alert("上傳失敗：" + data.error);
             })
             .catch(err => alert("連線錯誤，無法上傳！"));
