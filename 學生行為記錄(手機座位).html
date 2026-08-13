@@ -664,8 +664,11 @@
                     localStorage.setItem(`student_counts_${classCode}`, '{}');
                     localStorage.setItem(`student_score_deltas_${classCode}`, '{}');
                     updateLogDisplay();
+
+                    // ✨ 修改：清空當下立即重繪座位頁（徽章、外框顏色），不依賴下面那個可能失敗的背景請求
+                    generateSeats();
                     
-                    // ✨ 重新背景讀取雲端最新總分
+                    // ✨ 背景讀取雲端最新總分（即使這裡失敗，座位頁徽章也已經清空了）
                     loadClassDataFromCloud(true);
                 } else alert("上傳失敗：" + data.error);
             })
