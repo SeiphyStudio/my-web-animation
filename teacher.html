@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共同評分 · 老師後台</title>
+<style>
+  :root {
+    --bg: #fdf8f0; --card: #ffffff; --ink: #2b2620; --muted: #8a8177; --line: #eee3d3;
+    --accent: #e8730c; --accent-soft: #fff1e2; --ok: #1f9d55; --ok-soft: #e3f6ea;
+    --warn: #c0392b; --warn-soft: #fdecea; --blue: #2d6cdf; --blue-soft: #e8f0fd;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif; font-size: 15px; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--ink);
+    padding: 7px 14px; border-radius: 8px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.05); }
+  button.danger { color: var(--warn); border-color: #f2c4bf; }
+  button.small { padding: 3px 9px; font-size: 13px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input, textarea, select { font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: #fff; color: var(--ink); }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  textarea { width: 100%; min-height: 180px; font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+  h3 { font-size: 15px; margin: 0 0 10px; color: var(--muted); font-weight: 600; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+  .center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .login { max-width: 420px; width: 100%; text-align: center; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .mono { font-family: ui-monospace, Consolas, monospace; }
+  header.top { background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+  header.top .wrap { padding-top: 10px; padding-bottom: 0; }
+  .title { font-weight: 800; font-size: 19px; }
+  .code-badge { background: var(--accent-soft); color: var(--accent); font-weight: 800; letter-spacing: 2px; padding: 3px 10px; border-radius: 6px; }
+  .tabs { display: flex; gap: 4px; margin-top: 10px; overflow-x: auto; }
+  .tabs button { border: none; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 8px 14px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; }
+  .stat b { display: block; font-size: 24px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border-radius: 999px; padding: 6px 14px; font-weight: 600; }
+  .chip.open { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; background: #fffaf3; position: sticky; top: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .matrix td.cell { text-align: center; min-width: 54px; font-variant-numeric: tabular-nums; }
+  .matrix td.cell.has { cursor: pointer; font-weight: 700; }
+  .matrix td.cell.has:hover { background: var(--accent-soft); }
+  .matrix td.cell.self { color: #ccc; background: #fafafa; }
+  .matrix td.cell.void { color: #bbb; text-decoration: line-through; }
+  .matrix td.cell.wait { color: #d9cbb8; }
+  .matrix th.gopen { color: var(--ok); }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; background: #d5d0c9; }
+  .dot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+  .dot.off { background: #f0b429; }
+  .tag { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: #f3efe9; color: var(--muted); }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  .tag.blue { background: var(--blue-soft); color: var(--blue); }
+  tr.hi td { background: var(--warn-soft); }
+  tr.lo td { background: var(--blue-soft); }
+  tr.void td { color: #bbb; text-decoration: line-through; }
+  .rank { font-weight: 800; width: 36px; }
+  .bar { height: 8px; background: #f3ece2; border-radius: 4px; min-width: 120px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+  .crit-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .crit-row input[type=text] { flex: 1; min-width: 0; }
+  .crit-row input[type=number] { width: 80px; }
+  .err { color: var(--warn); font-size: 13px; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2b2620; color: #fff; padding: 10px 18px;
+    border-radius: 8px; z-index: 100; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
+  .toast.show { opacity: 1; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal { background: #fff; border-radius: var(--radius); padding: 20px; max-width: 520px; width: 100%; max-height: 90vh; overflow: auto; }
+  .modal .btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  .room-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .room-card { cursor: pointer; }
+  .room-card:hover { border-color: var(--accent); }
+  .qr-box { display: inline-block; padding: 10px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
+  .big-code { font-size: 56px; font-weight: 900; letter-spacing: 8px; color: var(--accent); text-align: center; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 0 32px; }
+</style>
+</head>
+<body>
+<div id="app"><div class="center muted">載入中…</div></div>
+<div id="toast" class="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where,
+  onSnapshot, serverTimestamp, writeBatch, arrayUnion, arrayRemove }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ── Firebase 設定（沿用 evaluate-each-other-5d4bf 專案）─────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAmqdU3AimELr5sa9FIFd_eb5zbM0nCFkI",
+  authDomain: "evaluate-each-other-5d4bf.firebaseapp.com",
+  projectId: "evaluate-each-other-5d4bf",
+  storageBucket: "evaluate-each-other-5d4bf.firebasestorage.app",
+  messagingSenderId: "323924183931",
+  appId: "1:323924183931:web:945c1feceaa4593d000bde",
+};
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+// ── 常數 ───────────────────────────────────────────────────────────
+const ONLINE_MS     = 150000;   // 超過 150 秒沒有心跳 → 視為離線（學生每 60 秒送一次）
+const MAX_CRITERIA  = 8;        // 安全規則只驗證 c1～c8
+const CODE_CHARS    = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const DEFAULT_CRITERIA = [
+  { id: "c1", name: "內容完整", max: 10 },
+  { id: "c2", name: "表達技巧", max: 10 },
+  { id: "c3", name: "投影片設計", max: 10 },
+  { id: "c4", name: "團隊合作", max: 10 },
+  { id: "c5", name: "時間控制", max: 10 },
+];
+
+// ── 小工具 ─────────────────────────────────────────────────────────
+const $   = (sel, root = document) => root.querySelector(sel);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const tsMs = t => (t && typeof t.toMillis === "function") ? t.toMillis() : 0;
+const avg  = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const fmt  = (x, d = 1) => x == null ? "—" : Number(x).toFixed(d);
+const natCmp = (a, b) => String(a).localeCompare(String(b), "zh-Hant", { numeric: true });
+const timeStr = t => { const ms = tsMs(t); if (!ms) return ""; const d = new Date(ms); return d.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); };
+
+function toast(msg) {
+  const el = $("#toast"); el.textContent = msg; el.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove("show"), 2600);
+}
+function modal(title, bodyHtml, buttons) {
+  return new Promise(resolve => {
+    const bg = document.createElement("div");
+    bg.className = "modal-bg";
+    bg.innerHTML = `<div class="modal"><h2>${esc(title)}</h2><div class="mbody">${bodyHtml}</div>
+      <div class="btns">${buttons.map((b, i) => `<button data-i="${i}" class="${b.cls || ""}">${esc(b.label)}</button>`).join("")}</div></div>`;
+    bg.addEventListener("click", e => {
+      const b = e.target.closest("button[data-i]");
+      if (b) { const v = buttons[+b.dataset.i].value; bg.remove(); resolve(v); }
+      else if (e.target === bg) { bg.remove(); resolve(null); }
+    });
+    document.body.appendChild(bg);
+  });
+}
+const confirmBox = (title, html, okLabel = "確定", danger = false) =>
+  modal(title, html, [{ label: "取消", value: false }, { label: okLabel, value: true, cls: danger ? "primary danger" : "primary" }]);
+
+async function commitOps(ops) {            // ops: [{type:'set'|'delete'|'update', ref, data}]
+  for (let i = 0; i < ops.length; i += 450) {
+    const b = writeBatch(db);
+    ops.slice(i, i + 450).forEach(o => {
+      if (o.type === "set") b.set(o.ref, o.data);
+      else if (o.type === "update") b.update(o.ref, o.data);
+      else b.delete(o.ref);
+    });
+    await b.commit();
+  }
+}
+function downloadCSV(filename, rows) {
+  const csv = "﻿" + rows.map(r => r.map(c => {
+    const s = String(c ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }).join(",")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function studentLink(roomId) { return new URL(`student.html?room=${encodeURIComponent(roomId)}`, location.href).href; }
+
+// ── 狀態 ───────────────────────────────────────────────────────────
+const S = {
+  user: null, admin: null,
+  rooms: [], unsubRooms: null,
+  roomId: null, room: null, roster: [], presence: [], votes: [], results: null, unsubRoom: [],
+  tab: "monitor", trimmed: false, voteFilter: "", preview: null,
+};
+const app$ = () => $("#app");
+
+// ══════════════════════════════════════════════════════════════════
+//  登入與白名單
+// ══════════════════════════════════════════════════════════════════
+onAuthStateChanged(auth, async u => {
+  S.user = u;
+  cleanupRoom(); if (S.unsubRooms) { S.unsubRooms(); S.unsubRooms = null; }
+  if (!u) return renderLogin();
+  try {
+    const snap = await getDoc(doc(db, "admins", u.uid));
+    if (!snap.exists()) return renderNotAdmin();
+    S.admin = snap.data();
+    const m = location.hash.match(/room=([A-Z0-9]+)/);
+    if (m) openRoom(m[1]); else openRoomList();
+  } catch (e) {
+    console.error(e);
+    renderNotAdmin(e.code === "permission-denied" ? "" : e.message);
+  }
+});
+
+function renderLogin(err = "") {
+  app$().innerHTML = `<div class="center"><div class="card login">
+    <div style="font-size:42px">🧑‍🏫</div>
+    <h2>共同評分 · 老師後台</h2>
+    <p class="muted">請使用已列入老師白名單的 Google 帳號登入</p>
+    ${err ? `<p class="err">${esc(err)}</p>` : ""}
+    <button class="primary" id="btnLogin" style="width:100%;padding:12px">使用 Google 帳號登入</button>
+  </div></div>`;
+  $("#btnLogin").onclick = async () => {
+    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+    catch (e) {
+      if (e.code === "auth/unauthorized-domain") renderLogin(`網域未授權，請到 Firebase Console → Authentication → 設定 → 授權網域，新增：${location.hostname}`);
+      else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") renderLogin("登入失敗：" + e.message);
+    }
+  };
+}
+
+function renderNotAdmin(extra = "") {
+  const u = S.user;
+  app$().innerHTML = `<div class="center"><div class="card login" style="text-align:left">
+    <h2>⛔ 此帳號不在老師白名單中</h2>
+    <p>登入帳號：<b>${esc(u.email)}</b></p>
+    <p>UID：<span class="mono" style="word-break:break-all">${esc(u.uid)}</span>
+      <button class="small" id="cpUid">複製</button></p>
+    ${extra ? `<p class="err">${esc(extra)}</p>` : ""}
+    <div class="muted" style="line-height:1.7">
+      若你是老師，請管理者到 Firebase Console → Firestore Database：<br>
+      ① 建立集合 <span class="mono">admins</span>（已存在就略過）<br>
+      ② 新增文件，文件 ID 填上方的 UID<br>
+      ③ 加欄位 <span class="mono">email</span>（字串，小寫）= ${esc((u.email || "").toLowerCase())}<br>
+      完成後重新整理此頁。
+    </div>
+    <div class="row" style="margin-top:14px"><span class="spacer"></span><button id="btnOut">登出</button></div>
+  </div></div>`;
+  $("#cpUid").onclick = () => navigator.clipboard.writeText(u.uid).then(() => toast("UID 已複製"));
+  $("#btnOut").onclick = () => signOut(auth);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  教室列表
+// ══════════════════════════════════════════════════════════════════
+function openRoomList() {
+  cleanupRoom();
+  history.replaceState(null, "", location.pathname + location.search);
+  if (!S.unsubRooms) {
+    S.unsubRooms = onSnapshot(query(collection(db, "rooms"), where("owners", "array-contains", S.user.uid)), snap => {
+      S.rooms = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => tsMs(b.createdAt) - tsMs(a.createdAt));
+      if (!S.roomId) renderRoomList();
+    }, e => { console.error(e); toast("讀取教室失敗：" + e.message); });
+  }
+  renderRoomList();
+}
+
+function renderRoomList() {
+  app$().innerHTML = `
+  <header class="top"><div class="wrap" style="padding-bottom:10px"><div class="row">
+    <span class="title">📋 共同評分 · 老師後台</span><span class="spacer"></span>
+    <span class="muted">${esc(S.user.email)}</span><button class="small" id="btnOut">登出</button>
+  </div></div></header>
+  <div class="wrap">
+    <div class="card"><h2>建立新教室</h2>
+      <div class="row"><input id="newTitle" placeholder="例如：高二 5 班 期末報告互評" style="flex:1;min-width:220px">
+      <button class="primary" id="btnCreate">建立</button></div>
+    </div>
+    <h3>我的教室（${S.rooms.length}）</h3>
+    <div class="room-list">
+      ${S.rooms.map(r => `<div class="card room-card" data-room="${esc(r.id)}">
+        <div class="row"><b>${esc(r.title || "(未命名)")}</b><span class="spacer"></span><span class="code-badge">${esc(r.id)}</span></div>
+        <div class="muted" style="margin-top:8px">組別 ${(r.groups || []).length} ・ 開放中 ${(r.openGroups || []).length}
+          ${r.owners?.[0] !== S.user.uid ? " ・ <span class='tag blue'>協同</span>" : ""}</div>
+      </div>`).join("") || `<p class="muted">尚無教室</p>`}
+    </div>
+    <footer>臺中二中 阿發老師 設計</footer>
+  </div>`;
+  $("#btnOut").onclick = () => signOut(auth);
+  $("#btnCreate").onclick = createRoom;
+  document.querySelectorAll("[data-room]").forEach(el => el.onclick = () => openRoom(el.dataset.room));
+}
+
+async function createRoom() {
+  const title = $("#newTitle").value.trim();
+  if (!title) return toast("請輸入教室名稱");
+  $("#btnCreate").disabled = true;
+  try {
+    let id;
+    for (let t = 0; t < 10; t++) {
+      id = Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+      if (!(await getDoc(doc(db, "rooms", id))).exists()) break;
+    }
+    await setDoc(doc(db, "rooms", id), {
+      title, owners: [S.user.uid],
+      criteria: DEFAULT_CRITERIA, maxes: Object.fromEntries(DEFAULT_CRITERIA.map(c => [c.id, c.max])),
+      groups: [], openGroups: [], blockOwnGroup: true, createdAt: serverTimestamp(),
+    });
+    openRoom(id);
+  } catch (e) { console.error(e); toast("建立失敗：" + e.message); $("#btnCreate").disabled = false; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  進入教室：訂閱 4 個即時資料來源
+// ══════════════════════════════════════════════════════════════════
+function cleanupRoom() {
+  S.unsubRoom.forEach(f => f()); S.unsubRoom = [];
+  S.roomId = null; S.room = null; S.roster = []; S.presence = []; S.votes = []; S.results = null; S.preview = null;
+}
+
+function openRoom(id) {
+  cleanupRoom();
+  S.roomId = id; S.tab = S.tab || "monitor";
+  history.replaceState(null, "", "#room=" + id);
+  const base = doc(db, "rooms", id);
+  let first = true;
+  S.unsubRoom.push(onSnapshot(base, snap => {
+    if (!snap.exists()) { toast("教室不存在或已刪除"); return openRoomList(); }
+    const data = snap.data();
+    if (!(data.owners || []).includes(S.user.uid)) { toast("你不是這間教室的老師"); return openRoomList(); }
+    S.room = data;
+    if (first) { first = false; renderShell(); } else { renderHeader(); renderLive(); }
+  }, e => { console.error(e); toast("無法讀取教室：" + e.message); openRoomList(); }));
+  S.unsubRoom.push(onSnapshot(collection(base, "roster"), snap => {
+    S.roster = snap.docs.map(d => ({ email: d.id, ...d.data() })).sort((a, b) => natCmp(a.seat, b.seat));
+    renderLive();
+  }));
+  S.unsubRoom.push(onSnapshot(collection(base, "presence"), snap => {
+    S.presence = snap.docs.map(d => ({ uid: d.id, ...d.data() })); renderLive();
+  }));
+  S.unsubRoom.push(onSnapshot(collection(base, "votes"), snap => {
+    S.votes = snap.docs.map(d => ({ id: d.id, ...d.data() })); renderLive();
+  }));
+  S.unsubRoom.push(onSnapshot(doc(base, "public", "results"), snap => {
+    S.results = snap.exists() ? snap.data() : null; renderLive();
+  }));
+}
+setInterval(() => { if (S.room && (S.tab === "monitor" || S.tab === "roster")) renderLive(); }, 15000);
+
+// ── 計算 ───────────────────────────────────────────────────────────
+function presenceOf(email) {
+  let best = null;
+  S.presence.forEach(p => { if (p.email === email && (!best || tsMs(p.lastSeen) > tsMs(best.lastSeen))) best = p; });
+  if (!best) return { state: "none", label: "未登入" };
+  const fresh = Date.now() - tsMs(best.lastSeen) < ONLINE_MS;
+  if (best.online !== false && fresh) return { state: "on", label: "線上", at: best.lastSeen };
+  return { state: "off", label: "已離開", at: best.lastSeen };
+}
+
+function compute() {
+  const r = S.room, crit = r.criteria || [], groups = r.groups || [];
+  const maxTotal = crit.reduce((a, c) => a + c.max, 0) || 1;
+  const valid = S.votes.filter(v => v.valid !== false && groups.includes(v.group));
+  const groupRows = groups.map(g => {
+    const vs = valid.filter(v => v.group === g);
+    const totals = vs.map(v => v.total).sort((a, b) => a - b);
+    const n = totals.length, mean = avg(totals);
+    const trim = n >= 5 ? avg(totals.slice(1, -1)) : mean;       // 5 票以上才去頭尾
+    const members = S.roster.filter(s => s.group === g).length;
+    return {
+      g, n, mean, trim, members,
+      expected: S.roster.length - (r.blockOwnGroup ? members : 0),
+      critAvg: crit.map(c => avg(vs.map(v => v.scores?.[c.id] ?? 0))),
+      score: S.trimmed ? trim : mean,
+    };
+  });
+  const ranked = [...groupRows].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
+  let rk = 0; ranked.forEach((x, i) => { if (x.score == null) x.rank = null; else { if (i === 0 || x.score !== ranked[i - 1].score) rk = i + 1; x.rank = rk; } });
+
+  const gMean = Object.fromEntries(groupRows.map(x => [x.g, x.mean]));
+  const raters = S.roster.map(s => {
+    const vs = valid.filter(v => v.email === s.email);
+    return {
+      ...s, n: vs.length,
+      avgPct: avg(vs.map(v => v.total / maxTotal * 100)),
+      dev: avg(vs.map(v => (v.total - gMean[v.group]) / maxTotal * 100)),
+      worst: vs.map(v => ({ g: v.group, d: (v.total - gMean[v.group]) / maxTotal * 100 }))
+               .sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0] || null,     // 偏離最大的一次
+    };
+  });
+  const rated = raters.filter(x => x.n > 0).sort((a, b) => b.avgPct - a.avgPct);
+  const unrated = raters.filter(x => x.n === 0);
+  return { crit, groups, maxTotal, valid, ranked, rated, unrated };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  版面：Header + 分頁；分頁分成「靜態區」與「即時區(#live)」
+//  即時資料更新時只重畫 #live，避免正在輸入的欄位被洗掉
+// ══════════════════════════════════════════════════════════════════
+const TABS = [["monitor", "即時監看"], ["rank", "排名與評分紀錄"], ["roster", "名單"], ["settings", "設定"]];
+
+function renderShell() {
+  app$().innerHTML = `
+  <header class="top"><div class="wrap">
+    <div class="row"><button class="small" id="btnBack">← 教室列表</button>
+      <span class="title" id="hTitle"></span><span class="code-badge" id="hCode"></span>
+      <span class="spacer"></span><button class="small" id="btnQR">📱 投影 QR Code</button>
+      <span class="muted">${esc(S.user.email)}</span><button class="small" id="btnOut">登出</button></div>
+    <div class="tabs">${TABS.map(([k, l]) => `<button data-tab="${k}">${l}</button>`).join("")}</div>
+  </div></header>
+  <div class="wrap"><div id="tabBody"></div><footer>臺中二中 阿發老師 設計</footer></div>`;
+  $("#btnBack").onclick = () => openRoomList();
+  $("#btnOut").onclick = () => signOut(auth);
+  $("#btnQR").onclick = showQR;
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderTab(); });
+  $("#tabBody").addEventListener("click", onAction);
+  $("#tabBody").addEventListener("change", onChange);
+  renderHeader(); renderTab();
+}
+function renderHeader() {
+  if (!$("#hTitle")) return;
+  $("#hTitle").textContent = S.room.title || "(未命名)";
+  $("#hCode").textContent = S.roomId;
+}
+function renderTab() {
+  document.querySelectorAll("[data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === S.tab));
+  const body = $("#tabBody");
+  if (S.tab === "roster") body.innerHTML = rosterStatic() + `<div id="live"></div>`;
+  else if (S.tab === "settings") body.innerHTML = settingsStatic();
+  else body.innerHTML = `<div id="live"></div>`;
+  if (S.tab === "settings") initSettings();
+  renderLive();
+}
+function renderLive() {
+  const live = $("#live");
+  if (!live || !S.room) return;
+  if (S.tab === "monitor") live.innerHTML = monitorLive();
+  else if (S.tab === "rank") live.innerHTML = rankLive();
+  else if (S.tab === "roster") live.innerHTML = rosterLive();
+}
+
+// ── 分頁一：即時監看 ────────────────────────────────────────────────
+function monitorLive() {
+  const r = S.room, groups = r.groups || [], open = new Set(r.openGroups || []);
+  const st = S.roster.map(s => presenceOf(s.email));
+  const onCount = st.filter(x => x.state === "on").length;
+  const voteMap = new Map(S.votes.map(v => [v.email + "|" + v.group, v]));
+  const validCount = S.votes.filter(v => v.valid !== false).length;
+  let expected = 0;
+  S.roster.forEach(s => groups.forEach(g => { if (open.has(g) && !(r.blockOwnGroup && s.group === g)) expected++; }));
+  const doneOpen = S.votes.filter(v => v.valid !== false && open.has(v.group)).length;
+
+  if (!groups.length) return `<div class="card"><h2>尚未匯入名單</h2><p class="muted">請先到「名單」分頁貼上 座號／姓名／組別／email。</p></div>`;
+
+  return `
+  <div class="stats">
+    <div class="stat"><span class="muted">線上學生</span><b>${onCount} <small class="muted">/ ${S.roster.length}</small></b></div>
+    <div class="stat"><span class="muted">開放中組別</span><b>${open.size} <small class="muted">/ ${groups.length}</small></b></div>
+    <div class="stat"><span class="muted">開放組別完成度</span><b>${doneOpen} <small class="muted">/ ${expected}</small></b></div>
+    <div class="stat"><span class="muted">有效評分總數</span><b>${validCount}</b></div>
+  </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:12px"><h2 style="margin:0">開放評分</h2><span class="spacer"></span>
+      <button class="small" data-act="openAll">全部開啟</button><button class="small" data-act="closeAll">全部關閉</button></div>
+    <div class="chips">${groups.map(g => `<button class="chip ${open.has(g) ? "open" : ""}" data-act="toggleGroup" data-g="${esc(g)}">
+      ${open.has(g) ? "🟢" : "⚪"} ${esc(g)}</button>`).join("")}</div>
+    <p class="muted" style="margin:10px 0 0">點組別切換開放／關閉。學生畫面會即時出現或消失該組。</p>
+  </div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">評分矩陣</h2><span class="spacer"></span>
+      <span class="muted">點分數可作廢／刪除 ・ <span class="dot on"></span>線上 <span class="dot off"></span>已離開 <span class="dot"></span>未登入</span></div>
+    <div class="tbl-wrap"><table class="matrix">
+      <thead><tr><th>座號</th><th>姓名</th><th>組</th><th>狀態</th>
+        ${groups.map(g => `<th class="num ${open.has(g) ? "gopen" : ""}">${esc(g)}</th>`).join("")}<th class="num">完成</th></tr></thead>
+      <tbody>${S.roster.map((s, i) => {
+        let done = 0, need = 0;
+        const cells = groups.map(g => {
+          const self = r.blockOwnGroup && s.group === g;
+          const v = voteMap.get(s.email + "|" + g);
+          if (!self && open.has(g)) need++;
+          if (v) {
+            if (v.valid !== false && open.has(g)) done++;
+            return `<td class="cell has ${v.valid === false ? "void" : ""}" data-act="vote" data-id="${esc(v.id)}">${v.total}</td>`;
+          }
+          if (self) return `<td class="cell self">—</td>`;
+          return `<td class="cell ${open.has(g) ? "wait" : ""}">${open.has(g) ? "·" : ""}</td>`;
+        }).join("");
+        const p = st[i];
+        return `<tr><td>${esc(s.seat)}</td><td>${esc(s.name)}</td><td>${esc(s.group)}</td>
+          <td title="${p.at ? "最後活動 " + timeStr(p.at) : ""}"><span class="dot ${p.state === "none" ? "" : p.state}"></span>${p.label}</td>
+          ${cells}<td class="num">${need ? `${done}/${need}` : "—"}</td></tr>`;
+      }).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── 分頁二：排名與評分紀錄 ──────────────────────────────────────────
+function rankLive() {
+  const C = compute();
+  if (!C.groups.length) return `<div class="card"><p class="muted">尚未匯入名單。</p></div>`;
+  const topMax = Math.max(...C.ranked.map(x => x.score || 0), 1);
+  const pub = S.results?.published;
+  const n = C.rated.length, k = n >= 9 ? 3 : n >= 5 ? 2 : n >= 3 ? 1 : 0;   // 標示前/後 k 名
+  const filter = S.voteFilter;
+  const list = S.votes.filter(v => !filter || v.group === filter)
+    .sort((a, b) => natCmp(a.group, b.group) || tsMs(b.at) - tsMs(a.at));
+
+  return `
+  <div class="card">
+    <div class="row" style="margin-bottom:12px"><h2 style="margin:0">🏆 小組排名</h2><span class="spacer"></span>
+      <label class="row" style="gap:6px"><input type="checkbox" data-chg="trimmed" ${S.trimmed ? "checked" : ""}>去掉最高與最低分（5 票以上）</label>
+      <button class="small" data-act="exportRank">匯出 CSV</button>
+      ${pub ? `<button class="small" data-act="publish">更新公布內容</button><button class="small danger" data-act="unpublish">收回公布</button>`
+            : `<button class="small primary" data-act="publish">公布排名給學生</button>`}
+    </div>
+    ${pub ? `<p class="muted" style="margin-top:0">✅ 學生目前看得到排名（公布於 ${timeStr(S.results.updatedAt)}）。新的評分不會自動更新，需按「更新公布內容」。</p>` : ""}
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>名次</th><th>組別</th><th class="num">${S.trimmed ? "去頭尾平均" : "平均總分"}</th><th></th><th class="num">票數</th>
+        ${C.crit.map(c => `<th class="num">${esc(c.name)}</th>`).join("")}</tr></thead>
+      <tbody>${C.ranked.map(x => `<tr><td class="rank">${x.rank ?? "—"}</td><td><b>${esc(x.g)}</b></td>
+        <td class="num"><b>${fmt(x.score, 2)}</b></td>
+        <td><div class="bar"><i style="width:${(x.score || 0) / topMax * 100}%"></i></div></td>
+        <td class="num">${x.n} / ${x.expected}</td>
+        ${x.critAvg.map(a => `<td class="num">${fmt(a, 1)}</td>`).join("")}</tr>`).join("")}</tbody>
+    </table></div>
+    <p class="muted">滿分 ${C.maxTotal} 分。作廢的評分不列入計算。</p>
+  </div>
+
+  <div class="card">
+    <h2>🔍 評分者給分排序（抓極端給分）</h2>
+    <p class="muted" style="margin-top:-6px">「平均給分」= 該生給出總分 ÷ 滿分；「與全班差距」= 該生給分減去各組全班平均，正值偏高、負值偏低；
+      「最極端一次」列出偏離全班最多的那一票（差距 ≥ 25% 以紅字標示）。紅底為給分最高 ${k} 人，藍底為最低 ${k} 人。</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>排序</th><th>座號</th><th>姓名</th><th>組</th><th class="num">已評組數</th><th class="num">平均給分</th><th class="num">與全班差距</th><th class="num">最極端一次</th></tr></thead>
+      <tbody>${C.rated.map((x, i) => `<tr class="${i < k ? "hi" : i >= n - k ? "lo" : ""}">
+          <td class="rank">${i + 1}</td><td>${esc(x.seat)}</td><td>${esc(x.name)}</td><td>${esc(x.group)}</td>
+          <td class="num">${x.n}</td><td class="num">${fmt(x.avgPct, 1)}%</td>
+          <td class="num">${x.dev >= 0 ? "+" : ""}${fmt(x.dev, 1)}%</td>
+          <td class="num">${esc(x.worst.g)} <b style="color:${Math.abs(x.worst.d) >= 25 ? "var(--warn)" : "inherit"}">${x.worst.d >= 0 ? "+" : ""}${fmt(x.worst.d, 1)}%</b></td></tr>`).join("")}
+        ${C.unrated.map(x => `<tr><td class="rank">—</td><td>${esc(x.seat)}</td><td>${esc(x.name)}</td><td>${esc(x.group)}</td>
+          <td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>`).join("")}</tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:12px"><h2 style="margin:0">📝 評分紀錄</h2>
+      <select data-chg="voteFilter"><option value="">全部組別</option>
+        ${C.groups.map(g => `<option value="${esc(g)}" ${g === filter ? "selected" : ""}>${esc(g)}</option>`).join("")}</select>
+      <span class="spacer"></span><button class="small" data-act="exportVotes">匯出明細 CSV</button></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>被評組</th><th>評分者</th><th>評分者組別</th>${C.crit.map(c => `<th class="num">${esc(c.name)}</th>`).join("")}
+        <th class="num">總分</th><th>時間</th><th>狀態</th><th></th></tr></thead>
+      <tbody>${list.map(v => `<tr class="${v.valid === false ? "void" : ""}"><td>${esc(v.group)}</td><td>${esc(v.name)}</td><td>${esc(v.voterGroup)}</td>
+        ${C.crit.map(c => `<td class="num">${v.scores?.[c.id] ?? "—"}</td>`).join("")}
+        <td class="num"><b>${v.total}</b></td><td>${timeStr(v.at)}</td>
+        <td>${v.valid === false ? `<span class="tag warn">已作廢</span>` : `<span class="tag ok">有效</span>`}</td>
+        <td style="text-decoration:none"><button class="small" data-act="vote" data-id="${esc(v.id)}">處理</button></td></tr>`).join("")
+        || `<tr><td colspan="${C.crit.length + 7}" class="muted">尚無評分</td></tr>`}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── 分頁三：名單 ────────────────────────────────────────────────────
+function rosterStatic() {
+  return `<div class="card">
+    <h2>匯入名單</h2>
+    <p class="muted" style="margin-top:-6px">從 Excel 複製四欄貼上（每位學生一列）：<b>座號　姓名　組別　email</b>。第一列若是標題會自動略過。
+      匯入會<b>取代</b>目前整份名單，組別清單也會依名單自動產生。</p>
+    <textarea id="rosterText" placeholder="1&#9;王小明&#9;第1組&#9;s110001@example.edu.tw&#10;2&#9;李大華&#9;第1組&#9;s110002@example.edu.tw"></textarea>
+    <div class="row" style="margin-top:10px"><button id="btnPreview" data-act="preview">預覽檢查</button>
+      <button class="primary" id="btnImport" data-act="import" disabled>確認匯入</button><span id="pvMsg" class="muted"></span></div>
+    <div id="pvBox"></div>
+  </div>`;
+}
+function parseRoster(text) {
+  const rows = [], errors = [], seenEmail = new Set(), seenName = new Set();
+  text.split(/\r?\n/).forEach((line, idx) => {
+    if (!line.trim()) return;
+    const cells = (line.includes("\t") ? line.split("\t") : line.split(/[,，]/)).map(c => c.trim());
+    if (idx === 0 && /座號|姓名|email/i.test(line) && !/@.+\./.test(cells[3] || "")) return;   // 標題列
+    const ln = idx + 1;
+    if (cells.length < 4) return errors.push(`第 ${ln} 列：需要 4 欄，只有 ${cells.length} 欄`);
+    const [seat, name, group, emailRaw] = cells;
+    const email = emailRaw.toLowerCase();
+    if (!name) errors.push(`第 ${ln} 列：姓名空白`);
+    if (!group) errors.push(`第 ${ln} 列：組別空白`);
+    if (group.includes("/")) errors.push(`第 ${ln} 列：組別名稱不能包含「/」`);
+    if (!/^[^@\s/]+@[^@\s/]+\.[^@\s/]+$/.test(email)) errors.push(`第 ${ln} 列：email 格式不正確「${emailRaw}」`);
+    if (seenEmail.has(email)) errors.push(`第 ${ln} 列：email 重複 ${email}`);
+    if (seenName.has(name)) errors.push(`第 ${ln} 列：姓名重複「${name}」（同名請加註區分，例如 王小明A）`);
+    seenEmail.add(email); seenName.add(name);
+    rows.push({ seat, name, group, email });
+  });
+  if (!rows.length && !errors.length) errors.push("沒有讀到任何資料");
+  const groups = [...new Set(rows.map(r => r.group))].sort(natCmp);
+  return { rows, errors, groups };
+}
+function renderPreview() {
+  const P = S.preview, box = $("#pvBox");
+  $("#btnImport").disabled = !P || P.errors.length > 0;
+  if (!P) { box.innerHTML = ""; return; }
+  $("#pvMsg").textContent = P.errors.length ? `有 ${P.errors.length} 個錯誤，請修正後再預覽` : `✓ ${P.rows.length} 位學生、${P.groups.length} 個組別，可以匯入`;
+  box.innerHTML = `${P.errors.length ? `<div class="err" style="margin-top:10px">${P.errors.map(esc).join("<br>")}</div>` : ""}
+    <div class="row" style="margin-top:12px">${P.groups.map(g => `<span class="tag">${esc(g)}：${P.rows.filter(r => r.group === g).length} 人</span>`).join("")}</div>`;
+}
+function rosterLive() {
+  const groups = S.room.groups || [];
+  return `<div class="card">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">目前名單（${S.roster.length} 人・${groups.length} 組）</h2><span class="spacer"></span>
+      ${S.roster.length ? `<button class="small danger" data-act="clearRoster">清空名單</button>` : ""}</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>座號</th><th>姓名</th><th>組別</th><th>email</th><th>狀態</th><th>最後活動</th></tr></thead>
+      <tbody>${S.roster.map(s => { const p = presenceOf(s.email); return `<tr><td>${esc(s.seat)}</td><td>${esc(s.name)}</td>
+        <td>${esc(s.group)}</td><td class="mono">${esc(s.email)}</td>
+        <td><span class="dot ${p.state === "none" ? "" : p.state}"></span>${p.label}</td><td>${p.at ? timeStr(p.at) : ""}</td></tr>`; }).join("")
+        || `<tr><td colspan="6" class="muted">尚無名單</td></tr>`}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── 分頁四：設定 ────────────────────────────────────────────────────
+function settingsStatic() {
+  const r = S.room, isCreator = r.owners[0] === S.user.uid, link = studentLink(S.roomId);
+  return `<div class="grid2">
+    <div>
+      <div class="card"><h2>教室名稱</h2>
+        <div class="row"><input id="setTitle" value="${esc(r.title)}" style="flex:1"><button data-act="saveTitle">儲存</button></div></div>
+      <div class="card"><h2>評分項目（最多 ${MAX_CRITERIA} 項）</h2>
+        <div id="critBox"></div>
+        <div class="row"><button class="small" data-act="addCrit">＋ 新增項目</button><span class="spacer"></span>
+          <button class="primary" data-act="saveCrit">儲存評分項目</button></div>
+        <p class="muted">每項滿分 1～100 的整數。已有評分後修改項目，舊評分可能無法對應，請在開始前設定好。</p></div>
+      <div class="card"><h2>評分規則</h2>
+        <label class="row"><input type="checkbox" data-chg="blockOwn" ${r.blockOwnGroup ? "checked" : ""}> 禁止學生評自己的組</label>
+        <p class="muted">學生送出後即鎖定，無法修改。老師刪除該筆評分後，學生可重新評分。</p></div>
+    </div>
+    <div>
+      <div class="card"><h2>學生連結</h2>
+        <div class="row"><input readonly value="${esc(link)}" style="flex:1;min-width:0" id="linkInput"><button data-act="copyLink">複製</button></div>
+        <div style="margin-top:12px" class="qr-box" id="qrSmall"></div>
+        <p class="muted">學生用<b>學校 Google 帳號</b>登入後，系統依 email 自動對應名單中的姓名與組別。</p></div>
+      <div class="card"><h2>協同老師</h2>
+        <div id="ownerBox" class="muted">讀取中…</div>
+        ${isCreator ? `<div class="row" style="margin-top:10px"><input id="coEmail" placeholder="協同老師 email（須已在白名單）" style="flex:1;min-width:0">
+          <button data-act="addOwner">加入</button></div>` : `<p class="muted">只有建立者可以新增或移除協同老師。</p>`}</div>
+      ${isCreator ? `<div class="card"><h2>危險區域</h2>
+        <button class="danger" data-act="deleteRoom">刪除此教室（含名單與所有評分）</button></div>` : ""}
+    </div></div>`;
+}
+let critDraft = [];
+function initSettings() {
+  critDraft = (S.room.criteria || []).map(c => ({ ...c }));
+  drawCrit();
+  if (window.QRCode) new QRCode($("#qrSmall"), { text: studentLink(S.roomId), width: 150, height: 150 });
+  drawOwners();
+}
+function drawCrit() {
+  $("#critBox").innerHTML = critDraft.map((c, i) => `<div class="crit-row">
+    <span class="muted" style="width:22px">${i + 1}.</span>
+    <input type="text" value="${esc(c.name)}" data-ci="${i}" data-f="name">
+    <input type="number" min="1" max="100" value="${c.max}" data-ci="${i}" data-f="max">
+    <button class="small danger" data-act="delCrit" data-i="${i}">✕</button></div>`).join("");
+  $("#critBox").oninput = e => { const t = e.target; if (t.dataset.ci == null) return;
+    critDraft[+t.dataset.ci][t.dataset.f] = t.dataset.f === "max" ? parseInt(t.value, 10) : t.value; };
+}
+async function drawOwners() {
+  const r = S.room, box = $("#ownerBox"); if (!box) return;
+  const rows = await Promise.all(r.owners.map(async (uid, i) => {
+    let email = uid; try { const s = await getDoc(doc(db, "admins", uid)); if (s.exists()) email = s.data().email || uid; } catch (e) {}
+    return `<div class="row" style="margin-bottom:6px"><span>${esc(email)}</span>${i === 0 ? `<span class="tag">建立者</span>` : ""}
+      ${i > 0 && r.owners[0] === S.user.uid ? `<button class="small danger" data-act="rmOwner" data-uid="${esc(uid)}">移除</button>` : ""}</div>`;
+  }));
+  if ($("#ownerBox")) $("#ownerBox").innerHTML = rows.join("");
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  事件處理
+// ══════════════════════════════════════════════════════════════════
+const roomRef = () => doc(db, "rooms", S.roomId);
+const guard = fn => async (...a) => { try { await fn(...a); } catch (e) { console.error(e); toast("操作失敗：" + (e.code === "permission-denied" ? "權限不足" : e.message)); } };
+
+async function onChange(e) {
+  const t = e.target, k = t.dataset.chg; if (!k) return;
+  if (k === "trimmed") { S.trimmed = t.checked; renderLive(); }
+  else if (k === "voteFilter") { S.voteFilter = t.value; renderLive(); }
+  else if (k === "blockOwn") await guard(() => updateDoc(roomRef(), { blockOwnGroup: t.checked }))();
+}
+
+const onAction = guard(async e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const act = b.dataset.act, r = S.room;
+  switch (act) {
+    case "toggleGroup": {
+      const g = b.dataset.g, on = (r.openGroups || []).includes(g);
+      await updateDoc(roomRef(), { openGroups: on ? arrayRemove(g) : arrayUnion(g) }); break;
+    }
+    case "openAll":  await updateDoc(roomRef(), { openGroups: [...(r.groups || [])] }); break;
+    case "closeAll": await updateDoc(roomRef(), { openGroups: [] }); break;
+    case "vote": return voteAction(b.dataset.id);
+    case "publish": {
+      const C = compute();
+      await setDoc(doc(roomRef(), "public", "results"), {
+        published: true, mode: S.trimmed ? "trim" : "mean", maxTotal: C.maxTotal, updatedAt: serverTimestamp(),
+        ranking: C.ranked.map(x => ({ group: x.g, rank: x.rank, score: x.score == null ? null : Math.round(x.score * 100) / 100, n: x.n })),
+      });
+      toast("已公布排名"); break;
+    }
+    case "unpublish": await setDoc(doc(roomRef(), "public", "results"), { published: false }, { merge: true }); toast("已收回"); break;
+    case "exportRank": {
+      const C = compute();
+      downloadCSV(`${r.title}_小組排名.csv`, [["名次", "組別", "平均總分", "去頭尾平均", "票數", ...C.crit.map(c => c.name)],
+        ...C.ranked.map(x => [x.rank ?? "", x.g, fmt(x.mean, 2), fmt(x.trim, 2), x.n, ...x.critAvg.map(a => fmt(a, 2))])]); break;
+    }
+    case "exportVotes": {
+      const crit = r.criteria || [];
+      downloadCSV(`${r.title}_評分明細.csv`, [["被評組", "評分者", "評分者組別", "email", ...crit.map(c => c.name), "總分", "時間", "狀態"],
+        ...[...S.votes].sort((a, b) => natCmp(a.group, b.group) || natCmp(a.name, b.name)).map(v =>
+          [v.group, v.name, v.voterGroup, v.email, ...crit.map(c => v.scores?.[c.id] ?? ""), v.total,
+           tsMs(v.at) ? new Date(tsMs(v.at)).toLocaleString("zh-TW") : "", v.valid === false ? "作廢" : "有效"])]); break;
+    }
+    case "preview": S.preview = parseRoster($("#rosterText").value); renderPreview(); break;
+    case "import": return importRoster();
+    case "clearRoster": {
+      if (!await confirmBox("清空名單", "確定清空整份名單？學生將無法再評分（已送出的評分紀錄保留）。", "清空", true)) return;
+      await commitOps(S.roster.map(s => ({ type: "delete", ref: doc(roomRef(), "roster", s.email) })));
+      await updateDoc(roomRef(), { groups: [], openGroups: [] }); toast("名單已清空"); break;
+    }
+    case "saveTitle": { const t = $("#setTitle").value.trim(); if (!t) return toast("名稱不可空白");
+      await updateDoc(roomRef(), { title: t }); toast("已儲存"); break; }
+    case "addCrit": if (critDraft.length >= MAX_CRITERIA) return toast(`最多 ${MAX_CRITERIA} 項`);
+      critDraft.push({ name: "", max: 10 }); drawCrit(); break;
+    case "delCrit": critDraft.splice(+b.dataset.i, 1); drawCrit(); break;
+    case "saveCrit": return saveCriteria();
+    case "copyLink": navigator.clipboard.writeText(studentLink(S.roomId)).then(() => toast("連結已複製")); break;
+    case "addOwner": {
+      const email = $("#coEmail").value.trim().toLowerCase(); if (!email) return;
+      const qs = await getDocs(query(collection(db, "admins"), where("email", "==", email)));
+      if (qs.empty) return toast("找不到這位老師，請確認對方已加入白名單（admins 的 email 欄位要小寫）");
+      await updateDoc(roomRef(), { owners: arrayUnion(qs.docs[0].id) }); $("#coEmail").value = ""; toast("已加入"); drawOwners(); break;
+    }
+    case "rmOwner":
+      if (!await confirmBox("移除協同老師", "確定移除？對方將無法再管理此教室。", "移除", true)) return;
+      await updateDoc(roomRef(), { owners: arrayRemove(b.dataset.uid) }); drawOwners(); break;
+    case "deleteRoom": return deleteRoom();
+  }
+});
+
+async function voteAction(id) {
+  const v = S.votes.find(x => x.id === id); if (!v) return;
+  const crit = S.room.criteria || [];
+  const body = `<p><b>${esc(v.name)}</b>（${esc(v.voterGroup)}）→ <b>${esc(v.group)}</b></p>
+    <table>${crit.map(c => `<tr><td>${esc(c.name)}</td><td class="num">${v.scores?.[c.id] ?? "—"} / ${c.max}</td></tr>`).join("")}
+    <tr><td><b>總分</b></td><td class="num"><b>${v.total}</b></td></tr></table>
+    <p class="muted">作廢：保留紀錄但不列入計算，可再恢復；學生無法重評。<br>刪除：紀錄移除，學生可重新評分此組。</p>`;
+  const choice = await modal("處理這筆評分", body, [
+    { label: "取消", value: null },
+    { label: "刪除（讓學生重評）", value: "del", cls: "danger" },
+    v.valid === false ? { label: "恢復有效", value: "restore", cls: "primary" } : { label: "作廢", value: "void", cls: "primary" },
+  ]);
+  const ref = doc(roomRef(), "votes", id);
+  if (choice === "void") { await updateDoc(ref, { valid: false }); toast("已作廢"); }
+  else if (choice === "restore") { await updateDoc(ref, { valid: true }); toast("已恢復"); }
+  else if (choice === "del") {
+    if (!await confirmBox("確定刪除？", "刪除後無法復原，學生可以重新評分這一組。", "刪除", true)) return;
+    await deleteDoc(ref); toast("已刪除");
+  }
+}
+
+async function importRoster() {
+  const P = S.preview; if (!P || P.errors.length) return;
+  const hasVotes = S.votes.length > 0;
+  const ok = await confirmBox("確認匯入", `將以 <b>${P.rows.length}</b> 位學生、<b>${P.groups.length}</b> 個組別<b>取代</b>目前名單。
+    ${hasVotes ? `<p class="err">注意：此教室已有 ${S.votes.length} 筆評分，名單變動可能讓部分評分無法對應。</p>` : ""}`, "匯入");
+  if (!ok) return;
+  const newEmails = new Set(P.rows.map(r => r.email));
+  const ops = S.roster.filter(s => !newEmails.has(s.email)).map(s => ({ type: "delete", ref: doc(roomRef(), "roster", s.email) }));
+  P.rows.forEach(r => ops.push({ type: "set", ref: doc(roomRef(), "roster", r.email), data: { seat: r.seat, name: r.name, group: r.group } }));
+  await commitOps(ops);
+  await updateDoc(roomRef(), { groups: P.groups, openGroups: (S.room.openGroups || []).filter(g => P.groups.includes(g)) });
+  S.preview = null; $("#rosterText").value = ""; renderPreview(); $("#pvMsg").textContent = "";
+  toast(`已匯入 ${P.rows.length} 位學生`);
+}
+
+async function saveCriteria() {
+  const list = critDraft.map(c => ({ name: String(c.name || "").trim(), max: c.max }));
+  if (!list.length) return toast("至少需要一個評分項目");
+  if (list.some(c => !c.name)) return toast("評分項目名稱不可空白");
+  if (list.some(c => !Number.isInteger(c.max) || c.max < 1 || c.max > 100)) return toast("滿分需為 1～100 的整數");
+  if (S.votes.length && !await confirmBox("已有評分紀錄", `此教室已有 ${S.votes.length} 筆評分，修改評分項目可能讓舊評分無法對應。確定儲存？`, "儲存", true)) return;
+  const criteria = list.map((c, i) => ({ id: "c" + (i + 1), name: c.name, max: c.max }));
+  await updateDoc(roomRef(), { criteria, maxes: Object.fromEntries(criteria.map(c => [c.id, c.max])) });
+  toast("評分項目已儲存");
+}
+
+async function deleteRoom() {
+  if (!await confirmBox("刪除教室", `確定刪除「${esc(S.room.title)}」？名單、上線紀錄與 ${S.votes.length} 筆評分將全部刪除，<b>無法復原</b>。`, "永久刪除", true)) return;
+  const base = roomRef(), ops = [];
+  for (const sub of ["roster", "presence", "votes", "public"]) {
+    (await getDocs(collection(base, sub))).forEach(d => ops.push({ type: "delete", ref: d.ref }));
+  }
+  const id = S.roomId;
+  cleanupRoom();
+  await commitOps(ops);
+  await deleteDoc(doc(db, "rooms", id));
+  toast("教室已刪除"); openRoomList();
+}
+
+function showQR() {
+  const link = studentLink(S.roomId);
+  modal(S.room.title, `<div class="big-code">${esc(S.roomId)}</div>
+    <div style="text-align:center"><div class="qr-box" id="qrBig"></div></div>
+    <p class="muted mono" style="text-align:center;word-break:break-all">${esc(link)}</p>`, [{ label: "關閉", value: null }]);
+  if (window.QRCode) new QRCode($("#qrBig"), { text: link, width: 320, height: 320 });
+}
+</script>
+</body>
+</html>
