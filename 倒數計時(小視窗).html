@@ -1386,9 +1386,18 @@ function init() {
 const PiP = {
   win: null, ro: null, mo: null, holder: null, restartLoop: () => {},
   supported: 'documentPictureInPicture' in window,
+  plain: false, modeBtn: null,     // 小窗專用的「純數字」顯示切換（不更動設定裡的主題）
   syncBody() {
     if (!this.win) return;
-    this.win.document.body.className = 'pip ' + [...document.body.classList].filter(c => c.startsWith('theme-')).join(' ');
+    const usePlain = this.plain && cfg.theme !== 'plain';
+    this.win.document.body.className = 'pip ' + (usePlain ? 'theme-plain' :
+      [...document.body.classList].filter(c => c.startsWith('theme-')).join(' '));
+    if (this.modeBtn) {
+      const NAME = { bomb: '💣 炸彈', balloon: '🎈 氣球', water: '💧 水球' };
+      this.modeBtn.hidden = cfg.theme === 'plain';          // 主題本來就是純數字時不需要切換
+      this.modeBtn.textContent = usePlain ? (NAME[cfg.theme] || '動畫') : '🔢 純數字';
+      this.modeBtn.title = usePlain ? '切回動畫主題' : '切換成純數字';
+    }
   },
   async open() {
     if (this.win) { this.win.focus(); return; }
@@ -1421,7 +1430,10 @@ const PiP = {
 
     // 搬移倒數卡與「開始/暫停、重設」按鈕（事件與狀態更新都跟著元素走）
     const bar = d.createElement('div'); bar.className = 'pip-bar';
-    bar.append(el.miniStart, el.miniReset);
+    this.modeBtn = d.createElement('button'); this.modeBtn.className = 'btn';
+    this.modeBtn.addEventListener('click', () => { this.plain = !this.plain; this.syncBody(); });
+    bar.append(this.modeBtn, el.miniStart, el.miniReset);
+    this.syncBody();
     root.append(clk, el.cdCard);
     d.body.append(root, bar);
 
@@ -1455,6 +1467,7 @@ const PiP = {
     if (this.mo) this.mo.disconnect();
     this.holder.replaceWith(el.cdCard);
     this.holder = null;
+    this.modeBtn = null;
     $('#miniBar').prepend(el.miniStart, el.miniReset);
     if (!fromPagehide) w.close();
     $('#btnPiP').textContent = '🗔 浮動視窗';
