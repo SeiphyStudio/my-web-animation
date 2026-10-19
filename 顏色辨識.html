@@ -92,6 +92,11 @@ input.bad{border-color:var(--danger);box-shadow:0 0 0 2px color-mix(in srgb,var(
 .reticle{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none}
 .reticle svg{width:100%;height:100%;display:block}
 .badge{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.68);color:#fff;font-size:13px;padding:4px 10px;border-radius:999px;pointer-events:none}
+/* 圖片雙指縮放 */
+.stage-host.zoomable{touch-action:none}
+.zoombar{position:absolute;left:8px;top:8px;z-index:3;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.68);color:#fff;
+  border-radius:999px;padding:3px 3px 3px 12px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.zoombar button{appearance:none;border:0;background:#fff;color:#1b1e23;font:inherit;font-size:13.5px;border-radius:999px;min-height:34px;padding:0 12px;cursor:pointer}
 
 /* ---------- readout ---------- */
 .viz{display:flex;gap:10px;align-items:stretch}
@@ -193,6 +198,20 @@ td.strong{font-weight:800;font-size:17px}
   .row.main dd{font-size:20px}
 }
 @media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+/* ---------- 說明視窗 ---------- */
+.dlg{padding:0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);color:var(--text);
+  width:min(92vw,34rem);max-height:84vh;box-shadow:0 12px 40px rgba(0,0,0,.28)}
+.dlg::backdrop{background:rgba(0,0,0,.5)}
+.dlg-in{padding:16px 18px 18px;max-height:84vh;overflow-y:auto}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.dlg-head h2{font-size:18px}
+.dlg-x{appearance:none;border:0;background:var(--surface-2);color:var(--text);font:inherit;font-size:18px;
+  width:40px;height:40px;border-radius:50%;cursor:pointer;flex:none}
+.dlg-info{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;overflow-wrap:anywhere}
+.dlg-info b{display:block;font-size:12.5px;color:var(--muted)}
+.dlg ul{margin:12px 0 0;padding-left:1.3em}
+.dlg li{font-size:15px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -230,6 +249,7 @@ td.strong{font-weight:800;font-size:17px}
         <label class="btn primary" for="file">選擇圖片</label>
         <input id="file" type="file" accept="image/*" hidden>
         <button class="btn" id="btnSample" type="button">載入範例色卡</button>
+        <button class="btn" id="btnHelp" type="button">說明</button>
       </div>
       <div class="stage-host" id="imgHost">
         <div class="ph" id="imgEmpty">
@@ -240,8 +260,8 @@ td.strong{font-weight:800;font-size:17px}
           <canvas id="imgCanvas" tabindex="0" aria-label="圖片取色區，點選或使用方向鍵移動取樣點"></canvas>
           <div class="reticle" id="imgReticle" hidden></div>
         </div>
+        <div class="zoombar" id="zoomBar" hidden><span id="zoomVal">1.0×</span><button type="button" id="zoomReset">重設</button></div>
       </div>
-      <p class="hint small" id="imgInfo">點一下圖片，或按住拖曳，即時讀取顏色（每次取取樣點周圍 5×5 像素的平均）。電腦上可用方向鍵逐像素微調，Shift＋方向鍵一次移 10 像素。</p>
     </div>
 
     <!-- ===== 相機 ===== -->
@@ -381,6 +401,19 @@ td.strong{font-weight:800;font-size:17px}
 <p class="foot">臺中二中 阿發老師 設計・所有運算都在你的裝置上完成，圖片與相機畫面不會上傳</p>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<dialog class="dlg" id="helpDlg" aria-labelledby="helpTitle">
+  <div class="dlg-in">
+    <div class="dlg-head"><h2 id="helpTitle">圖片取色說明</h2><button class="dlg-x" id="helpClose" type="button" aria-label="關閉">✕</button></div>
+    <p class="dlg-info"><b>目前圖片</b><span id="imgInfo">尚未載入圖片</span></p>
+    <ul>
+      <li>按「選擇圖片」，或把圖片拖曳、貼上（Ctrl／⌘＋V）到圖片區。也可以先載入範例色卡，對照已知色碼。</li>
+      <li>點一下圖片，或按住拖曳，即時讀取顏色。每次取取樣點周圍 5×5 像素的平均。</li>
+      <li>手機：雙指捏合縮放（最大 10×），雙指一起移動可平移；放大後按左上角「重設」回到原始大小。</li>
+      <li>電腦：點選圖片後，可用方向鍵逐像素微調，Shift＋方向鍵一次移 10 像素。</li>
+      <li>超過 3000 像素的圖片會自動縮小，以節省記憶體。</li>
+    </ul>
+  </div>
+</dialog>
 <div class="fs" id="fs" hidden role="dialog" aria-label="全螢幕色卡">
   <span class="fs-tip">點一下或按 Esc 關閉</span>
   <div class="fs-text"><b id="fsHex"></b><span id="fsRgb"></span></div>
@@ -591,7 +624,7 @@ function fit(stage, host, nw, nh) {
   const s = Math.min(aw / nw, maxStageH() / nh);
   stage.style.width = Math.max(1, Math.floor(nw * s)) + 'px';
   stage.style.height = Math.max(1, Math.floor(nh * s)) + 'px';
-  if (stage.id === 'imgStage') img.canvas.style.imageRendering = s > 1.5 ? 'pixelated' : 'auto';
+  if (stage.id === 'imgStage') { img.fitS = s; applyZoom(); }   // pixelated 判斷改由 applyZoom 依「適配倍率×縮放倍率」決定
 }
 function refit() {
   fit($('#imgStage'), $('#imgHost'), img.w, img.h);
@@ -620,8 +653,8 @@ function drawToCanvas(source, sw, sh, label) {
   c.imageSmoothingQuality = 'high'; c.drawImage(source, 0, 0, w, h);
   img.has = true; img.pick = null;
   $('#imgEmpty').hidden = true; $('#imgStage').hidden = false; $('#imgReticle').hidden = true;
-  $('#imgInfo').textContent = `${label}・${sw}×${sh} 像素` + (sc < 1 ? `（為節省記憶體，已縮小為 ${w}×${h}）` : '') +
-    '。點一下圖片，或按住拖曳，即時讀取顏色（取樣點周圍 5×5 像素平均）。';
+  $('#imgInfo').textContent = `${label}・${sw}×${sh} 像素` + (sc < 1 ? `（為節省記憶體，已縮小為 ${w}×${h}）` : '');
+  imgHost.classList.add('zoomable'); resetZoom();
   refit();
 }
 async function loadImageFile(file) {
@@ -673,7 +706,7 @@ function pickImageEvt(e) {
 }
 let dragging = false;
 img.canvas.addEventListener('pointerdown', e => {
-  if (!img.has) return; dragging = true;
+  if (!img.has || zoomLock) return; dragging = true;
   try { img.canvas.setPointerCapture(e.pointerId); } catch (_) {}
   pickImageEvt(e);
 });
@@ -687,6 +720,11 @@ img.canvas.addEventListener('keydown', e => {
 });
 $('#file').addEventListener('change', e => { loadImageFile(e.target.files[0]); e.target.value = ''; });
 $('#btnSample').addEventListener('click', drawSampleChart);
+/* 說明視窗：✕、點視窗外暗色區域、Esc（dialog 內建）皆可關閉 */
+const helpDlg = $('#helpDlg');
+$('#btnHelp').addEventListener('click', () => { if (helpDlg.showModal) helpDlg.showModal(); else helpDlg.setAttribute('open', ''); });
+$('#helpClose').addEventListener('click', () => { if (helpDlg.close) helpDlg.close(); else helpDlg.removeAttribute('open'); });
+helpDlg.addEventListener('click', e => { if (e.target === helpDlg && helpDlg.close) helpDlg.close(); });
 const imgHost = $('#imgHost');
 ['dragenter', 'dragover'].forEach(t => imgHost.addEventListener(t, e => { e.preventDefault(); imgHost.classList.add('drag'); }));
 ['dragleave', 'drop'].forEach(t => imgHost.addEventListener(t, e => { e.preventDefault(); imgHost.classList.remove('drag'); }));
@@ -695,6 +733,75 @@ document.addEventListener('paste', e => {
   const f = [...(e.clipboardData ? e.clipboardData.files : [])].find(f => f.type.startsWith('image/'));
   if (f) { showTab('image'); loadImageFile(f); }
 });
+
+/* ---------- 圖片雙指縮放・平移（僅觸控；滑鼠操作不受影響） ----------
+   單指：取色（原行為）；雙指：捏合縮放＋一起移動平移。
+   第二指放下時，讀值退回這次手勢開始前的顏色，避免第一指誤取色。
+   取色座標用 getBoundingClientRect() 計算，已含 transform，放大後仍對準正確像素。 */
+const ZMAX = 10;
+const zoom = { z: 1, tx: 0, ty: 0 };          // tx,ty：舞台中心相對外框中心的位移（螢幕 px）
+const imgStageEl = $('#imgStage'), touchPts = new Map();
+let pinch = null, zoomLock = false, zsnap = null;
+function clampZoom() {
+  const mx = Math.max(0, (imgStageEl.offsetWidth * zoom.z - imgHost.clientWidth) / 2);
+  const my = Math.max(0, (imgStageEl.offsetHeight * zoom.z - imgHost.clientHeight) / 2);
+  zoom.tx = clamp(zoom.tx, -mx, mx); zoom.ty = clamp(zoom.ty, -my, my);
+}
+function applyZoom() {
+  if (zoom.z < 1.01) zoom.z = 1;
+  clampZoom();
+  const on = zoom.z > 1;
+  imgStageEl.style.transform = on ? `translate(${zoom.tx}px, ${zoom.ty}px) scale(${zoom.z})` : '';
+  $('#imgReticle').style.transform = on ? `scale(${1 / zoom.z})` : '';   // 準心反向縮放，螢幕上大小固定
+  img.canvas.style.imageRendering = (img.fitS || 1) * zoom.z > 1.5 ? 'pixelated' : 'auto';
+  $('#zoomBar').hidden = !on;
+  $('#zoomVal').textContent = zoom.z.toFixed(1) + '×';
+}
+function resetZoom() { zoom.z = 1; zoom.tx = 0; zoom.ty = 0; applyZoom(); }
+function hostPt(x, y) { const r = imgHost.getBoundingClientRect(); return { x: x - r.left - r.width / 2, y: y - r.top - r.height / 2 }; }
+function startPinch() {
+  const [a, b] = [...touchPts.values()], m = hostPt((a.x + b.x) / 2, (a.y + b.y) / 2);
+  pinch = { d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: zoom.z,
+            px: (m.x - zoom.tx) / zoom.z, py: (m.y - zoom.ty) / zoom.z };   // 雙指中點下方的圖片位置（未縮放座標）
+}
+function takeZSnap() {
+  const rt = $('#imgReticle');
+  zsnap = { st: { ...state }, pick: img.pick && { ...img.pick }, rtHidden: rt.hidden, rtL: rt.style.left, rtT: rt.style.top,
+            loupe: lctx.getImageData(0, 0, loupeCv.width, loupeCv.height) };
+}
+function restoreZSnap() {
+  if (!zsnap) return;
+  const rt = $('#imgReticle');
+  Object.assign(state, zsnap.st); img.pick = zsnap.pick;
+  rt.hidden = zsnap.rtHidden; rt.style.left = zsnap.rtL; rt.style.top = zsnap.rtT;
+  lctx.putImageData(zsnap.loupe, 0, 0);
+  render();
+}
+imgHost.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch' || !img.has || e.target.closest('.zoombar')) return;
+  if (!touchPts.size) takeZSnap();
+  touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (touchPts.size === 2) {
+    if (!zoomLock) { dragging = false; restoreZSnap(); }
+    zoomLock = true; startPinch();
+  }
+}, true);   // capture：比 canvas 的取色先執行
+imgHost.addEventListener('pointermove', e => {
+  if (!touchPts.has(e.pointerId)) return;
+  touchPts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (!pinch || touchPts.size < 2) return;
+  const [a, b] = [...touchPts.values()], m = hostPt((a.x + b.x) / 2, (a.y + b.y) / 2);
+  zoom.z = clamp(pinch.z0 * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d0, 1, ZMAX);
+  zoom.tx = m.x - zoom.z * pinch.px; zoom.ty = m.y - zoom.z * pinch.py;
+  applyZoom();
+}, true);
+['pointerup', 'pointercancel'].forEach(t => imgHost.addEventListener(t, e => {
+  if (!touchPts.delete(e.pointerId)) return;
+  if (touchPts.size >= 2) startPinch(); else pinch = null;
+  if (!touchPts.size) zoomLock = false;      // 全部手指離開才恢復單指取色
+}, true));
+imgHost.addEventListener('gesturestart', e => e.preventDefault());   // iOS Safari：避免整頁被放大
+$('#zoomReset').addEventListener('click', resetZoom);
 
 /* ================= 相機模式 ================= */
 const video = $('#video');
