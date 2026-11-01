@@ -467,7 +467,7 @@
             gas: 'bhv_gas_url', behaviors: 'bhv_behaviors', cls: 'bhv_class', clsList: 'bhv_class_list',
             logs: 'bhv_logs', thr: 'bhv_threshold', modeN: 'bhv_mode_narrow', modeW: 'bhv_mode_wide',
             migrated: 'bhv_migrated_v1',
-            counts: c => `bhv_counts_${c}`, deltas: c => `bhv_deltas_${c}`, seat: c => `bhv_seat_${c}`
+            seat: c => `bhv_seat_${c}`
         };
         const LS = {
             get(k, d = null) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
@@ -520,6 +520,7 @@
         window.onload = function () {
             if (IS_GAS) document.body.classList.add('gas-mode');
             const migratedCount = migrateOldData();
+            cleanupOldCounters();
 
             gasUrl = LS.get(K.gas, '');
             document.getElementById('gas-url').value = gasUrl;
@@ -564,23 +565,47 @@
             if (dl !== null && LS.get(K.modeW) === null) LS.set(K.modeW, dl === '2' ? '1' : '0');
 
             if (oldLogs.length > 0) {
+                const code = LS.get(K.cls, '');
+                if (code) oldLogs.forEach(l => { if (!l.classCode) l.classCode = code; });
                 const all = {};
                 [...LS.getJSON(K.logs, []), ...oldLogs].forEach(l => { all[l.id] = l; });
                 const combined = Object.values(all).sort((a, b) => a.id - b.id);
                 LS.setJSON(K.logs, combined);
-                const code = LS.get(K.cls, '');
-                if (code) {
-                    const counts = {}, deltas = {};
-                    combined.forEach(l => {
-                        counts[l.seatId] = (counts[l.seatId] || 0) + 1;
-                        deltas[l.seatId] = (deltas[l.seatId] || 0) + (l.score || 0);
-                    });
-                    LS.setJSON(K.counts(code), counts);
-                    LS.setJSON(K.deltas(code), deltas);
-                }
             }
             LS.set(K.migrated, '1');
             return oldLogs.length;
+        }
+
+        // 移除舊的分班計數鍵值（改由暫存記錄即時計算）
+        function cleanupOldCounters() {
+            try {
+                const dead = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && (k.startsWith('bhv_counts_') || k.startsWith('bhv_deltas_'))) dead.push(k);
+                }
+                dead.forEach(k => localStorage.removeItem(k));
+            } catch (e) {}
+        }
+
+        // 未標示班級的記錄（第 2 步版本留下的），歸入目前選擇的班級
+        function assignOrphanLogs() {
+            if (!currentClass) return;
+            const orphans = logs.filter(l => !l.classCode);
+            if (orphans.length === 0) return;
+            orphans.forEach(l => l.classCode = currentClass);
+            saveLogs();
+            alert(`有 ${orphans.length} 筆記錄沒有標示班級，已歸入 ${currentClass} 班。\n請到「暫時記錄區」確認是否正確，再上傳。`);
+        }
+
+        // ================= 依暫存記錄即時計算（只算目前班級） =================
+        function classLogs() { return logs.filter(l => l.classCode === currentClass); }
+        function seatStats(seatId) {
+            let count = 0, delta = 0;
+            logs.forEach(l => {
+                if (l.classCode === currentClass && l.seatId === seatId) { count++; delta += (l.score || 0); }
+            });
+            return { count, delta };
         }
 
         // ================= 版面切換 =================
@@ -847,7 +872,6 @@
 
             normalizeModes();
             const rows = classSeatData.rows, cols = classSeatData.cols, names = classSeatData.names || {};
-            const savedCounts = LS.getJSON(K.counts(currentClass), {});
 
             grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
             grid.innerHTML = '';
@@ -876,8 +900,9 @@
                         const badge = document.createElement('div');
                         badge.className = 'seat-badge';
                         badge.id = `badge-${seatId}`;
-                        if (savedCounts[seatId] && savedCounts[seatId] > 0) {
-                            badge.innerText = savedCounts[seatId];
+                        const cnt = seatStats(seatId).count;
+                        if (cnt > 0) {
+                            badge.innerText = cnt;
                             badge.style.opacity = 1;
                             badge.style.backgroundColor = currentBehavior.color;
                         }
@@ -900,8 +925,7 @@
             if (!rawData) return;
             const logName = seatParts(rawData).logName;
             const baseScore = (classSeatData.scores && classSeatData.scores[logName]) ? classSeatData.scores[logName] : 0;
-            const deltas = LS.getJSON(K.deltas(currentClass), {});
-            const totalScore = baseScore + (deltas[seatId] || 0);
+            const totalScore = baseScore + seatStats(seatId).delta;
 
             const seatDiv = document.getElementById(`seat-${seatId}`);
             if (!seatDiv || seatDiv.classList.contains('empty-seat')) return;
@@ -929,17 +953,16 @@
             const CANCEL_WINDOW_MS = 30000;
             let existingLogIndex = -1;
             for (let i = logs.length - 1; i >= 0; i--) {
-                if (logs[i].seatId === seatId && logs[i].behavior === currentBehavior.value) {
+                if (logs[i].classCode === currentClass && logs[i].seatId === seatId && logs[i].behavior === currentBehavior.value) {
                     if (Date.now() - logs[i].id <= CANCEL_WINDOW_MS) existingLogIndex = i;
                     break;
                 }
             }
 
             if (existingLogIndex !== -1) {
-                const removedLog = logs.splice(existingLogIndex, 1)[0];
+                logs.splice(existingLogIndex, 1);
                 saveLogs();
-                updateSeatCount(seatId, -1);
-                updateSeatScoreDelta(seatId, -(removedLog.score || 0));
+                updateSeatCount(seatId);
                 updateLogDisplay();
                 seatDiv.style.backgroundColor = '#dcdcdc';
                 setTimeout(() => { seatDiv.style.backgroundColor = ''; updateSingleSeatColor(seatId); }, 200);
@@ -961,35 +984,26 @@
             const localFullTime = `${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')} ${timeString}`;
 
             const logEntry = {
-                id: Date.now(), seatId: seatId, name: logName, behavior: currentBehavior.value,
+                id: Date.now(), classCode: currentClass, seatId: seatId, name: logName, behavior: currentBehavior.value,
                 score: currentBehavior.score || 0, time: timeString, fullTime: localFullTime
             };
             logs.push(logEntry);
             saveLogs();
-            updateSeatCount(seatId, 1);
-            updateSeatScoreDelta(seatId, logEntry.score);
+            updateSeatCount(seatId);
+            updateSingleSeatColor(seatId);
             updateLogDisplay();
             if (!isWide()) showToast(`${stripNo(logName)} - ${currentBehavior.value}`);
         }
 
         function saveLogs() { LS.setJSON(K.logs, logs); }
 
-        function updateSeatScoreDelta(seatId, deltaScore) {
-            if (deltaScore === 0) return;
-            const deltas = LS.getJSON(K.deltas(currentClass), {});
-            deltas[seatId] = (deltas[seatId] || 0) + deltaScore;
-            LS.setJSON(K.deltas(currentClass), deltas);
-            updateSingleSeatColor(seatId);
-        }
-
-        function updateSeatCount(seatId, delta) {
-            const counts = LS.getJSON(K.counts(currentClass), {});
-            counts[seatId] = Math.max(0, (counts[seatId] || 0) + delta);
-            LS.setJSON(K.counts(currentClass), counts);
+        // 依暫存記錄重新顯示該座位的徽章數字
+        function updateSeatCount(seatId) {
+            const cnt = seatStats(seatId).count;
             const badge = document.getElementById(`badge-${seatId}`);
             if (badge) {
-                if (counts[seatId] > 0) {
-                    badge.innerText = counts[seatId];
+                if (cnt > 0) {
+                    badge.innerText = cnt;
                     badge.style.opacity = 1;
                     badge.style.backgroundColor = colorMap[currentBehavior.value] || currentBehavior.color || CUSTOM_COLOR;
                 } else badge.style.opacity = 0;
@@ -999,10 +1013,11 @@
         function updateLogDisplay() {
             const list = document.getElementById('log-list');
             list.innerHTML = '';
-            document.getElementById('log-count').innerText = `${logs.length} 筆`;
+            const shown = classLogs();
+            document.getElementById('log-count').innerText = `${shown.length} 筆`;
             const wide = isWide();
 
-            [...logs].reverse().forEach(log => {
+            [...shown].reverse().forEach(log => {
                 const item = document.createElement('div');
                 item.className = 'log-item';
                 const color = colorMap[log.behavior] || CUSTOM_COLOR;
@@ -1032,22 +1047,19 @@
         }
 
         function deleteLog(logId, seatId) {
-            const logToDelete = logs.find(l => l.id === logId);
-            if (logToDelete) {
-                updateSeatScoreDelta(seatId, -(logToDelete.score || 0));
-                updateSeatCount(seatId, -1);
-            }
             logs = logs.filter(log => log.id !== logId);
             saveLogs();
+            updateSeatCount(seatId);
+            updateSingleSeatColor(seatId);
             updateLogDisplay();
         }
 
+        // 只刪除目前班級的暫存記錄
         function clearAllLogs(skipConfirm = false) {
-            if (!skipConfirm && !confirm("確定要刪除「所有」暫存記錄嗎？\n這將會把所有學生的行為計數歸零！")) return;
-            logs = [];
+            const label = currentClass ? `${currentClass} 班` : '目前班級';
+            if (!skipConfirm && !confirm(`確定要刪除「${label}」的所有暫存記錄嗎？\n這將會把該班學生的行為計數歸零！`)) return;
+            logs = logs.filter(l => l.classCode !== currentClass);
             saveLogs();
-            LS.set(K.counts(currentClass), '{}');
-            LS.set(K.deltas(currentClass), '{}');
             updateLogDisplay();
             generateSeats();
             if (!skipConfirm) showToast("已清空");
@@ -1055,6 +1067,7 @@
 
         function loadFromStorage() {
             logs = LS.getJSON(K.logs, []);
+            assignOrphanLogs();
             updateLogDisplay();
             if (currentClass) {
                 const saved = LS.getJSON(K.seat(currentClass), null);
@@ -1086,10 +1099,10 @@
                         classSeatData = data.seatData;
                         LS.setJSON(K.seat(code), classSeatData);
                         normalizeModes();
-                        if (!silent && !auto && confirm("是否要清空目前的「暫時上課計數」？")) {
-                            LS.set(K.counts(code), '{}');
-                            LS.set(K.deltas(code), '{}');
-                            logs = []; saveLogs();
+                        const pending = logs.filter(l => l.classCode === code).length;
+                        if (!silent && !auto && pending > 0 && confirm(`${code} 班目前有 ${pending} 筆尚未上傳的暫存記錄，是否要清空？`)) {
+                            logs = logs.filter(l => l.classCode !== code);
+                            saveLogs();
                         }
                         loadFromStorage();
                         if (auto) showToast(`✅ 已載入 ${code} 座位表`);
@@ -1124,19 +1137,25 @@
 
         function uploadToGoogleSheet() {
             if (!hasBackend()) { alert("請先設定 GAS 網址！"); openSettings(); return; }
-            if (logs.length === 0) { alert("目前沒有記錄可上傳！"); return; }
             const classCode = currentClass;
             if (!classCode) { alert("請先選擇班級！"); return; }
+            const sending = logs.filter(l => l.classCode === classCode);
+            if (sending.length === 0) { alert(`${classCode} 班目前沒有記錄可上傳！`); return; }
 
             showToast("⏳ 上傳中...");
             setBusy('.upload-btn', true, '上傳中...');
-            callApi({ action: "log", classCode: classCode, logs: logs })
+            callApi({ action: "log", classCode: classCode, logs: sending })
                 .then(data => {
                     if (data.result === 'success') {
-                        let msg = `✅ 上傳成功！共 ${data.count} 筆記錄已寫入 Google Sheet。`;
+                        // 只移除後端確認收到的記錄；上傳途中新增的記錄會保留
+                        const done = new Set((data.receivedIds || sending.map(l => l.id)).map(String));
+                        logs = logs.filter(l => !(l.classCode === classCode && done.has(String(l.id))));
+                        saveLogs();
+                        updateLogDisplay();
+                        generateSeats();
+                        let msg = `✅ 上傳成功！共 ${data.count} 筆記錄已寫入 ${classCode} 班。`;
                         if (data.skipped) msg += `\n（另有 ${data.skipped} 筆先前已上傳過，已自動略過）`;
-                        alert(msg + `\n\n暫存記錄將自動清空。`);
-                        clearAllLogs(true);
+                        alert(msg + `\n\n已上傳的記錄已從暫存區移除。`);
                         loadClassDataFromCloud(true);
                     } else alert("上傳失敗：" + data.error);
                 })
