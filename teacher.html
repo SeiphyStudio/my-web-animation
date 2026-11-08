@@ -641,8 +641,10 @@ function settingsStatic() {
         <div id="ownerBox" class="muted">讀取中…</div>
         ${isCreator ? `<div class="row" style="margin-top:10px"><input id="coEmail" placeholder="協同老師 email（須已在白名單）" style="flex:1;min-width:0">
           <button data-act="addOwner">加入</button></div>` : `<p class="muted">只有建立者可以新增或移除協同老師。</p>`}</div>
-      ${isCreator ? `<div class="card"><h2>危險區域</h2>
-        <button class="danger" data-act="deleteRoom">刪除此教室（含名單與所有評分）</button></div>` : ""}
+      <div class="card"><h2>危險區域</h2>
+        <button class="danger" data-act="clearVotes">清除所有評分（保留名單與設定）</button>
+        <p class="muted">清除後學生可以重新評分。清除前請先到「排名與評分紀錄」匯出 CSV 備份。</p>
+        ${isCreator ? `<button class="danger" data-act="deleteRoom">刪除此教室（含名單與所有評分）</button>` : ""}</div>
     </div></div>`;
 }
 let critDraft = [];
@@ -739,6 +741,7 @@ const onAction = guard(async e => {
     case "rmOwner":
       if (!await confirmBox("移除協同老師", "確定移除？對方將無法再管理此教室。", "移除", true)) return;
       await updateDoc(roomRef(), { owners: arrayRemove(b.dataset.uid) }); drawOwners(); break;
+    case "clearVotes": return clearVotes();
     case "deleteRoom": return deleteRoom();
   }
 });
@@ -788,6 +791,25 @@ async function saveCriteria() {
   const criteria = list.map((c, i) => ({ id: "c" + (i + 1), name: c.name, max: c.max }));
   await updateDoc(roomRef(), { criteria, maxes: Object.fromEntries(criteria.map(c => [c.id, c.max])) });
   toast("評分項目已儲存");
+}
+
+async function clearVotes() {
+  const n = S.votes.length;
+  if (!n) return toast("目前沒有任何評分");
+  const p = modal("清除所有評分", `<p>將刪除「${esc(S.room.title)}」的 <b>${n}</b> 筆評分（含已作廢），<b>無法復原</b>。
+    名單、評分項目與學生連結都會保留，學生可以重新評分。</p>
+    <p class="muted">建議先到「排名與評分紀錄」按「匯出明細 CSV」備份。</p>
+    <p>請輸入教室代碼 <b class="mono">${esc(S.roomId)}</b> 確認：</p>
+    <input id="cvCode" style="width:100%" autocomplete="off">`,
+    [{ label: "取消", value: null }, { label: "清除所有評分", value: "ok", cls: "primary danger" }]);
+  let code = "";
+  const inp = $("#cvCode"); inp.focus(); inp.oninput = () => { code = inp.value.trim().toUpperCase(); };
+  if (await p !== "ok") return;
+  if (code !== S.roomId) return toast("教室代碼不符，未清除任何評分");
+  const ids = S.votes.map(v => v.id);
+  await commitOps(ids.map(id => ({ type: "delete", ref: doc(roomRef(), "votes", id) })));
+  if (S.results?.published) await setDoc(doc(roomRef(), "public", "results"), { published: false }, { merge: true });
+  toast(`已清除 ${ids.length} 筆評分，學生可以重新評分`);
 }
 
 async function deleteRoom() {
